@@ -11,12 +11,12 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false)
 
   const [showVehicleForm, setShowVehicleForm] = useState(false)
-  const [vehicleForm, setVehicleForm] = useState({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '' })
+  const [vehicleForm, setVehicleForm] = useState({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
   const [vehicleImage, setVehicleImage] = useState(null)
   const [istamaraImage, setIstamaraImage] = useState(null)
 
   const [showDriverForm, setShowDriverForm] = useState(false)
-  const [driverForm, setDriverForm] = useState({ full_name: '', national_id: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
+  const [driverForm, setDriverForm] = useState({ full_name: '', national_id: '', passport_number: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
   const [iqamaImage, setIqamaImage] = useState(null)
   const [licenseImage, setLicenseImage] = useState(null)
 
@@ -64,7 +64,7 @@ export default function Dashboard() {
     const istimara_image = await uploadFile(istamaraImage, 'istimara')
     await supabase.from('vehicles').insert([{ ...vehicleForm, vehicle_image, istimara_image }])
     setShowVehicleForm(false)
-    setVehicleForm({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '' })
+    setVehicleForm({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
     setVehicleImage(null); setIstamaraImage(null)
     setUploading(false); fetchData()
   }
@@ -75,7 +75,7 @@ export default function Dashboard() {
     const license_image = await uploadFile(licenseImage, 'licenses')
     await supabase.from('drivers').insert([{ ...driverForm, iqama_image, license_image }])
     setShowDriverForm(false)
-    setDriverForm({ full_name: '', national_id: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
+    setDriverForm({ full_name: '', national_id: '', passport_number: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
     setIqamaImage(null); setLicenseImage(null)
     setUploading(false); fetchData()
   }
@@ -95,6 +95,11 @@ export default function Dashboard() {
     fetchData()
   }
 
+  const updatePreparation = async (id, val) => {
+    await supabase.from('vehicles').update({ preparation_status: val }).eq('id', id)
+    fetchData()
+  }
+
   const deleteVehicle = async (id) => { await supabase.from('vehicles').delete().eq('id', id); fetchData() }
   const deleteDriver = async (id) => { await supabase.from('drivers').delete().eq('id', id); fetchData() }
   const deleteMaintenance = async (id) => { await supabase.from('maintenance').delete().eq('id', id); fetchData() }
@@ -106,15 +111,13 @@ export default function Dashboard() {
   const statusBg = (s) => s === 'active' ? '#f0fdf4' : s === 'pending' ? '#fffbeb' : '#fef2f2'
   const statusLabel = (s) => s === 'active' ? 'نشط' : s === 'pending' ? 'معلق' : 'غير نشط'
 
+  const prepColor = (s) => s === 'ready' ? '#16a34a' : s === 'in_progress' ? '#d97706' : '#dc2626'
+  const prepBg = (s) => s === 'ready' ? '#f0fdf4' : s === 'in_progress' ? '#fffbeb' : '#fef2f2'
+  const prepLabel = (s) => s === 'ready' ? 'جاهزة ✅' : s === 'in_progress' ? 'قيد التجهيز 🔄' : 'غير جاهزة ❌'
+
   const C = {
-    orange: '#ff6b00',
-    orangeLight: '#fff7f2',
-    orangeBorder: 'rgba(255,107,0,0.15)',
-    white: '#fff',
-    gray: '#f8f9fa',
-    text: '#1a1a1a',
-    muted: '#888',
-    border: '#e8e8e8',
+    orange: '#ff6b00', orangeLight: '#fff7f2', orangeBorder: 'rgba(255,107,0,0.15)',
+    white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8',
   }
 
   const st = {
@@ -126,7 +129,7 @@ export default function Dashboard() {
     main: { flex: 1, padding: '24px', overflowX: 'auto' },
     header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' },
     title: { color: C.text, fontSize: '19px', fontWeight: '800' },
-    btn: (c, outline) => ({ background: outline ? C.white : (c || C.orange), color: outline ? (c || C.orange) : C.white, border: `2px solid ${c || C.orange}`, borderRadius: '9px', padding: '9px 18px', fontSize: '13px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer', transition: 'all 0.15s' }),
+    btn: (c, outline) => ({ background: outline ? C.white : (c || C.orange), color: outline ? (c || C.orange) : C.white, border: `2px solid ${c || C.orange}`, borderRadius: '9px', padding: '9px 18px', fontSize: '13px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer' }),
     card: { background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
     kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '20px' },
     kpiCard: (c) => ({ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '20px', borderTop: `4px solid ${c}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }),
@@ -142,6 +145,7 @@ export default function Dashboard() {
     sectionTitle: { color: C.orange, fontSize: '13px', fontWeight: '700', margin: '18px 0 10px', borderBottom: `2px solid ${C.orangeBorder}`, paddingBottom: '6px' },
     thumb: { width: '38px', height: '38px', borderRadius: '8px', objectFit: 'cover', cursor: 'pointer', border: `1px solid ${C.border}` },
     imgLink: { color: C.orange, fontSize: '12px', cursor: 'pointer', fontWeight: '600' },
+    prepSelect: (s) => ({ background: prepBg(s), color: prepColor(s), border: `1.5px solid ${prepColor(s)}`, borderRadius: '8px', padding: '4px 8px', fontSize: '11px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer', outline: 'none' }),
   }
 
   const FileInput = ({ label, icon, onChange, file }) => (
@@ -158,7 +162,6 @@ export default function Dashboard() {
     <div style={st.app}>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
 
-      {/* Image Preview */}
       {previewImage && (
         <div style={{ ...st.modal, zIndex: 200 }} onClick={() => setPreviewImage(null)}>
           <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: '14px', padding: '16px', maxWidth: '90vw' }}>
@@ -193,7 +196,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Main */}
         <div style={st.main}>
 
           {/* Dashboard */}
@@ -249,13 +251,14 @@ export default function Dashboard() {
               <div style={st.card}>
                 <table style={st.table}>
                   <thead><tr>
-                    <th style={st.th}>صورة</th><th style={st.th}>رقم اللوحة</th><th style={st.th}>كود المركبة</th>
+                    <th style={st.th}>صورة</th><th style={st.th}>رقم اللوحة</th><th style={st.th}>كود</th>
                     <th style={st.th}>الماركة</th><th style={st.th}>الموديل</th><th style={st.th}>السنة</th>
-                    <th style={st.th}>الحالة</th><th style={st.th}>الاستمارة</th><th style={st.th}>حذف</th>
+                    <th style={st.th}>الحالة</th><th style={st.th}>التجهيز</th>
+                    <th style={st.th}>الاستمارة</th><th style={st.th}>حذف</th>
                   </tr></thead>
                   <tbody>
                     {vehicles.map(v => (
-                      <tr key={v.id} style={{ transition: 'background 0.1s' }} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                      <tr key={v.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                         <td style={st.td}>{v.vehicle_image ? <img src={v.vehicle_image} style={st.thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" /> : '—'}</td>
                         <td style={{ ...st.td, fontWeight: '700' }}>{v.plate_number}</td>
                         <td style={st.td}>{v.vehicle_code || '—'}</td>
@@ -263,13 +266,24 @@ export default function Dashboard() {
                         <td style={st.td}>{v.model}</td>
                         <td style={st.td}>{v.year}</td>
                         <td style={st.td}><span style={st.badge(v.status)}>{statusLabel(v.status)}</span></td>
+                        <td style={st.td}>
+                          <select
+                            value={v.preparation_status || 'not_ready'}
+                            onChange={e => updatePreparation(v.id, e.target.value)}
+                            style={st.prepSelect(v.preparation_status || 'not_ready')}
+                          >
+                            <option value="not_ready">غير جاهزة ❌</option>
+                            <option value="in_progress">قيد التجهيز 🔄</option>
+                            <option value="ready">جاهزة ✅</option>
+                          </select>
+                        </td>
                         <td style={st.td}>{v.istimara_image ? <span style={st.imgLink} onClick={() => setPreviewImage(v.istimara_image)}>عرض 📄</span> : '—'}</td>
                         <td style={st.td}><button onClick={() => deleteVehicle(v.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '16px' }}>🗑️</button></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {vehicles.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد مركبات — اضغط إضافة مركبة</div>}
+                {vehicles.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد مركبات</div>}
               </div>
             </div>
           )}
@@ -284,8 +298,8 @@ export default function Dashboard() {
               <div style={st.card}>
                 <table style={st.table}>
                   <thead><tr>
-                    <th style={st.th}>الاسم</th><th style={st.th}>الهوية</th><th style={st.th}>الجوال</th>
-                    <th style={st.th}>رقم الرخصة</th><th style={st.th}>انتهاء الرخصة</th>
+                    <th style={st.th}>الاسم</th><th style={st.th}>الهوية</th><th style={st.th}>جواز السفر</th>
+                    <th style={st.th}>الجوال</th><th style={st.th}>رقم الرخصة</th><th style={st.th}>انتهاء الرخصة</th>
                     <th style={st.th}>الإقامة</th><th style={st.th}>الرخصة</th>
                     <th style={st.th}>الحالة</th><th style={st.th}>حذف</th>
                   </tr></thead>
@@ -294,6 +308,7 @@ export default function Dashboard() {
                       <tr key={d.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                         <td style={{ ...st.td, fontWeight: '700' }}>{d.full_name}</td>
                         <td style={st.td}>{d.national_id}</td>
+                        <td style={st.td}>{d.passport_number || '—'}</td>
                         <td style={st.td}>{d.phone}</td>
                         <td style={st.td}>{d.license_number}</td>
                         <td style={st.td}>{d.license_expiry}</td>
@@ -398,15 +413,20 @@ export default function Dashboard() {
             <div style={st.sectionTitle}>📋 البيانات الأساسية</div>
             <div style={st.formGrid}>
               {[['plate_number','رقم اللوحة'],['vehicle_code','كود المركبة'],['type','النوع'],['brand','الماركة'],['model','الموديل'],['year','السنة'],['color','اللون'],['fuel_type','نوع الوقود']].map(([key,label]) => (
-                <div key={key}>
-                  <label style={st.label}>{label}</label>
-                  <input style={st.input} value={vehicleForm[key]} onChange={e => setVehicleForm({...vehicleForm,[key]:e.target.value})} />
-                </div>
+                <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={vehicleForm[key]} onChange={e => setVehicleForm({...vehicleForm,[key]:e.target.value})} /></div>
               ))}
               <div>
                 <label style={st.label}>الحالة</label>
                 <select style={st.input} value={vehicleForm.status} onChange={e => setVehicleForm({...vehicleForm,status:e.target.value})}>
                   <option value="active">نشط</option><option value="inactive">غير نشط</option><option value="pending">معلق</option>
+                </select>
+              </div>
+              <div>
+                <label style={st.label}>حالة التجهيز</label>
+                <select style={st.input} value={vehicleForm.preparation_status} onChange={e => setVehicleForm({...vehicleForm,preparation_status:e.target.value})}>
+                  <option value="not_ready">غير جاهزة ❌</option>
+                  <option value="in_progress">قيد التجهيز 🔄</option>
+                  <option value="ready">جاهزة ✅</option>
                 </select>
               </div>
             </div>
@@ -430,7 +450,7 @@ export default function Dashboard() {
             <div style={{ color: C.text, fontSize: '17px', fontWeight: '800', marginBottom: '4px' }}>👤 إضافة سائق جديد</div>
             <div style={st.sectionTitle}>📋 البيانات الأساسية</div>
             <div style={st.formGrid}>
-              {[['full_name','الاسم الكامل'],['national_id','رقم الهوية'],['phone','رقم الجوال'],['license_number','رقم الرخصة']].map(([key,label]) => (
+              {[['full_name','الاسم الكامل'],['national_id','رقم الهوية'],['passport_number','رقم جواز السفر'],['phone','رقم الجوال'],['license_number','رقم الرخصة']].map(([key,label]) => (
                 <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={driverForm[key]} onChange={e => setDriverForm({...driverForm,[key]:e.target.value})} /></div>
               ))}
               <div><label style={st.label}>انتهاء الرخصة</label><input type="date" style={st.input} value={driverForm.license_expiry} onChange={e => setDriverForm({...driverForm,license_expiry:e.target.value})} /></div>
@@ -458,8 +478,8 @@ export default function Dashboard() {
       {showMaintenanceForm && (
         <div style={st.modal}>
           <div style={st.modalBox}>
-            <div style={{ color: C.text, fontSize: '17px', fontWeight: '800', marginBottom: '4px' }}>🔧 إضافة صيانة</div>
-            <div style={st.formGrid} style={{ marginTop: '16px' }}>
+            <div style={{ color: C.text, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>🔧 إضافة صيانة</div>
+            <div style={st.formGrid}>
               <div>
                 <label style={st.label}>المركبة</label>
                 <select style={st.input} value={maintenanceForm.vehicle_id} onChange={e => setMaintenanceForm({...maintenanceForm,vehicle_id:e.target.value})}>
