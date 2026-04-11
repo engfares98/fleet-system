@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [uploading, setUploading] = useState(false)
 
+  // Add forms
   const [showVehicleForm, setShowVehicleForm] = useState(false)
   const [vehicleForm, setVehicleForm] = useState({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
   const [vehicleImage, setVehicleImage] = useState(null)
@@ -25,6 +26,11 @@ export default function Dashboard() {
 
   const [showFuelForm, setShowFuelForm] = useState(false)
   const [fuelForm, setFuelForm] = useState({ vehicle_id: '', driver_id: '', date: '', liters: '', cost_per_liter: '', odometer: '' })
+
+  // Edit forms
+  const [editItem, setEditItem] = useState(null)
+  const [editType, setEditType] = useState(null)
+  const [editForm, setEditForm] = useState({})
 
   const [previewImage, setPreviewImage] = useState(null)
 
@@ -56,6 +62,35 @@ export default function Dashboard() {
     if (error) return null
     const { data } = supabase.storage.from('fleet-files').getPublicUrl(fileName)
     return data.publicUrl
+  }
+
+  // Open edit modal
+  const openEdit = (type, item) => {
+    setEditType(type)
+    setEditItem(item)
+    setEditForm({ ...item })
+  }
+
+  // Save edit
+  const saveEdit = async () => {
+    setUploading(true)
+    const table = editType === 'vehicle' ? 'vehicles' : editType === 'driver' ? 'drivers' : editType === 'maintenance' ? 'maintenance' : 'fuel_logs'
+    
+    const updateData = { ...editForm }
+    delete updateData.id
+    delete updateData.created_at
+    delete updateData.vehicles
+    delete updateData.drivers
+
+    if (editType === 'fuel_logs') {
+      updateData.total_cost = updateData.liters * updateData.cost_per_liter
+    }
+
+    await supabase.from(table).update(updateData).eq('id', editItem.id)
+    setEditItem(null)
+    setEditType(null)
+    setUploading(false)
+    fetchData()
   }
 
   const addVehicle = async () => {
@@ -110,10 +145,8 @@ export default function Dashboard() {
   const statusColor = (s) => s === 'active' ? '#16a34a' : s === 'pending' ? '#d97706' : '#dc2626'
   const statusBg = (s) => s === 'active' ? '#f0fdf4' : s === 'pending' ? '#fffbeb' : '#fef2f2'
   const statusLabel = (s) => s === 'active' ? 'نشط' : s === 'pending' ? 'معلق' : 'غير نشط'
-
   const prepColor = (s) => s === 'ready' ? '#16a34a' : s === 'in_progress' ? '#d97706' : '#dc2626'
   const prepBg = (s) => s === 'ready' ? '#f0fdf4' : s === 'in_progress' ? '#fffbeb' : '#fef2f2'
-  const prepLabel = (s) => s === 'ready' ? 'جاهزة ✅' : s === 'in_progress' ? 'قيد التجهيز 🔄' : 'غير جاهزة ❌'
 
   const C = {
     orange: '#ff6b00', orangeLight: '#fff7f2', orangeBorder: 'rgba(255,107,0,0.15)',
@@ -125,7 +158,7 @@ export default function Dashboard() {
     topbar: { background: C.white, borderBottom: `3px solid ${C.orange}`, padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 12px rgba(255,107,0,0.08)', position: 'sticky', top: 0, zIndex: 20 },
     body: { display: 'flex', flex: 1 },
     sidebar: { width: '220px', background: C.white, borderLeft: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', padding: '16px 0', position: 'sticky', top: '63px', height: 'calc(100vh - 63px)', overflowY: 'auto' },
-    navItem: (a) => ({ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 20px', cursor: 'pointer', fontSize: '13px', fontWeight: a ? '700' : '400', color: a ? C.orange : C.muted, background: a ? C.orangeLight : 'transparent', borderRight: a ? `3px solid ${C.orange}` : '3px solid transparent', transition: 'all 0.15s' }),
+    navItem: (a) => ({ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 20px', cursor: 'pointer', fontSize: '13px', fontWeight: a ? '700' : '400', color: a ? C.orange : C.muted, background: a ? C.orangeLight : 'transparent', borderRight: a ? `3px solid ${C.orange}` : '3px solid transparent' }),
     main: { flex: 1, padding: '24px', overflowX: 'auto' },
     header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' },
     title: { color: C.text, fontSize: '19px', fontWeight: '800' },
@@ -135,7 +168,7 @@ export default function Dashboard() {
     kpiCard: (c) => ({ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '20px', borderTop: `4px solid ${c}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }),
     table: { width: '100%', borderCollapse: 'collapse' },
     th: { padding: '12px 14px', textAlign: 'right', color: C.muted, fontSize: '12px', fontWeight: '600', borderBottom: `2px solid ${C.border}`, background: '#fafafa' },
-    td: { padding: '12px 14px', color: C.text, fontSize: '13px', borderBottom: `1px solid ${C.border}` },
+    td: { padding: '10px 14px', color: C.text, fontSize: '13px', borderBottom: `1px solid ${C.border}` },
     badge: (s) => ({ background: statusBg(s), color: statusColor(s), padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', display: 'inline-block' }),
     modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
     modalBox: { background: C.white, borderRadius: '18px', padding: '32px', width: '580px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(0,0,0,0.15)' },
@@ -143,8 +176,10 @@ export default function Dashboard() {
     label: { color: '#555', fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '6px' },
     formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' },
     sectionTitle: { color: C.orange, fontSize: '13px', fontWeight: '700', margin: '18px 0 10px', borderBottom: `2px solid ${C.orangeBorder}`, paddingBottom: '6px' },
-    thumb: { width: '38px', height: '38px', borderRadius: '8px', objectFit: 'cover', cursor: 'pointer', border: `1px solid ${C.border}` },
+    thumb: { width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover', cursor: 'pointer', border: `1px solid ${C.border}` },
     imgLink: { color: C.orange, fontSize: '12px', cursor: 'pointer', fontWeight: '600' },
+    editBtn: { background: '#fff7f2', border: '1px solid #ffccaa', color: C.orange, borderRadius: '6px', padding: '4px 8px', fontSize: '12px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '600' },
+    deleteBtn: { background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '15px' },
     prepSelect: (s) => ({ background: prepBg(s), color: prepColor(s), border: `1.5px solid ${prepColor(s)}`, borderRadius: '8px', padding: '4px 8px', fontSize: '11px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer', outline: 'none' }),
   }
 
@@ -158,16 +193,114 @@ export default function Dashboard() {
     </div>
   )
 
+  const InputField = ({ label, field, type = 'text' }) => (
+    <div>
+      <label style={st.label}>{label}</label>
+      <input type={type} style={st.input} value={editForm[field] || ''} onChange={e => setEditForm({ ...editForm, [field]: e.target.value })} />
+    </div>
+  )
+
+  const SelectField = ({ label, field, options }) => (
+    <div>
+      <label style={st.label}>{label}</label>
+      <select style={st.input} value={editForm[field] || ''} onChange={e => setEditForm({ ...editForm, [field]: e.target.value })}>
+        {options.map(([val, lbl]) => <option key={val} value={val}>{lbl}</option>)}
+      </select>
+    </div>
+  )
+
   return (
     <div style={st.app}>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
 
+      {/* Image Preview */}
       {previewImage && (
         <div style={{ ...st.modal, zIndex: 200 }} onClick={() => setPreviewImage(null)}>
           <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: '14px', padding: '16px', maxWidth: '90vw' }}>
             <img src={previewImage} style={{ maxWidth: '80vw', maxHeight: '80vh', borderRadius: '8px' }} alt="preview" />
             <div style={{ textAlign: 'center', marginTop: '12px' }}>
               <button style={st.btn('#888', true)} onClick={() => setPreviewImage(null)}>إغلاق</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editItem && (
+        <div style={st.modal}>
+          <div style={st.modalBox}>
+            <div style={{ color: C.text, fontSize: '17px', fontWeight: '800', marginBottom: '20px' }}>
+              ✏️ تعديل {editType === 'vehicle' ? 'مركبة' : editType === 'driver' ? 'سائق' : editType === 'maintenance' ? 'صيانة' : 'وقود'}
+            </div>
+
+            {editType === 'vehicle' && (
+              <div style={st.formGrid}>
+                <InputField label="رقم اللوحة" field="plate_number" />
+                <InputField label="كود المركبة" field="vehicle_code" />
+                <InputField label="النوع" field="type" />
+                <InputField label="الماركة" field="brand" />
+                <InputField label="الموديل" field="model" />
+                <InputField label="السنة" field="year" />
+                <InputField label="اللون" field="color" />
+                <InputField label="نوع الوقود" field="fuel_type" />
+                <SelectField label="الحالة" field="status" options={[['active','نشط'],['inactive','غير نشط'],['pending','معلق']]} />
+                <SelectField label="حالة التجهيز" field="preparation_status" options={[['not_ready','غير جاهزة ❌'],['in_progress','قيد التجهيز 🔄'],['ready','جاهزة ✅']]} />
+              </div>
+            )}
+
+            {editType === 'driver' && (
+              <div style={st.formGrid}>
+                <InputField label="الاسم الكامل" field="full_name" />
+                <InputField label="رقم الهوية" field="national_id" />
+                <InputField label="رقم جواز السفر" field="passport_number" />
+                <InputField label="رقم الجوال" field="phone" />
+                <InputField label="رقم الرخصة" field="license_number" />
+                <InputField label="انتهاء الرخصة" field="license_expiry" type="date" />
+                <SelectField label="الحالة" field="status" options={[['active','نشط'],['inactive','غير نشط']]} />
+              </div>
+            )}
+
+            {editType === 'maintenance' && (
+              <div style={st.formGrid}>
+                <div>
+                  <label style={st.label}>المركبة</label>
+                  <select style={st.input} value={editForm.vehicle_id || ''} onChange={e => setEditForm({ ...editForm, vehicle_id: e.target.value })}>
+                    {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}
+                  </select>
+                </div>
+                <InputField label="نوع الصيانة" field="type" />
+                <InputField label="الوصف" field="description" />
+                <InputField label="التكلفة" field="cost" />
+                <InputField label="التاريخ" field="date" type="date" />
+                <InputField label="الموعد القادم" field="next_date" type="date" />
+                <SelectField label="الحالة" field="status" options={[['pending','معلق'],['active','مكتمل'],['inactive','ملغي']]} />
+              </div>
+            )}
+
+            {editType === 'fuel' && (
+              <div style={st.formGrid}>
+                <div>
+                  <label style={st.label}>المركبة</label>
+                  <select style={st.input} value={editForm.vehicle_id || ''} onChange={e => setEditForm({ ...editForm, vehicle_id: e.target.value })}>
+                    {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={st.label}>السائق</label>
+                  <select style={st.input} value={editForm.driver_id || ''} onChange={e => setEditForm({ ...editForm, driver_id: e.target.value })}>
+                    {drivers.map(d => <option key={d.id} value={d.id}>{d.full_name}</option>)}
+                  </select>
+                </div>
+                <InputField label="التاريخ" field="date" type="date" />
+                <InputField label="اللترات" field="liters" type="number" />
+                <InputField label="سعر اللتر" field="cost_per_liter" type="number" />
+                <InputField label="العداد" field="odometer" type="number" />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+              <button style={st.btn()} onClick={saveEdit} disabled={uploading}>{uploading ? '⏳ جاري الحفظ...' : '💾 حفظ التعديلات'}</button>
+              <button style={st.btn('#888', true)} onClick={() => setEditItem(null)}>إلغاء</button>
             </div>
           </div>
         </div>
@@ -187,7 +320,6 @@ export default function Dashboard() {
       </div>
 
       <div style={st.body}>
-        {/* Sidebar */}
         <div style={st.sidebar}>
           {[['dashboard','📊','لوحة التحكم'],['vehicles','🚛','المركبات'],['drivers','👤','السائقون'],['maintenance','🔧','الصيانة'],['fuel','⛽','الوقود']].map(([id,icon,label]) => (
             <div key={id} style={st.navItem(activeTab === id)} onClick={() => setActiveTab(id)}>
@@ -198,7 +330,6 @@ export default function Dashboard() {
 
         <div style={st.main}>
 
-          {/* Dashboard */}
           {activeTab === 'dashboard' && (
             <div>
               <div style={st.header}><div style={st.title}>📊 لوحة التحكم</div></div>
@@ -215,13 +346,7 @@ export default function Dashboard() {
                   <div style={{ color: C.text, fontWeight: '800', marginBottom: '16px', fontSize: '14px' }}>🚛 آخر المركبات</div>
                   {vehicles.slice(0,5).map(v => (
                     <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        {v.vehicle_image && <img src={v.vehicle_image} style={st.thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" />}
-                        <div>
-                          <div style={{ color: C.text, fontSize: '13px', fontWeight: '600' }}>{v.plate_number}</div>
-                          {v.vehicle_code && <div style={{ color: C.muted, fontSize: '11px' }}>{v.vehicle_code}</div>}
-                        </div>
-                      </div>
+                      <div style={{ color: C.text, fontSize: '13px', fontWeight: '600' }}>{v.plate_number}</div>
                       <span style={st.badge(v.status)}>{statusLabel(v.status)}</span>
                     </div>
                   ))}
@@ -241,7 +366,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Vehicles */}
           {activeTab === 'vehicles' && (
             <div>
               <div style={st.header}>
@@ -254,7 +378,7 @@ export default function Dashboard() {
                     <th style={st.th}>صورة</th><th style={st.th}>رقم اللوحة</th><th style={st.th}>كود</th>
                     <th style={st.th}>الماركة</th><th style={st.th}>الموديل</th><th style={st.th}>السنة</th>
                     <th style={st.th}>الحالة</th><th style={st.th}>التجهيز</th>
-                    <th style={st.th}>الاستمارة</th><th style={st.th}>حذف</th>
+                    <th style={st.th}>الاستمارة</th><th style={st.th}>تعديل</th><th style={st.th}>حذف</th>
                   </tr></thead>
                   <tbody>
                     {vehicles.map(v => (
@@ -267,18 +391,15 @@ export default function Dashboard() {
                         <td style={st.td}>{v.year}</td>
                         <td style={st.td}><span style={st.badge(v.status)}>{statusLabel(v.status)}</span></td>
                         <td style={st.td}>
-                          <select
-                            value={v.preparation_status || 'not_ready'}
-                            onChange={e => updatePreparation(v.id, e.target.value)}
-                            style={st.prepSelect(v.preparation_status || 'not_ready')}
-                          >
+                          <select value={v.preparation_status || 'not_ready'} onChange={e => updatePreparation(v.id, e.target.value)} style={st.prepSelect(v.preparation_status || 'not_ready')}>
                             <option value="not_ready">غير جاهزة ❌</option>
                             <option value="in_progress">قيد التجهيز 🔄</option>
                             <option value="ready">جاهزة ✅</option>
                           </select>
                         </td>
                         <td style={st.td}>{v.istimara_image ? <span style={st.imgLink} onClick={() => setPreviewImage(v.istimara_image)}>عرض 📄</span> : '—'}</td>
-                        <td style={st.td}><button onClick={() => deleteVehicle(v.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '16px' }}>🗑️</button></td>
+                        <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('vehicle', v)}>✏️ تعديل</button></td>
+                        <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteVehicle(v.id)}>🗑️</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -288,11 +409,10 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Drivers */}
           {activeTab === 'drivers' && (
             <div>
               <div style={st.header}>
-                <div style={st.title}>👤 السائقون</div>
+                <div style={st.title}>👤 السائقون ({drivers.length})</div>
                 <button style={st.btn()} onClick={() => setShowDriverForm(true)}>+ إضافة سائق</button>
               </div>
               <div style={st.card}>
@@ -301,21 +421,22 @@ export default function Dashboard() {
                     <th style={st.th}>الاسم</th><th style={st.th}>الهوية</th><th style={st.th}>جواز السفر</th>
                     <th style={st.th}>الجوال</th><th style={st.th}>رقم الرخصة</th><th style={st.th}>انتهاء الرخصة</th>
                     <th style={st.th}>الإقامة</th><th style={st.th}>الرخصة</th>
-                    <th style={st.th}>الحالة</th><th style={st.th}>حذف</th>
+                    <th style={st.th}>الحالة</th><th style={st.th}>تعديل</th><th style={st.th}>حذف</th>
                   </tr></thead>
                   <tbody>
                     {drivers.map(d => (
                       <tr key={d.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                         <td style={{ ...st.td, fontWeight: '700' }}>{d.full_name}</td>
-                        <td style={st.td}>{d.national_id}</td>
+                        <td style={st.td}>{d.national_id || '—'}</td>
                         <td style={st.td}>{d.passport_number || '—'}</td>
-                        <td style={st.td}>{d.phone}</td>
-                        <td style={st.td}>{d.license_number}</td>
-                        <td style={st.td}>{d.license_expiry}</td>
+                        <td style={st.td}>{d.phone || '—'}</td>
+                        <td style={st.td}>{d.license_number || '—'}</td>
+                        <td style={st.td}>{d.license_expiry || '—'}</td>
                         <td style={st.td}>{d.iqama_image ? <span style={st.imgLink} onClick={() => setPreviewImage(d.iqama_image)}>عرض 🪪</span> : '—'}</td>
                         <td style={st.td}>{d.license_image ? <span style={st.imgLink} onClick={() => setPreviewImage(d.license_image)}>عرض 🚗</span> : '—'}</td>
                         <td style={st.td}><span style={st.badge(d.status)}>{statusLabel(d.status)}</span></td>
-                        <td style={st.td}><button onClick={() => deleteDriver(d.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '16px' }}>🗑️</button></td>
+                        <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('driver', d)}>✏️ تعديل</button></td>
+                        <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteDriver(d.id)}>🗑️</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -325,7 +446,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Maintenance */}
           {activeTab === 'maintenance' && (
             <div>
               <div style={st.header}>
@@ -337,7 +457,7 @@ export default function Dashboard() {
                   <thead><tr>
                     <th style={st.th}>المركبة</th><th style={st.th}>النوع</th><th style={st.th}>الوصف</th>
                     <th style={st.th}>التاريخ</th><th style={st.th}>التكلفة</th><th style={st.th}>الموعد القادم</th>
-                    <th style={st.th}>الحالة</th><th style={st.th}>حذف</th>
+                    <th style={st.th}>الحالة</th><th style={st.th}>تعديل</th><th style={st.th}>حذف</th>
                   </tr></thead>
                   <tbody>
                     {maintenance.map(m => (
@@ -349,7 +469,8 @@ export default function Dashboard() {
                         <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{m.cost} ر.س</span></td>
                         <td style={st.td}>{m.next_date}</td>
                         <td style={st.td}><span style={st.badge(m.status)}>{statusLabel(m.status)}</span></td>
-                        <td style={st.td}><button onClick={() => deleteMaintenance(m.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '16px' }}>🗑️</button></td>
+                        <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('maintenance', m)}>✏️ تعديل</button></td>
+                        <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteMaintenance(m.id)}>🗑️</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -359,7 +480,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Fuel */}
           {activeTab === 'fuel' && (
             <div>
               <div style={st.header}>
@@ -381,7 +501,7 @@ export default function Dashboard() {
                   <thead><tr>
                     <th style={st.th}>المركبة</th><th style={st.th}>السائق</th><th style={st.th}>التاريخ</th>
                     <th style={st.th}>اللترات</th><th style={st.th}>سعر اللتر</th><th style={st.th}>الإجمالي</th>
-                    <th style={st.th}>العداد</th><th style={st.th}>حذف</th>
+                    <th style={st.th}>العداد</th><th style={st.th}>تعديل</th><th style={st.th}>حذف</th>
                   </tr></thead>
                   <tbody>
                     {fuelLogs.map(f => (
@@ -393,7 +513,8 @@ export default function Dashboard() {
                         <td style={st.td}>{f.cost_per_liter}</td>
                         <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{f.total_cost} ر.س</span></td>
                         <td style={st.td}>{f.odometer} كم</td>
-                        <td style={st.td}><button onClick={() => deleteFuel(f.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '16px' }}>🗑️</button></td>
+                        <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('fuel', f)}>✏️ تعديل</button></td>
+                        <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteFuel(f.id)}>🗑️</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -405,32 +526,20 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Vehicle Modal */}
+      {/* Vehicle Add Modal */}
       {showVehicleForm && (
         <div style={st.modal}>
           <div style={st.modalBox}>
             <div style={{ color: C.text, fontSize: '17px', fontWeight: '800', marginBottom: '4px' }}>🚛 إضافة مركبة جديدة</div>
-            <div style={st.sectionTitle}>📋 البيانات الأساسية</div>
+            <div style={{ color: C.orange, fontSize: '13px', fontWeight: '700', margin: '16px 0 10px', borderBottom: `2px solid ${C.orangeBorder}`, paddingBottom: '6px' }}>📋 البيانات الأساسية</div>
             <div style={st.formGrid}>
               {[['plate_number','رقم اللوحة'],['vehicle_code','كود المركبة'],['type','النوع'],['brand','الماركة'],['model','الموديل'],['year','السنة'],['color','اللون'],['fuel_type','نوع الوقود']].map(([key,label]) => (
                 <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={vehicleForm[key]} onChange={e => setVehicleForm({...vehicleForm,[key]:e.target.value})} /></div>
               ))}
-              <div>
-                <label style={st.label}>الحالة</label>
-                <select style={st.input} value={vehicleForm.status} onChange={e => setVehicleForm({...vehicleForm,status:e.target.value})}>
-                  <option value="active">نشط</option><option value="inactive">غير نشط</option><option value="pending">معلق</option>
-                </select>
-              </div>
-              <div>
-                <label style={st.label}>حالة التجهيز</label>
-                <select style={st.input} value={vehicleForm.preparation_status} onChange={e => setVehicleForm({...vehicleForm,preparation_status:e.target.value})}>
-                  <option value="not_ready">غير جاهزة ❌</option>
-                  <option value="in_progress">قيد التجهيز 🔄</option>
-                  <option value="ready">جاهزة ✅</option>
-                </select>
-              </div>
+              <div><label style={st.label}>الحالة</label><select style={st.input} value={vehicleForm.status} onChange={e => setVehicleForm({...vehicleForm,status:e.target.value})}><option value="active">نشط</option><option value="inactive">غير نشط</option><option value="pending">معلق</option></select></div>
+              <div><label style={st.label}>حالة التجهيز</label><select style={st.input} value={vehicleForm.preparation_status} onChange={e => setVehicleForm({...vehicleForm,preparation_status:e.target.value})}><option value="not_ready">غير جاهزة ❌</option><option value="in_progress">قيد التجهيز 🔄</option><option value="ready">جاهزة ✅</option></select></div>
             </div>
-            <div style={st.sectionTitle}>📸 الصور والمستندات</div>
+            <div style={{ color: C.orange, fontSize: '13px', fontWeight: '700', margin: '16px 0 10px', borderBottom: `2px solid ${C.orangeBorder}`, paddingBottom: '6px' }}>📸 الصور والمستندات</div>
             <div style={st.formGrid}>
               <FileInput label="صورة المركبة" icon="🚛" onChange={setVehicleImage} file={vehicleImage} />
               <FileInput label="صورة الاستمارة" icon="📄" onChange={setIstamaraImage} file={istamaraImage} />
@@ -443,25 +552,19 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Driver Modal */}
+      {/* Driver Add Modal */}
       {showDriverForm && (
         <div style={st.modal}>
           <div style={st.modalBox}>
-            <div style={{ color: C.text, fontSize: '17px', fontWeight: '800', marginBottom: '4px' }}>👤 إضافة سائق جديد</div>
-            <div style={st.sectionTitle}>📋 البيانات الأساسية</div>
+            <div style={{ color: C.text, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>👤 إضافة سائق جديد</div>
             <div style={st.formGrid}>
               {[['full_name','الاسم الكامل'],['national_id','رقم الهوية'],['passport_number','رقم جواز السفر'],['phone','رقم الجوال'],['license_number','رقم الرخصة']].map(([key,label]) => (
                 <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={driverForm[key]} onChange={e => setDriverForm({...driverForm,[key]:e.target.value})} /></div>
               ))}
               <div><label style={st.label}>انتهاء الرخصة</label><input type="date" style={st.input} value={driverForm.license_expiry} onChange={e => setDriverForm({...driverForm,license_expiry:e.target.value})} /></div>
-              <div>
-                <label style={st.label}>الحالة</label>
-                <select style={st.input} value={driverForm.status} onChange={e => setDriverForm({...driverForm,status:e.target.value})}>
-                  <option value="active">نشط</option><option value="inactive">غير نشط</option>
-                </select>
-              </div>
+              <div><label style={st.label}>الحالة</label><select style={st.input} value={driverForm.status} onChange={e => setDriverForm({...driverForm,status:e.target.value})}><option value="active">نشط</option><option value="inactive">غير نشط</option></select></div>
             </div>
-            <div style={st.sectionTitle}>📸 المستندات</div>
+            <div style={{ color: C.orange, fontSize: '13px', fontWeight: '700', margin: '16px 0 10px', borderBottom: `2px solid ${C.orangeBorder}`, paddingBottom: '6px' }}>📸 المستندات</div>
             <div style={st.formGrid}>
               <FileInput label="صورة الإقامة" icon="🪪" onChange={setIqamaImage} file={iqamaImage} />
               <FileInput label="صورة الرخصة" icon="🚗" onChange={setLicenseImage} file={licenseImage} />
@@ -474,30 +577,19 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Maintenance Modal */}
+      {/* Maintenance Add Modal */}
       {showMaintenanceForm && (
         <div style={st.modal}>
           <div style={st.modalBox}>
             <div style={{ color: C.text, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>🔧 إضافة صيانة</div>
             <div style={st.formGrid}>
-              <div>
-                <label style={st.label}>المركبة</label>
-                <select style={st.input} value={maintenanceForm.vehicle_id} onChange={e => setMaintenanceForm({...maintenanceForm,vehicle_id:e.target.value})}>
-                  <option value="">اختر مركبة</option>
-                  {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}
-                </select>
-              </div>
+              <div><label style={st.label}>المركبة</label><select style={st.input} value={maintenanceForm.vehicle_id} onChange={e => setMaintenanceForm({...maintenanceForm,vehicle_id:e.target.value})}><option value="">اختر مركبة</option>{vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
               {[['type','نوع الصيانة'],['description','الوصف'],['cost','التكلفة']].map(([key,label]) => (
                 <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={maintenanceForm[key]} onChange={e => setMaintenanceForm({...maintenanceForm,[key]:e.target.value})} /></div>
               ))}
               <div><label style={st.label}>التاريخ</label><input type="date" style={st.input} value={maintenanceForm.date} onChange={e => setMaintenanceForm({...maintenanceForm,date:e.target.value})} /></div>
               <div><label style={st.label}>الموعد القادم</label><input type="date" style={st.input} value={maintenanceForm.next_date} onChange={e => setMaintenanceForm({...maintenanceForm,next_date:e.target.value})} /></div>
-              <div>
-                <label style={st.label}>الحالة</label>
-                <select style={st.input} value={maintenanceForm.status} onChange={e => setMaintenanceForm({...maintenanceForm,status:e.target.value})}>
-                  <option value="pending">معلق</option><option value="active">مكتمل</option><option value="inactive">ملغي</option>
-                </select>
-              </div>
+              <div><label style={st.label}>الحالة</label><select style={st.input} value={maintenanceForm.status} onChange={e => setMaintenanceForm({...maintenanceForm,status:e.target.value})}><option value="pending">معلق</option><option value="active">مكتمل</option><option value="inactive">ملغي</option></select></div>
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <button style={st.btn()} onClick={addMaintenance}>حفظ</button>
@@ -507,26 +599,14 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Fuel Modal */}
+      {/* Fuel Add Modal */}
       {showFuelForm && (
         <div style={st.modal}>
           <div style={st.modalBox}>
             <div style={{ color: C.text, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>⛽ إضافة تزود وقود</div>
             <div style={st.formGrid}>
-              <div>
-                <label style={st.label}>المركبة</label>
-                <select style={st.input} value={fuelForm.vehicle_id} onChange={e => setFuelForm({...fuelForm,vehicle_id:e.target.value})}>
-                  <option value="">اختر مركبة</option>
-                  {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={st.label}>السائق</label>
-                <select style={st.input} value={fuelForm.driver_id} onChange={e => setFuelForm({...fuelForm,driver_id:e.target.value})}>
-                  <option value="">اختر سائق</option>
-                  {drivers.map(d => <option key={d.id} value={d.id}>{d.full_name}</option>)}
-                </select>
-              </div>
+              <div><label style={st.label}>المركبة</label><select style={st.input} value={fuelForm.vehicle_id} onChange={e => setFuelForm({...fuelForm,vehicle_id:e.target.value})}><option value="">اختر مركبة</option>{vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
+              <div><label style={st.label}>السائق</label><select style={st.input} value={fuelForm.driver_id} onChange={e => setFuelForm({...fuelForm,driver_id:e.target.value})}><option value="">اختر سائق</option>{drivers.map(d => <option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
               <div><label style={st.label}>التاريخ</label><input type="date" style={st.input} value={fuelForm.date} onChange={e => setFuelForm({...fuelForm,date:e.target.value})} /></div>
               {[['liters','اللترات'],['cost_per_liter','سعر اللتر'],['odometer','قراءة العداد']].map(([key,label]) => (
                 <div key={key}><label style={st.label}>{label}</label><input type="number" style={st.input} value={fuelForm[key]} onChange={e => setFuelForm({...fuelForm,[key]:e.target.value})} /></div>
