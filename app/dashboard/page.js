@@ -102,40 +102,53 @@ export default function Dashboard() {
   const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/' }
 
   const totalFuelCost = fuelLogs.reduce((a, b) => a + (b.total_cost || 0), 0)
-  const statusColor = (s) => s === 'active' ? '#00ff88' : s === 'pending' ? '#ffb830' : '#ff3b5c'
+  const statusColor = (s) => s === 'active' ? '#16a34a' : s === 'pending' ? '#d97706' : '#dc2626'
+  const statusBg = (s) => s === 'active' ? '#f0fdf4' : s === 'pending' ? '#fffbeb' : '#fef2f2'
   const statusLabel = (s) => s === 'active' ? 'نشط' : s === 'pending' ? 'معلق' : 'غير نشط'
 
+  const C = {
+    orange: '#ff6b00',
+    orangeLight: '#fff7f2',
+    orangeBorder: 'rgba(255,107,0,0.15)',
+    white: '#fff',
+    gray: '#f8f9fa',
+    text: '#1a1a1a',
+    muted: '#888',
+    border: '#e8e8e8',
+  }
+
   const st = {
-    app: { minHeight: '100vh', background: '#080c14', fontFamily: 'Cairo, sans-serif', direction: 'rtl', display: 'flex' },
-    sidebar: { width: '220px', background: '#0d1521', borderLeft: '1px solid #1a2a3f', display: 'flex', flexDirection: 'column', padding: '20px 0', position: 'fixed', right: 0, top: 0, height: '100vh', zIndex: 10 },
-    logo: { padding: '0 20px 20px', borderBottom: '1px solid #1a2a3f', marginBottom: '16px' },
-    logoIcon: { width: '44px', height: '44px', background: 'linear-gradient(135deg, #00d4ff, #0066ff)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', marginBottom: '8px' },
-    navItem: (a) => ({ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 20px', cursor: 'pointer', fontSize: '13px', color: a ? '#00d4ff' : '#4a6a8a', background: a ? 'rgba(0,212,255,0.1)' : 'transparent', borderRight: a ? '3px solid #00d4ff' : '3px solid transparent' }),
-    main: { marginRight: '220px', flex: 1, padding: '24px' },
-    header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' },
-    title: { color: '#e8f4ff', fontSize: '20px', fontWeight: '700' },
-    btn: (c) => ({ background: c || '#00d4ff', color: c ? '#fff' : '#080c14', border: 'none', borderRadius: '8px', padding: '9px 16px', fontSize: '13px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer' }),
-    card: { background: '#0d1521', border: '1px solid #1a2a3f', borderRadius: '14px', padding: '20px' },
-    kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' },
+    app: { minHeight: '100vh', background: C.gray, fontFamily: 'Cairo, sans-serif', direction: 'rtl', display: 'flex', flexDirection: 'column' },
+    topbar: { background: C.white, borderBottom: `3px solid ${C.orange}`, padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 12px rgba(255,107,0,0.08)', position: 'sticky', top: 0, zIndex: 20 },
+    body: { display: 'flex', flex: 1 },
+    sidebar: { width: '220px', background: C.white, borderLeft: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', padding: '16px 0', position: 'sticky', top: '63px', height: 'calc(100vh - 63px)', overflowY: 'auto' },
+    navItem: (a) => ({ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 20px', cursor: 'pointer', fontSize: '13px', fontWeight: a ? '700' : '400', color: a ? C.orange : C.muted, background: a ? C.orangeLight : 'transparent', borderRight: a ? `3px solid ${C.orange}` : '3px solid transparent', transition: 'all 0.15s' }),
+    main: { flex: 1, padding: '24px', overflowX: 'auto' },
+    header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' },
+    title: { color: C.text, fontSize: '19px', fontWeight: '800' },
+    btn: (c, outline) => ({ background: outline ? C.white : (c || C.orange), color: outline ? (c || C.orange) : C.white, border: `2px solid ${c || C.orange}`, borderRadius: '9px', padding: '9px 18px', fontSize: '13px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer', transition: 'all 0.15s' }),
+    card: { background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
+    kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '20px' },
+    kpiCard: (c) => ({ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '20px', borderTop: `4px solid ${c}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }),
     table: { width: '100%', borderCollapse: 'collapse' },
-    th: { padding: '12px', textAlign: 'right', color: '#4a6a8a', fontSize: '12px', borderBottom: '1px solid #1a2a3f' },
-    td: { padding: '12px', color: '#e8f4ff', fontSize: '13px', borderBottom: '1px solid #111c2d' },
-    badge: (c) => ({ background: c + '20', color: c, padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }),
-    modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
-    modalBox: { background: '#0d1521', border: '1px solid #1a2a3f', borderRadius: '16px', padding: '30px', width: '560px', maxHeight: '90vh', overflowY: 'auto' },
-    input: { width: '100%', padding: '10px 14px', background: '#111c2d', border: '1px solid #1a2a3f', borderRadius: '8px', color: '#e8f4ff', fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box' },
-    label: { color: '#4a6a8a', fontSize: '12px', display: 'block', marginBottom: '6px' },
+    th: { padding: '12px 14px', textAlign: 'right', color: C.muted, fontSize: '12px', fontWeight: '600', borderBottom: `2px solid ${C.border}`, background: '#fafafa' },
+    td: { padding: '12px 14px', color: C.text, fontSize: '13px', borderBottom: `1px solid ${C.border}` },
+    badge: (s) => ({ background: statusBg(s), color: statusColor(s), padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', display: 'inline-block' }),
+    modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
+    modalBox: { background: C.white, borderRadius: '18px', padding: '32px', width: '580px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(0,0,0,0.15)' },
+    input: { width: '100%', padding: '10px 14px', background: '#fafafa', border: `1.5px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box' },
+    label: { color: '#555', fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '6px' },
     formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' },
-    sectionTitle: { color: '#00d4ff', fontSize: '13px', fontWeight: '700', margin: '16px 0 10px', borderBottom: '1px solid #1a2a3f', paddingBottom: '6px' },
-    thumb: { width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', cursor: 'pointer', border: '1px solid #1a2a3f' },
-    imgLink: { color: '#00d4ff', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline' },
+    sectionTitle: { color: C.orange, fontSize: '13px', fontWeight: '700', margin: '18px 0 10px', borderBottom: `2px solid ${C.orangeBorder}`, paddingBottom: '6px' },
+    thumb: { width: '38px', height: '38px', borderRadius: '8px', objectFit: 'cover', cursor: 'pointer', border: `1px solid ${C.border}` },
+    imgLink: { color: C.orange, fontSize: '12px', cursor: 'pointer', fontWeight: '600' },
   }
 
   const FileInput = ({ label, icon, onChange, file }) => (
     <div>
       <label style={st.label}>{icon} {label}</label>
-      <label style={{ width: '100%', padding: '10px', background: '#111c2d', border: `2px dashed ${file ? '#00d4ff' : '#1a2a3f'}`, borderRadius: '8px', color: file ? '#00d4ff' : '#4a6a8a', fontSize: '12px', cursor: 'pointer', textAlign: 'center', display: 'block', boxSizing: 'border-box' }}>
-        {file ? `✅ ${file.name}` : `اضغط لرفع ${label}`}
+      <label style={{ width: '100%', padding: '12px', background: file ? '#fff7f2' : '#fafafa', border: `2px dashed ${file ? C.orange : C.border}`, borderRadius: '8px', color: file ? C.orange : C.muted, fontSize: '12px', cursor: 'pointer', textAlign: 'center', display: 'block', boxSizing: 'border-box', fontWeight: '600' }}>
+        {file ? `✅ ${file.name}` : `📎 اضغط لرفع ${label}`}
         <input type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={e => onChange(e.target.files[0])} />
       </label>
     </div>
@@ -148,226 +161,240 @@ export default function Dashboard() {
       {/* Image Preview */}
       {previewImage && (
         <div style={{ ...st.modal, zIndex: 200 }} onClick={() => setPreviewImage(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#0d1521', borderRadius: '12px', padding: '16px', maxWidth: '90vw' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: '14px', padding: '16px', maxWidth: '90vw' }}>
             <img src={previewImage} style={{ maxWidth: '80vw', maxHeight: '80vh', borderRadius: '8px' }} alt="preview" />
             <div style={{ textAlign: 'center', marginTop: '12px' }}>
-              <button style={st.btn('#4a6a8a')} onClick={() => setPreviewImage(null)}>إغلاق</button>
+              <button style={st.btn('#888', true)} onClick={() => setPreviewImage(null)}>إغلاق</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Sidebar */}
-      <div style={st.sidebar}>
-        <div style={st.logo}>
-          <div style={st.logoIcon}>🚛</div>
-          <div style={{ color: '#e8f4ff', fontSize: '14px', fontWeight: '700' }}>أسطولي</div>
-          <div style={{ color: '#4a6a8a', fontSize: '11px' }}>إدارة المركبات</div>
+      {/* Top Bar */}
+      <div style={st.topbar}>
+        <img src="/logo-madinah.jpeg" alt="أمانة المدينة المنورة" style={{ height: '50px', objectFit: 'contain' }} />
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '15px', fontWeight: '900', color: C.orange }}>أسطول مشاريع نظافة المدينة المنورة</div>
+          <div style={{ fontSize: '11px', color: C.muted }}>Cleaning Fleet Management System</div>
         </div>
-        {[['dashboard','📊','لوحة التحكم'],['vehicles','🚛','المركبات'],['drivers','👤','السائقون'],['maintenance','🔧','الصيانة'],['fuel','⛽','الوقود']].map(([id,icon,label]) => (
-          <div key={id} style={st.navItem(activeTab === id)} onClick={() => setActiveTab(id)}>
-            <span>{icon}</span><span>{label}</span>
-          </div>
-        ))}
-        <div style={{ flex: 1 }} />
-        <div style={{ padding: '16px 20px', borderTop: '1px solid #1a2a3f' }}>
-          <button onClick={handleLogout} style={{ ...st.btn('#ff3b5c'), width: '100%' }}>تسجيل الخروج</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <img src="/logo-mag.jpeg" alt="MAG" style={{ height: '40px', objectFit: 'contain' }} />
+          <button onClick={handleLogout} style={st.btn('#dc2626', true)}>خروج</button>
         </div>
       </div>
 
-      {/* Main */}
-      <div style={st.main}>
-
-        {activeTab === 'dashboard' && (
-          <div>
-            <div style={st.header}><div style={st.title}>📊 لوحة التحكم</div></div>
-            <div style={st.kpiGrid}>
-              {[['🚛','المركبات',vehicles.length,'#00d4ff'],['👤','السائقون',drivers.length,'#00ff88'],['🔧','الصيانة',maintenance.length,'#ffb830'],['⛽','تكلفة الوقود',totalFuelCost.toFixed(0)+' ر.س','#ff6b35']].map(([icon,label,val,color]) => (
-                <div key={label} style={st.card}>
-                  <div style={{ color: '#4a6a8a', fontSize: '12px', marginBottom: '8px' }}>{icon} {label}</div>
-                  <div style={{ fontFamily: 'monospace', fontSize: '32px', fontWeight: '700', color }}>{val}</div>
-                </div>
-              ))}
+      <div style={st.body}>
+        {/* Sidebar */}
+        <div style={st.sidebar}>
+          {[['dashboard','📊','لوحة التحكم'],['vehicles','🚛','المركبات'],['drivers','👤','السائقون'],['maintenance','🔧','الصيانة'],['fuel','⛽','الوقود']].map(([id,icon,label]) => (
+            <div key={id} style={st.navItem(activeTab === id)} onClick={() => setActiveTab(id)}>
+              <span style={{ fontSize: '17px' }}>{icon}</span><span>{label}</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div style={st.card}>
-                <div style={{ color: '#e8f4ff', fontWeight: '700', marginBottom: '16px' }}>🚛 آخر المركبات</div>
-                {vehicles.slice(0,5).map(v => (
-                  <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #111c2d' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      {v.vehicle_image && <img src={v.vehicle_image} style={st.thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" />}
-                      <div>
-                        <div style={{ color: '#e8f4ff', fontSize: '13px' }}>{v.plate_number}</div>
-                        {v.vehicle_code && <div style={{ color: '#4a6a8a', fontSize: '11px' }}>{v.vehicle_code}</div>}
+          ))}
+        </div>
+
+        {/* Main */}
+        <div style={st.main}>
+
+          {/* Dashboard */}
+          {activeTab === 'dashboard' && (
+            <div>
+              <div style={st.header}><div style={st.title}>📊 لوحة التحكم</div></div>
+              <div style={st.kpiGrid}>
+                {[['🚛','المركبات',vehicles.length,'#ff6b00'],['👤','السائقون',drivers.length,'#16a34a'],['🔧','الصيانة',maintenance.length,'#d97706'],['⛽','تكلفة الوقود',totalFuelCost.toFixed(0)+' ر.س','#7c3aed']].map(([icon,label,val,color]) => (
+                  <div key={label} style={st.kpiCard(color)}>
+                    <div style={{ color: C.muted, fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>{icon} {label}</div>
+                    <div style={{ fontSize: '32px', fontWeight: '900', color }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={st.card}>
+                  <div style={{ color: C.text, fontWeight: '800', marginBottom: '16px', fontSize: '14px' }}>🚛 آخر المركبات</div>
+                  {vehicles.slice(0,5).map(v => (
+                    <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {v.vehicle_image && <img src={v.vehicle_image} style={st.thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" />}
+                        <div>
+                          <div style={{ color: C.text, fontSize: '13px', fontWeight: '600' }}>{v.plate_number}</div>
+                          {v.vehicle_code && <div style={{ color: C.muted, fontSize: '11px' }}>{v.vehicle_code}</div>}
+                        </div>
                       </div>
+                      <span style={st.badge(v.status)}>{statusLabel(v.status)}</span>
                     </div>
-                    <span style={st.badge(statusColor(v.status))}>{statusLabel(v.status)}</span>
-                  </div>
-                ))}
-                {vehicles.length === 0 && <div style={{ color: '#4a6a8a', fontSize: '13px' }}>لا توجد مركبات</div>}
+                  ))}
+                  {vehicles.length === 0 && <div style={{ color: C.muted, fontSize: '13px', textAlign: 'center', padding: '20px' }}>لا توجد مركبات</div>}
+                </div>
+                <div style={st.card}>
+                  <div style={{ color: C.text, fontWeight: '800', marginBottom: '16px', fontSize: '14px' }}>👤 آخر السائقين</div>
+                  {drivers.slice(0,5).map(d => (
+                    <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
+                      <div style={{ color: C.text, fontSize: '13px', fontWeight: '600' }}>{d.full_name}</div>
+                      <span style={st.badge(d.status)}>{statusLabel(d.status)}</span>
+                    </div>
+                  ))}
+                  {drivers.length === 0 && <div style={{ color: C.muted, fontSize: '13px', textAlign: 'center', padding: '20px' }}>لا يوجد سائقون</div>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Vehicles */}
+          {activeTab === 'vehicles' && (
+            <div>
+              <div style={st.header}>
+                <div style={st.title}>🚛 المركبات</div>
+                <button style={st.btn()} onClick={() => setShowVehicleForm(true)}>+ إضافة مركبة</button>
               </div>
               <div style={st.card}>
-                <div style={{ color: '#e8f4ff', fontWeight: '700', marginBottom: '16px' }}>👤 آخر السائقين</div>
-                {drivers.slice(0,5).map(d => (
-                  <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #111c2d' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      {d.iqama_image && <img src={d.iqama_image} style={st.thumb} onClick={() => setPreviewImage(d.iqama_image)} alt="" />}
-                      <div style={{ color: '#e8f4ff', fontSize: '13px' }}>{d.full_name}</div>
-                    </div>
-                    <span style={st.badge(statusColor(d.status))}>{statusLabel(d.status)}</span>
-                  </div>
-                ))}
-                {drivers.length === 0 && <div style={{ color: '#4a6a8a', fontSize: '13px' }}>لا يوجد سائقون</div>}
+                <table style={st.table}>
+                  <thead><tr>
+                    <th style={st.th}>صورة</th><th style={st.th}>رقم اللوحة</th><th style={st.th}>كود المركبة</th>
+                    <th style={st.th}>الماركة</th><th style={st.th}>الموديل</th><th style={st.th}>السنة</th>
+                    <th style={st.th}>الحالة</th><th style={st.th}>الاستمارة</th><th style={st.th}>حذف</th>
+                  </tr></thead>
+                  <tbody>
+                    {vehicles.map(v => (
+                      <tr key={v.id} style={{ transition: 'background 0.1s' }} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <td style={st.td}>{v.vehicle_image ? <img src={v.vehicle_image} style={st.thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" /> : '—'}</td>
+                        <td style={{ ...st.td, fontWeight: '700' }}>{v.plate_number}</td>
+                        <td style={st.td}>{v.vehicle_code || '—'}</td>
+                        <td style={st.td}>{v.brand}</td>
+                        <td style={st.td}>{v.model}</td>
+                        <td style={st.td}>{v.year}</td>
+                        <td style={st.td}><span style={st.badge(v.status)}>{statusLabel(v.status)}</span></td>
+                        <td style={st.td}>{v.istimara_image ? <span style={st.imgLink} onClick={() => setPreviewImage(v.istimara_image)}>عرض 📄</span> : '—'}</td>
+                        <td style={st.td}><button onClick={() => deleteVehicle(v.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '16px' }}>🗑️</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {vehicles.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد مركبات — اضغط إضافة مركبة</div>}
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {activeTab === 'vehicles' && (
-          <div>
-            <div style={st.header}>
-              <div style={st.title}>🚛 المركبات</div>
-              <button style={st.btn()} onClick={() => setShowVehicleForm(true)}>+ إضافة مركبة</button>
+          {/* Drivers */}
+          {activeTab === 'drivers' && (
+            <div>
+              <div style={st.header}>
+                <div style={st.title}>👤 السائقون</div>
+                <button style={st.btn()} onClick={() => setShowDriverForm(true)}>+ إضافة سائق</button>
+              </div>
+              <div style={st.card}>
+                <table style={st.table}>
+                  <thead><tr>
+                    <th style={st.th}>الاسم</th><th style={st.th}>الهوية</th><th style={st.th}>الجوال</th>
+                    <th style={st.th}>رقم الرخصة</th><th style={st.th}>انتهاء الرخصة</th>
+                    <th style={st.th}>الإقامة</th><th style={st.th}>الرخصة</th>
+                    <th style={st.th}>الحالة</th><th style={st.th}>حذف</th>
+                  </tr></thead>
+                  <tbody>
+                    {drivers.map(d => (
+                      <tr key={d.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <td style={{ ...st.td, fontWeight: '700' }}>{d.full_name}</td>
+                        <td style={st.td}>{d.national_id}</td>
+                        <td style={st.td}>{d.phone}</td>
+                        <td style={st.td}>{d.license_number}</td>
+                        <td style={st.td}>{d.license_expiry}</td>
+                        <td style={st.td}>{d.iqama_image ? <span style={st.imgLink} onClick={() => setPreviewImage(d.iqama_image)}>عرض 🪪</span> : '—'}</td>
+                        <td style={st.td}>{d.license_image ? <span style={st.imgLink} onClick={() => setPreviewImage(d.license_image)}>عرض 🚗</span> : '—'}</td>
+                        <td style={st.td}><span style={st.badge(d.status)}>{statusLabel(d.status)}</span></td>
+                        <td style={st.td}><button onClick={() => deleteDriver(d.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '16px' }}>🗑️</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {drivers.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا يوجد سائقون</div>}
+              </div>
             </div>
-            <div style={st.card}>
-              <table style={st.table}>
-                <thead><tr>
-                  <th style={st.th}>صورة</th><th style={st.th}>رقم اللوحة</th><th style={st.th}>كود المركبة</th>
-                  <th style={st.th}>الماركة</th><th style={st.th}>الموديل</th><th style={st.th}>السنة</th>
-                  <th style={st.th}>الحالة</th><th style={st.th}>الاستمارة</th><th style={st.th}>حذف</th>
-                </tr></thead>
-                <tbody>
-                  {vehicles.map(v => (
-                    <tr key={v.id}>
-                      <td style={st.td}>{v.vehicle_image ? <img src={v.vehicle_image} style={st.thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" /> : '—'}</td>
-                      <td style={st.td}>{v.plate_number}</td>
-                      <td style={st.td}>{v.vehicle_code || '—'}</td>
-                      <td style={st.td}>{v.brand}</td>
-                      <td style={st.td}>{v.model}</td>
-                      <td style={st.td}>{v.year}</td>
-                      <td style={st.td}><span style={st.badge(statusColor(v.status))}>{statusLabel(v.status)}</span></td>
-                      <td style={st.td}>{v.istimara_image ? <span style={st.imgLink} onClick={() => setPreviewImage(v.istimara_image)}>عرض 📄</span> : '—'}</td>
-                      <td style={st.td}><button onClick={() => deleteVehicle(v.id)} style={{ background: 'none', border: 'none', color: '#ff3b5c', cursor: 'pointer', fontSize: '16px' }}>🗑️</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {vehicles.length === 0 && <div style={{ color: '#4a6a8a', textAlign: 'center', padding: '40px' }}>لا توجد مركبات</div>}
-            </div>
-          </div>
-        )}
+          )}
 
-        {activeTab === 'drivers' && (
-          <div>
-            <div style={st.header}>
-              <div style={st.title}>👤 السائقون</div>
-              <button style={st.btn()} onClick={() => setShowDriverForm(true)}>+ إضافة سائق</button>
+          {/* Maintenance */}
+          {activeTab === 'maintenance' && (
+            <div>
+              <div style={st.header}>
+                <div style={st.title}>🔧 الصيانة</div>
+                <button style={st.btn()} onClick={() => setShowMaintenanceForm(true)}>+ إضافة صيانة</button>
+              </div>
+              <div style={st.card}>
+                <table style={st.table}>
+                  <thead><tr>
+                    <th style={st.th}>المركبة</th><th style={st.th}>النوع</th><th style={st.th}>الوصف</th>
+                    <th style={st.th}>التاريخ</th><th style={st.th}>التكلفة</th><th style={st.th}>الموعد القادم</th>
+                    <th style={st.th}>الحالة</th><th style={st.th}>حذف</th>
+                  </tr></thead>
+                  <tbody>
+                    {maintenance.map(m => (
+                      <tr key={m.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <td style={{ ...st.td, fontWeight: '700' }}>{m.vehicles?.plate_number}</td>
+                        <td style={st.td}>{m.type}</td>
+                        <td style={st.td}>{m.description}</td>
+                        <td style={st.td}>{m.date}</td>
+                        <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{m.cost} ر.س</span></td>
+                        <td style={st.td}>{m.next_date}</td>
+                        <td style={st.td}><span style={st.badge(m.status)}>{statusLabel(m.status)}</span></td>
+                        <td style={st.td}><button onClick={() => deleteMaintenance(m.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '16px' }}>🗑️</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {maintenance.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد سجلات صيانة</div>}
+              </div>
             </div>
-            <div style={st.card}>
-              <table style={st.table}>
-                <thead><tr>
-                  <th style={st.th}>الاسم</th><th style={st.th}>الهوية</th><th style={st.th}>الجوال</th>
-                  <th style={st.th}>رقم الرخصة</th><th style={st.th}>انتهاء الرخصة</th>
-                  <th style={st.th}>الإقامة</th><th style={st.th}>الرخصة</th>
-                  <th style={st.th}>الحالة</th><th style={st.th}>حذف</th>
-                </tr></thead>
-                <tbody>
-                  {drivers.map(d => (
-                    <tr key={d.id}>
-                      <td style={st.td}>{d.full_name}</td>
-                      <td style={st.td}>{d.national_id}</td>
-                      <td style={st.td}>{d.phone}</td>
-                      <td style={st.td}>{d.license_number}</td>
-                      <td style={st.td}>{d.license_expiry}</td>
-                      <td style={st.td}>{d.iqama_image ? <span style={st.imgLink} onClick={() => setPreviewImage(d.iqama_image)}>عرض 🪪</span> : '—'}</td>
-                      <td style={st.td}>{d.license_image ? <span style={st.imgLink} onClick={() => setPreviewImage(d.license_image)}>عرض 🚗</span> : '—'}</td>
-                      <td style={st.td}><span style={st.badge(statusColor(d.status))}>{statusLabel(d.status)}</span></td>
-                      <td style={st.td}><button onClick={() => deleteDriver(d.id)} style={{ background: 'none', border: 'none', color: '#ff3b5c', cursor: 'pointer', fontSize: '16px' }}>🗑️</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {drivers.length === 0 && <div style={{ color: '#4a6a8a', textAlign: 'center', padding: '40px' }}>لا يوجد سائقون</div>}
-            </div>
-          </div>
-        )}
+          )}
 
-        {activeTab === 'maintenance' && (
-          <div>
-            <div style={st.header}>
-              <div style={st.title}>🔧 الصيانة</div>
-              <button style={st.btn()} onClick={() => setShowMaintenanceForm(true)}>+ إضافة صيانة</button>
+          {/* Fuel */}
+          {activeTab === 'fuel' && (
+            <div>
+              <div style={st.header}>
+                <div style={st.title}>⛽ الوقود</div>
+                <button style={st.btn()} onClick={() => setShowFuelForm(true)}>+ إضافة تزود وقود</button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div style={st.kpiCard('#ff6b00')}>
+                  <div style={{ color: C.muted, fontSize: '12px', fontWeight: '600' }}>⛽ إجمالي التكلفة</div>
+                  <div style={{ fontSize: '28px', fontWeight: '900', color: '#ff6b00' }}>{totalFuelCost.toFixed(2)} ر.س</div>
+                </div>
+                <div style={st.kpiCard('#7c3aed')}>
+                  <div style={{ color: C.muted, fontSize: '12px', fontWeight: '600' }}>📋 عدد السجلات</div>
+                  <div style={{ fontSize: '28px', fontWeight: '900', color: '#7c3aed' }}>{fuelLogs.length}</div>
+                </div>
+              </div>
+              <div style={st.card}>
+                <table style={st.table}>
+                  <thead><tr>
+                    <th style={st.th}>المركبة</th><th style={st.th}>السائق</th><th style={st.th}>التاريخ</th>
+                    <th style={st.th}>اللترات</th><th style={st.th}>سعر اللتر</th><th style={st.th}>الإجمالي</th>
+                    <th style={st.th}>العداد</th><th style={st.th}>حذف</th>
+                  </tr></thead>
+                  <tbody>
+                    {fuelLogs.map(f => (
+                      <tr key={f.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <td style={{ ...st.td, fontWeight: '700' }}>{f.vehicles?.plate_number}</td>
+                        <td style={st.td}>{f.drivers?.full_name}</td>
+                        <td style={st.td}>{f.date}</td>
+                        <td style={st.td}>{f.liters}</td>
+                        <td style={st.td}>{f.cost_per_liter}</td>
+                        <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{f.total_cost} ر.س</span></td>
+                        <td style={st.td}>{f.odometer} كم</td>
+                        <td style={st.td}><button onClick={() => deleteFuel(f.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '16px' }}>🗑️</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {fuelLogs.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد سجلات وقود</div>}
+              </div>
             </div>
-            <div style={st.card}>
-              <table style={st.table}>
-                <thead><tr>
-                  <th style={st.th}>المركبة</th><th style={st.th}>النوع</th><th style={st.th}>الوصف</th>
-                  <th style={st.th}>التاريخ</th><th style={st.th}>التكلفة</th><th style={st.th}>الموعد القادم</th>
-                  <th style={st.th}>الحالة</th><th style={st.th}>حذف</th>
-                </tr></thead>
-                <tbody>
-                  {maintenance.map(m => (
-                    <tr key={m.id}>
-                      <td style={st.td}>{m.vehicles?.plate_number}</td>
-                      <td style={st.td}>{m.type}</td>
-                      <td style={st.td}>{m.description}</td>
-                      <td style={st.td}>{m.date}</td>
-                      <td style={st.td}>{m.cost} ر.س</td>
-                      <td style={st.td}>{m.next_date}</td>
-                      <td style={st.td}><span style={st.badge(statusColor(m.status))}>{statusLabel(m.status)}</span></td>
-                      <td style={st.td}><button onClick={() => deleteMaintenance(m.id)} style={{ background: 'none', border: 'none', color: '#ff3b5c', cursor: 'pointer', fontSize: '16px' }}>🗑️</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {maintenance.length === 0 && <div style={{ color: '#4a6a8a', textAlign: 'center', padding: '40px' }}>لا توجد سجلات صيانة</div>}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'fuel' && (
-          <div>
-            <div style={st.header}>
-              <div style={st.title}>⛽ الوقود</div>
-              <button style={st.btn()} onClick={() => setShowFuelForm(true)}>+ إضافة تزود وقود</button>
-            </div>
-            <div style={{ ...st.card, marginBottom: '16px', display: 'flex', gap: '32px' }}>
-              <div><div style={{ color: '#4a6a8a', fontSize: '12px' }}>إجمالي التكلفة</div><div style={{ color: '#ff6b35', fontSize: '24px', fontWeight: '700' }}>{totalFuelCost.toFixed(2)} ر.س</div></div>
-              <div><div style={{ color: '#4a6a8a', fontSize: '12px' }}>عدد السجلات</div><div style={{ color: '#00d4ff', fontSize: '24px', fontWeight: '700' }}>{fuelLogs.length}</div></div>
-            </div>
-            <div style={st.card}>
-              <table style={st.table}>
-                <thead><tr>
-                  <th style={st.th}>المركبة</th><th style={st.th}>السائق</th><th style={st.th}>التاريخ</th>
-                  <th style={st.th}>اللترات</th><th style={st.th}>سعر اللتر</th><th style={st.th}>الإجمالي</th>
-                  <th style={st.th}>العداد</th><th style={st.th}>حذف</th>
-                </tr></thead>
-                <tbody>
-                  {fuelLogs.map(f => (
-                    <tr key={f.id}>
-                      <td style={st.td}>{f.vehicles?.plate_number}</td>
-                      <td style={st.td}>{f.drivers?.full_name}</td>
-                      <td style={st.td}>{f.date}</td>
-                      <td style={st.td}>{f.liters}</td>
-                      <td style={st.td}>{f.cost_per_liter}</td>
-                      <td style={st.td}>{f.total_cost} ر.س</td>
-                      <td style={st.td}>{f.odometer} كم</td>
-                      <td style={st.td}><button onClick={() => deleteFuel(f.id)} style={{ background: 'none', border: 'none', color: '#ff3b5c', cursor: 'pointer', fontSize: '16px' }}>🗑️</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {fuelLogs.length === 0 && <div style={{ color: '#4a6a8a', textAlign: 'center', padding: '40px' }}>لا توجد سجلات وقود</div>}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Vehicle Modal */}
       {showVehicleForm && (
         <div style={st.modal}>
           <div style={st.modalBox}>
-            <div style={{ color: '#e8f4ff', fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>🚛 إضافة مركبة جديدة</div>
+            <div style={{ color: C.text, fontSize: '17px', fontWeight: '800', marginBottom: '4px' }}>🚛 إضافة مركبة جديدة</div>
             <div style={st.sectionTitle}>📋 البيانات الأساسية</div>
             <div style={st.formGrid}>
               {[['plate_number','رقم اللوحة'],['vehicle_code','كود المركبة'],['type','النوع'],['brand','الماركة'],['model','الموديل'],['year','السنة'],['color','اللون'],['fuel_type','نوع الوقود']].map(([key,label]) => (
@@ -389,8 +416,8 @@ export default function Dashboard() {
               <FileInput label="صورة الاستمارة" icon="📄" onChange={setIstamaraImage} file={istamaraImage} />
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button style={st.btn()} onClick={addVehicle} disabled={uploading}>{uploading ? 'جاري الرفع...' : 'حفظ'}</button>
-              <button style={st.btn('#4a6a8a')} onClick={() => setShowVehicleForm(false)}>إلغاء</button>
+              <button style={st.btn()} onClick={addVehicle} disabled={uploading}>{uploading ? '⏳ جاري الرفع...' : 'حفظ'}</button>
+              <button style={st.btn('#888', true)} onClick={() => setShowVehicleForm(false)}>إلغاء</button>
             </div>
           </div>
         </div>
@@ -400,19 +427,13 @@ export default function Dashboard() {
       {showDriverForm && (
         <div style={st.modal}>
           <div style={st.modalBox}>
-            <div style={{ color: '#e8f4ff', fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>👤 إضافة سائق جديد</div>
+            <div style={{ color: C.text, fontSize: '17px', fontWeight: '800', marginBottom: '4px' }}>👤 إضافة سائق جديد</div>
             <div style={st.sectionTitle}>📋 البيانات الأساسية</div>
             <div style={st.formGrid}>
               {[['full_name','الاسم الكامل'],['national_id','رقم الهوية'],['phone','رقم الجوال'],['license_number','رقم الرخصة']].map(([key,label]) => (
-                <div key={key}>
-                  <label style={st.label}>{label}</label>
-                  <input style={st.input} value={driverForm[key]} onChange={e => setDriverForm({...driverForm,[key]:e.target.value})} />
-                </div>
+                <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={driverForm[key]} onChange={e => setDriverForm({...driverForm,[key]:e.target.value})} /></div>
               ))}
-              <div>
-                <label style={st.label}>انتهاء الرخصة</label>
-                <input type="date" style={st.input} value={driverForm.license_expiry} onChange={e => setDriverForm({...driverForm,license_expiry:e.target.value})} />
-              </div>
+              <div><label style={st.label}>انتهاء الرخصة</label><input type="date" style={st.input} value={driverForm.license_expiry} onChange={e => setDriverForm({...driverForm,license_expiry:e.target.value})} /></div>
               <div>
                 <label style={st.label}>الحالة</label>
                 <select style={st.input} value={driverForm.status} onChange={e => setDriverForm({...driverForm,status:e.target.value})}>
@@ -426,8 +447,8 @@ export default function Dashboard() {
               <FileInput label="صورة الرخصة" icon="🚗" onChange={setLicenseImage} file={licenseImage} />
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button style={st.btn()} onClick={addDriver} disabled={uploading}>{uploading ? 'جاري الرفع...' : 'حفظ'}</button>
-              <button style={st.btn('#4a6a8a')} onClick={() => setShowDriverForm(false)}>إلغاء</button>
+              <button style={st.btn()} onClick={addDriver} disabled={uploading}>{uploading ? '⏳ جاري الرفع...' : 'حفظ'}</button>
+              <button style={st.btn('#888', true)} onClick={() => setShowDriverForm(false)}>إلغاء</button>
             </div>
           </div>
         </div>
@@ -437,8 +458,8 @@ export default function Dashboard() {
       {showMaintenanceForm && (
         <div style={st.modal}>
           <div style={st.modalBox}>
-            <div style={{ color: '#e8f4ff', fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>🔧 إضافة صيانة</div>
-            <div style={st.formGrid}>
+            <div style={{ color: C.text, fontSize: '17px', fontWeight: '800', marginBottom: '4px' }}>🔧 إضافة صيانة</div>
+            <div style={st.formGrid} style={{ marginTop: '16px' }}>
               <div>
                 <label style={st.label}>المركبة</label>
                 <select style={st.input} value={maintenanceForm.vehicle_id} onChange={e => setMaintenanceForm({...maintenanceForm,vehicle_id:e.target.value})}>
@@ -460,7 +481,7 @@ export default function Dashboard() {
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <button style={st.btn()} onClick={addMaintenance}>حفظ</button>
-              <button style={st.btn('#4a6a8a')} onClick={() => setShowMaintenanceForm(false)}>إلغاء</button>
+              <button style={st.btn('#888', true)} onClick={() => setShowMaintenanceForm(false)}>إلغاء</button>
             </div>
           </div>
         </div>
@@ -470,7 +491,7 @@ export default function Dashboard() {
       {showFuelForm && (
         <div style={st.modal}>
           <div style={st.modalBox}>
-            <div style={{ color: '#e8f4ff', fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>⛽ إضافة تزود وقود</div>
+            <div style={{ color: C.text, fontSize: '17px', fontWeight: '800', marginBottom: '16px' }}>⛽ إضافة تزود وقود</div>
             <div style={st.formGrid}>
               <div>
                 <label style={st.label}>المركبة</label>
@@ -493,7 +514,7 @@ export default function Dashboard() {
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <button style={st.btn()} onClick={addFuel}>حفظ</button>
-              <button style={st.btn('#4a6a8a')} onClick={() => setShowFuelForm(false)}>إلغاء</button>
+              <button style={st.btn('#888', true)} onClick={() => setShowFuelForm(false)}>إلغاء</button>
             </div>
           </div>
         </div>
