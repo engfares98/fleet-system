@@ -11,6 +11,9 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [currentRole, setCurrentRole] = useState('viewer')
+  const [currentUser, setCurrentUser] = useState(null)
+  const [userRoles, setUserRoles] = useState([])
 
   const [vehicleSearch, setVehicleSearch] = useState('')
   const [driverSearch, setDriverSearch] = useState('')
@@ -51,24 +54,28 @@ export default function Dashboard() {
 
   const checkAuth = async () => {
     const { data } = await supabase.auth.getSession()
-    if (!data.session) window.location.href = '/'
+    if (!data.session) { window.location.href = '/'; return }
+    setCurrentUser(data.session.user)
+    const { data: roleData } = await supabase.from('user_roles').select('*').eq('user_id', data.session.user.id).single()
+    setCurrentRole(roleData?.role || 'admin')
   }
 
   const fetchData = async () => {
-    const [v, d, m, f] = await Promise.all([
+    const [v, d, m, f, ur] = await Promise.all([
       supabase.from('vehicles').select('*').order('created_at', { ascending: false }),
       supabase.from('drivers').select('*').order('created_at', { ascending: false }),
       supabase.from('maintenance').select('*, vehicles(plate_number)').order('created_at', { ascending: false }),
       supabase.from('fuel_logs').select('*, vehicles(plate_number), drivers(full_name)').order('created_at', { ascending: false }),
+      supabase.from('user_roles').select('*').order('created_at', { ascending: false }),
     ])
     setVehicles(v.data || []); setDrivers(d.data || [])
     setMaintenance(m.data || []); setFuelLogs(f.data || [])
+    setUserRoles(ur.data || [])
   }
 
   const daysUntil = (dateStr) => {
     if (!dateStr) return null
-    const diff = Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24))
-    return diff
+    return Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24))
   }
 
   const getAlerts = () => {
@@ -76,17 +83,13 @@ export default function Dashboard() {
     drivers.forEach(d => {
       if (d.license_expiry) {
         const days = daysUntil(d.license_expiry)
-        if (days !== null && days <= 60) {
-          alerts.push({ id: `lic-${d.id}`, type: days < 0 ? 'expired' : days <= 14 ? 'critical' : days <= 30 ? 'warning' : 'info', icon: '🪪', title: `رخصة قيادة: ${d.full_name}`, detail: days < 0 ? `منتهية منذ ${Math.abs(days)} يوم` : `تنتهي خلال ${days} يوم`, days })
-        }
+        if (days !== null && days <= 60) alerts.push({ id: `lic-${d.id}`, type: days < 0 ? 'expired' : days <= 14 ? 'critical' : days <= 30 ? 'warning' : 'info', icon: '🪪', title: `رخصة: ${d.full_name}`, detail: days < 0 ? `منتهية منذ ${Math.abs(days)} يوم` : `تنتهي خلال ${days} يوم`, days })
       }
     })
     maintenance.forEach(m => {
       if (m.next_date) {
         const days = daysUntil(m.next_date)
-        if (days !== null && days <= 30) {
-          alerts.push({ id: `maint-${m.id}`, type: days < 0 ? 'expired' : days <= 7 ? 'critical' : 'warning', icon: '🔧', title: `صيانة: ${m.vehicles?.plate_number || ''}`, detail: days < 0 ? `تأخر ${Math.abs(days)} يوم` : `خلال ${days} يوم`, days })
-        }
+        if (days !== null && days <= 30) alerts.push({ id: `maint-${m.id}`, type: days < 0 ? 'expired' : days <= 7 ? 'critical' : 'warning', icon: '🔧', title: `صيانة: ${m.vehicles?.plate_number || ''}`, detail: days < 0 ? `تأخر ${Math.abs(days)} يوم` : `خلال ${days} يوم`, days })
       }
     })
     return alerts.sort((a, b) => a.days - b.days)
@@ -95,48 +98,20 @@ export default function Dashboard() {
   const alerts = getAlerts()
   const criticalAlerts = alerts.filter(a => a.type === 'expired' || a.type === 'critical')
 
-  // Excel export
   const exportToCSV = (data, filename) => {
     if (!data || data.length === 0) return
     const headers = Object.keys(data[0])
-    const csvContent = [
-      headers.join(','),
-      ...data.map(row => headers.map(h => `"${(row[h] || '').toString().replace(/"/g, '""')}"`).join(','))
-    ].join('\n')
+    const csvContent = [headers.join(','), ...data.map(row => headers.map(h => `"${(row[h] || '').toString().replace(/"/g, '""')}"`).join(','))].join('\n')
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = filename + '.csv'; a.click()
     URL.revokeObjectURL(url)
   }
 
-  const exportVehicles = () => exportToCSV(vehicles.map(v => ({
-    'رقم اللوحة': v.plate_number || '', 'كود المركبة': v.vehicle_code || '',
-    'النوع': v.type || '', 'الماركة': v.brand || '', 'الموديل': v.model || '',
-    'السنة': v.year || '', 'اللون': v.color || '', 'نوع الوقود': v.fuel_type || '',
-    'الحالة': v.status === 'active' ? 'نشط' : 'غير نشط',
-    'حالة التجهيز': v.preparation_status === 'ready' ? 'جاهزة' : v.preparation_status === 'in_progress' ? 'قيد التجهيز' : 'غير جاهزة'
-  })), 'المركبات')
-
-  const exportDrivers = () => exportToCSV(drivers.map(d => ({
-    'الاسم': d.full_name || '', 'رقم الهوية': d.national_id || '',
-    'رقم الجواز': d.passport_number || '', 'الجوال': d.phone || '',
-    'رقم الرخصة': d.license_number || '', 'انتهاء الرخصة': d.license_expiry || '',
-    'الحالة': d.status === 'active' ? 'نشط' : 'غير نشط'
-  })), 'السائقون')
-
-  const exportMaintenance = () => exportToCSV(maintenance.map(m => ({
-    'المركبة': m.vehicles?.plate_number || '', 'النوع': m.type || '',
-    'الوصف': m.description || '', 'التاريخ': m.date || '',
-    'التكلفة': m.cost || '', 'الموعد القادم': m.next_date || '',
-    'الحالة': m.status === 'active' ? 'مكتمل' : m.status === 'pending' ? 'معلق' : 'ملغي'
-  })), 'الصيانة')
-
-  const exportFuel = () => exportToCSV(fuelLogs.map(f => ({
-    'المركبة': f.vehicles?.plate_number || '', 'السائق': f.drivers?.full_name || '',
-    'التاريخ': f.date || '', 'اللترات': f.liters || '',
-    'سعر اللتر': f.cost_per_liter || '', 'الإجمالي': f.total_cost || '',
-    'قراءة العداد': f.odometer || ''
-  })), 'الوقود')
+  const exportVehicles = () => exportToCSV(vehicles.map(v => ({ 'رقم اللوحة': v.plate_number || '', 'كود المركبة': v.vehicle_code || '', 'النوع': v.type || '', 'الماركة': v.brand || '', 'الموديل': v.model || '', 'السنة': v.year || '', 'اللون': v.color || '', 'نوع الوقود': v.fuel_type || '', 'الحالة': v.status === 'active' ? 'نشط' : 'غير نشط', 'حالة التجهيز': v.preparation_status === 'ready' ? 'جاهزة' : v.preparation_status === 'in_progress' ? 'قيد التجهيز' : 'غير جاهزة' })), 'المركبات')
+  const exportDrivers = () => exportToCSV(drivers.map(d => ({ 'الاسم': d.full_name || '', 'رقم الهوية': d.national_id || '', 'رقم الجواز': d.passport_number || '', 'الجوال': d.phone || '', 'رقم الرخصة': d.license_number || '', 'انتهاء الرخصة': d.license_expiry || '', 'الحالة': d.status === 'active' ? 'نشط' : 'غير نشط' })), 'السائقون')
+  const exportMaintenance = () => exportToCSV(maintenance.map(m => ({ 'المركبة': m.vehicles?.plate_number || '', 'النوع': m.type || '', 'الوصف': m.description || '', 'التاريخ': m.date || '', 'التكلفة': m.cost || '', 'الموعد القادم': m.next_date || '', 'الحالة': m.status === 'active' ? 'مكتمل' : m.status === 'pending' ? 'معلق' : 'ملغي' })), 'الصيانة')
+  const exportFuel = () => exportToCSV(fuelLogs.map(f => ({ 'المركبة': f.vehicles?.plate_number || '', 'السائق': f.drivers?.full_name || '', 'التاريخ': f.date || '', 'اللترات': f.liters || '', 'سعر اللتر': f.cost_per_liter || '', 'الإجمالي': f.total_cost || '', 'قراءة العداد': f.odometer || '' })), 'الوقود')
 
   const uploadFile = async (file, folder) => {
     if (!file) return null
@@ -210,10 +185,22 @@ export default function Dashboard() {
     await supabase.from('vehicles').update({ preparation_status: val }).eq('id', id); fetchData()
   }
 
-  const deleteVehicle = async (id) => { await supabase.from('vehicles').delete().eq('id', id); fetchData() }
-  const deleteDriver = async (id) => { await supabase.from('drivers').delete().eq('id', id); fetchData() }
-  const deleteMaintenance = async (id) => { await supabase.from('maintenance').delete().eq('id', id); fetchData() }
-  const deleteFuel = async (id) => { await supabase.from('fuel_logs').delete().eq('id', id); fetchData() }
+  const updateUserRole = async (userId, newRole) => {
+    await supabase.from('user_roles').update({ role: newRole }).eq('user_id', userId); fetchData()
+  }
+
+  const deleteUserRole = async (userId) => {
+    if (!confirm('هل أنت متأكد؟')) return
+    await supabase.from('user_roles').delete().eq('user_id', userId); fetchData()
+  }
+
+  const canEdit = currentRole === 'admin' || currentRole === 'editor'
+  const canDelete = currentRole === 'admin'
+
+  const deleteVehicle = async (id) => { if (!canDelete) return; await supabase.from('vehicles').delete().eq('id', id); fetchData() }
+  const deleteDriver = async (id) => { if (!canDelete) return; await supabase.from('drivers').delete().eq('id', id); fetchData() }
+  const deleteMaintenance = async (id) => { if (!canDelete) return; await supabase.from('maintenance').delete().eq('id', id); fetchData() }
+  const deleteFuel = async (id) => { if (!canDelete) return; await supabase.from('fuel_logs').delete().eq('id', id); fetchData() }
   const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/' }
 
   const totalFuelCost = fuelLogs.reduce((a, b) => a + (b.total_cost || 0), 0)
@@ -228,35 +215,21 @@ export default function Dashboard() {
   const statusLabel = (s) => s === 'active' ? 'نشط' : s === 'pending' ? 'معلق' : 'غير نشط'
   const prepColor = (s) => s === 'ready' ? '#16a34a' : s === 'in_progress' ? '#d97706' : '#dc2626'
   const prepBg = (s) => s === 'ready' ? '#f0fdf4' : s === 'in_progress' ? '#fffbeb' : '#fef2f2'
-  const alertColor = (type) => type === 'expired' ? '#dc2626' : type === 'critical' ? '#ea580c' : type === 'warning' ? '#d97706' : '#2563eb'
-  const alertBg = (type) => type === 'expired' ? '#fef2f2' : type === 'critical' ? '#fff7ed' : type === 'warning' ? '#fffbeb' : '#eff6ff'
+  const alertColor = (t) => t === 'expired' ? '#dc2626' : t === 'critical' ? '#ea580c' : t === 'warning' ? '#d97706' : '#2563eb'
+  const alertBg = (t) => t === 'expired' ? '#fef2f2' : t === 'critical' ? '#fff7ed' : t === 'warning' ? '#fffbeb' : '#eff6ff'
+  const roleLabel = (r) => r === 'admin' ? '👑 مدير' : r === 'editor' ? '✏️ محرر' : '👁️ مشاهد'
+  const roleColor = (r) => r === 'admin' ? '#7c3aed' : r === 'editor' ? '#ff6b00' : '#16a34a'
+  const roleBg = (r) => r === 'admin' ? '#f5f3ff' : r === 'editor' ? '#fff7f2' : '#f0fdf4'
 
-  const filteredVehicles = vehicles.filter(v =>
-    (v.plate_number || '').includes(vehicleSearch) || (v.vehicle_code || '').includes(vehicleSearch) ||
-    (v.brand || '').includes(vehicleSearch) || (v.model || '').includes(vehicleSearch)
-  )
-  const filteredDrivers = drivers.filter(d =>
-    (d.full_name || '').includes(driverSearch) || (d.national_id || '').includes(driverSearch) ||
-    (d.passport_number || '').includes(driverSearch) || (d.phone || '').includes(driverSearch)
-  )
+  const filteredVehicles = vehicles.filter(v => (v.plate_number || '').includes(vehicleSearch) || (v.vehicle_code || '').includes(vehicleSearch) || (v.brand || '').includes(vehicleSearch) || (v.model || '').includes(vehicleSearch))
+  const filteredDrivers = drivers.filter(d => (d.full_name || '').includes(driverSearch) || (d.national_id || '').includes(driverSearch) || (d.passport_number || '').includes(driverSearch) || (d.phone || '').includes(driverSearch))
 
-  // Vehicle type breakdown
-  const vehicleTypes = vehicles.reduce((acc, v) => {
-    const key = v.preparation_status || 'not_ready'
-    acc[key] = (acc[key] || 0) + 1
-    return acc
-  }, {})
-
-  // Fuel by vehicle (top 5)
-  const fuelByVehicle = fuelLogs.reduce((acc, f) => {
-    const key = f.vehicles?.plate_number || 'غير محدد'
-    acc[key] = (acc[key] || 0) + (Number(f.total_cost) || 0)
-    return acc
-  }, {})
+  const vehicleTypes = vehicles.reduce((acc, v) => { const key = v.preparation_status || 'not_ready'; acc[key] = (acc[key] || 0) + 1; return acc }, {})
+  const fuelByVehicle = fuelLogs.reduce((acc, f) => { const key = f.vehicles?.plate_number || 'غير محدد'; acc[key] = (acc[key] || 0) + (Number(f.total_cost) || 0); return acc }, {})
   const topFuelVehicles = Object.entries(fuelByVehicle).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   const C = { orange: '#ff6b00', orangeLight: '#fff7f2', white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8' }
-  const navItems = [['dashboard','📊','لوحة التحكم'],['vehicles','🚛','المركبات'],['drivers','👤','السائقون'],['maintenance','🔧','الصيانة'],['fuel','⛽','الوقود'],['reports','📈','التقارير'],['alerts','🔔','التنبيهات']]
+  const navItems = [['dashboard','📊','لوحة التحكم'],['vehicles','🚛','المركبات'],['drivers','👤','السائقون'],['maintenance','🔧','الصيانة'],['fuel','⛽','الوقود'],['reports','📈','التقارير'],['alerts','🔔','التنبيهات'],['users','👥','المستخدمون']]
 
   const st = {
     input: { width: '100%', padding: '10px 14px', background: '#fafafa', border: `1.5px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box' },
@@ -309,7 +282,7 @@ export default function Dashboard() {
             <span style={{ fontSize: '12px', fontWeight: '700', color }}>{val.toFixed(0)}</span>
           </div>
           <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${maxVal > 0 ? (val / maxVal) * 100 : 0}%`, background: color, borderRadius: '4px', transition: 'width 1s ease' }} />
+            <div style={{ height: '100%', width: `${maxVal > 0 ? (val / maxVal) * 100 : 0}%`, background: color, borderRadius: '4px' }} />
           </div>
         </div>
       ))}
@@ -327,9 +300,7 @@ export default function Dashboard() {
         <div style={{ ...st.modal, zIndex: 200 }} onClick={() => setPreviewImage(null)}>
           <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: '14px', padding: '16px', maxWidth: '90vw' }}>
             <img src={previewImage} style={{ maxWidth: '80vw', maxHeight: '80vh', borderRadius: '8px' }} alt="preview" />
-            <div style={{ textAlign: 'center', marginTop: '12px' }}>
-              <button style={st.btn('#888', true)} onClick={() => setPreviewImage(null)}>إغلاق</button>
-            </div>
+            <div style={{ textAlign: 'center', marginTop: '12px' }}><button style={st.btn('#888', true)} onClick={() => setPreviewImage(null)}>إغلاق</button></div>
           </div>
         </div>
       )}
@@ -344,6 +315,7 @@ export default function Dashboard() {
         </div>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: isMobile ? '11px' : '15px', fontWeight: '900', color: C.orange }}>{isMobile ? 'أسطول نظافة المدينة' : 'أسطول مشاريع نظافة المدينة المنورة'}</div>
+          {!isMobile && <div style={{ fontSize: '11px', color: C.muted }}>صلاحيتك: <span style={{ color: roleColor(currentRole), fontWeight: '700' }}>{roleLabel(currentRole)}</span></div>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {criticalAlerts.length > 0 && (
@@ -367,12 +339,14 @@ export default function Dashboard() {
             </div>
           )}
           {navItems.map(([id, icon, label]) => (
-            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === id ? '700' : '400', color: activeTab === id ? C.orange : C.muted, background: activeTab === id ? C.orangeLight : 'transparent', borderRight: activeTab === id ? `3px solid ${C.orange}` : '3px solid transparent', position: 'relative' }}
-              onClick={() => { setActiveTab(id); if (isMobile) setSidebarOpen(false) }}>
-              <span style={{ fontSize: '17px' }}>{icon}</span>
-              <span>{label}</span>
-              {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ marginRight: 'auto', background: '#dc2626', color: '#fff', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: '700' }}>{criticalAlerts.length}</span>}
-            </div>
+            (!['users'].includes(id) || currentRole === 'admin') && (
+              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === id ? '700' : '400', color: activeTab === id ? C.orange : C.muted, background: activeTab === id ? C.orangeLight : 'transparent', borderRight: activeTab === id ? `3px solid ${C.orange}` : '3px solid transparent', position: 'relative' }}
+                onClick={() => { setActiveTab(id); if (isMobile) setSidebarOpen(false) }}>
+                <span style={{ fontSize: '17px' }}>{icon}</span>
+                <span>{label}</span>
+                {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ marginRight: 'auto', background: '#dc2626', color: '#fff', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: '700' }}>{criticalAlerts.length}</span>}
+              </div>
+            )
           ))}
           <div style={{ flex: 1 }} />
           <div style={{ padding: '16px 20px', borderTop: `1px solid ${C.border}` }}>
@@ -429,33 +403,90 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Users Management */}
+          {activeTab === 'users' && currentRole === 'admin' && (
+            <div>
+              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>👥 إدارة المستخدمين</div>
+
+              {/* Role cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
+                {[['admin','👑 مدير','صلاحيات كاملة','#7c3aed'],['editor','✏️ محرر','إضافة وتعديل فقط','#ff6b00'],['viewer','👁️ مشاهد','مشاهدة فقط','#16a34a']].map(([role,label,desc,color]) => (
+                  <div key={role} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', borderTop: `3px solid ${color}` }}>
+                    <div style={{ fontWeight: '700', color, marginBottom: '4px' }}>{label}</div>
+                    <div style={{ fontSize: '12px', color: C.muted }}>{desc}</div>
+                    <div style={{ fontSize: '20px', fontWeight: '900', color, marginTop: '8px' }}>{userRoles.filter(u => u.role === role).length}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* How to add user */}
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+                <div style={{ fontWeight: '700', color: '#1d4ed8', marginBottom: '8px' }}>💡 كيف تضيف مستخدم جديد؟</div>
+                <div style={{ fontSize: '13px', color: '#1e40af' }}>
+                  1. روح Supabase ← Authentication ← Users ← Add User<br/>
+                  2. أدخل البريد الإلكتروني وكلمة المرور<br/>
+                  3. بعد إنشاء الحساب، غيّر صلاحيته من الجدول أدناه
+                </div>
+              </div>
+
+              {/* Users table */}
+              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr>
+                    <th style={st.th}>المستخدم</th>
+                    <th style={st.th}>الصلاحية الحالية</th>
+                    <th style={st.th}>تغيير الصلاحية</th>
+                    <th style={st.th}>حذف</th>
+                  </tr></thead>
+                  <tbody>
+                    {userRoles.map(u => (
+                      <tr key={u.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <td style={st.td}>
+                          <div style={{ fontWeight: '700' }}>{u.full_name || 'مستخدم'}</div>
+                          <div style={{ fontSize: '11px', color: C.muted }}>{u.user_id?.substring(0, 16)}...</div>
+                        </td>
+                        <td style={st.td}>
+                          <span style={{ background: roleBg(u.role), color: roleColor(u.role), padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' }}>{roleLabel(u.role)}</span>
+                        </td>
+                        <td style={st.td}>
+                          {u.user_id !== currentUser?.id ? (
+                            <select value={u.role} onChange={e => updateUserRole(u.user_id, e.target.value)} style={{ ...st.input, width: 'auto', padding: '6px 10px', fontSize: '12px' }}>
+                              <option value="admin">👑 مدير</option>
+                              <option value="editor">✏️ محرر</option>
+                              <option value="viewer">👁️ مشاهد</option>
+                            </select>
+                          ) : <span style={{ color: C.muted, fontSize: '12px' }}>أنت</span>}
+                        </td>
+                        <td style={st.td}>
+                          {u.user_id !== currentUser?.id ? (
+                            <button onClick={() => deleteUserRole(u.user_id)} style={st.deleteBtn}>🗑️</button>
+                          ) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {userRoles.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا يوجد مستخدمون</div>}
+              </div>
+            </div>
+          )}
+
           {/* Reports */}
           {activeTab === 'reports' && (
             <div>
               <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>📈 التقارير والإحصائيات</div>
-
-              {/* KPI Summary */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[
-                  ['🚛', 'إجمالي المركبات', vehicles.length, '#ff6b00'],
-                  ['✅', 'مركبات نشطة', activeVehicles, '#16a34a'],
-                  ['🟢', 'مركبات جاهزة', readyVehicles, '#16a34a'],
-                  ['👤', 'إجمالي السائقين', drivers.length, '#2563eb'],
-                  ['👍', 'سائقون نشطون', activeDrivers, '#16a34a'],
-                  ['🔔', 'تنبيهات نشطة', alerts.length, '#dc2626'],
-                ].map(([icon, label, val, color]) => (
+                {[['🚛','إجمالي المركبات',vehicles.length,'#ff6b00'],['✅','مركبات نشطة',activeVehicles,'#16a34a'],['🟢','مركبات جاهزة',readyVehicles,'#16a34a'],['👤','إجمالي السائقين',drivers.length,'#2563eb'],['👍','سائقون نشطون',activeDrivers,'#16a34a'],['🔔','تنبيهات نشطة',alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
                   <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', borderTop: `3px solid ${color}` }}>
                     <div style={{ color: C.muted, fontSize: '11px', marginBottom: '6px' }}>{icon} {label}</div>
                     <div style={{ fontSize: '26px', fontWeight: '900', color }}>{val}</div>
                   </div>
                 ))}
               </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                {/* Fuel report */}
                 <div style={st.card}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ fontWeight: '800', fontSize: '14px' }}>⛽ تقرير الوقود</div>
+                    <div style={{ fontWeight: '800' }}>⛽ تقرير الوقود</div>
                     <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>📥 تصدير</button>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
@@ -471,11 +502,9 @@ export default function Dashboard() {
                   <div style={{ fontWeight: '700', fontSize: '12px', marginBottom: '10px', color: C.muted }}>أعلى 5 مركبات استهلاكاً</div>
                   <BarChart data={topFuelVehicles} maxVal={topFuelVehicles[0]?.[1] || 1} color={C.orange} />
                 </div>
-
-                {/* Maintenance report */}
                 <div style={st.card}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ fontWeight: '800', fontSize: '14px' }}>🔧 تقرير الصيانة</div>
+                    <div style={{ fontWeight: '800' }}>🔧 تقرير الصيانة</div>
                     <button onClick={exportMaintenance} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>📥 تصدير</button>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
@@ -488,52 +517,31 @@ export default function Dashboard() {
                       <div style={{ fontSize: '11px', color: C.muted }}>صيانة مكتملة</div>
                     </div>
                   </div>
-                  <div style={{ fontWeight: '700', fontSize: '12px', marginBottom: '10px', color: C.muted }}>حالة الصيانة</div>
-                  <BarChart
-                    data={[
-                      ['مكتملة', maintenance.filter(m => m.status === 'active').length],
-                      ['معلقة', maintenance.filter(m => m.status === 'pending').length],
-                      ['ملغاة', maintenance.filter(m => m.status === 'inactive').length],
-                    ]}
-                    maxVal={maintenance.length || 1}
-                    color="#d97706"
-                  />
+                  <BarChart data={[['مكتملة',maintenance.filter(m=>m.status==='active').length],['معلقة',maintenance.filter(m=>m.status==='pending').length],['ملغاة',maintenance.filter(m=>m.status==='inactive').length]]} maxVal={maintenance.length||1} color="#d97706" />
                 </div>
               </div>
-
-              {/* Vehicle status */}
               <div style={st.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div style={{ fontWeight: '800', fontSize: '14px' }}>🚛 تقرير المركبات</div>
-                  <button onClick={exportVehicles} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>📥 تصدير Excel</button>
+                  <div style={{ fontWeight: '800' }}>🚛 تقرير المركبات</div>
+                  <button onClick={exportVehicles} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>📥 تصدير</button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px' }}>
-                  <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '28px', fontWeight: '900', color: '#16a34a' }}>{readyVehicles}</div>
-                    <div style={{ fontSize: '12px', color: C.muted }}>✅ جاهزة</div>
-                    <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: '700' }}>{vehicles.length > 0 ? ((readyVehicles/vehicles.length)*100).toFixed(0) : 0}%</div>
-                  </div>
-                  <div style={{ background: '#fffbeb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '28px', fontWeight: '900', color: '#d97706' }}>{vehicleTypes['in_progress'] || 0}</div>
-                    <div style={{ fontSize: '12px', color: C.muted }}>🔄 قيد التجهيز</div>
-                    <div style={{ fontSize: '11px', color: '#d97706', fontWeight: '700' }}>{vehicles.length > 0 ? (((vehicleTypes['in_progress']||0)/vehicles.length)*100).toFixed(0) : 0}%</div>
-                  </div>
-                  <div style={{ background: '#fef2f2', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '28px', fontWeight: '900', color: '#dc2626' }}>{vehicleTypes['not_ready'] || 0}</div>
-                    <div style={{ fontSize: '12px', color: C.muted }}>❌ غير جاهزة</div>
-                    <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700' }}>{vehicles.length > 0 ? (((vehicleTypes['not_ready']||0)/vehicles.length)*100).toFixed(0) : 0}%</div>
-                  </div>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
+                  {[['جاهزة ✅',readyVehicles,'#16a34a'],['قيد التجهيز 🔄',vehicleTypes['in_progress']||0,'#d97706'],['غير جاهزة ❌',vehicleTypes['not_ready']||0,'#dc2626']].map(([label,val,color]) => (
+                    <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '26px', fontWeight: '900', color }}>{val}</div>
+                      <div style={{ fontSize: '12px', color: C.muted }}>{label}</div>
+                      <div style={{ fontSize: '11px', color, fontWeight: '700' }}>{vehicles.length > 0 ? ((val/vehicles.length)*100).toFixed(0) : 0}%</div>
+                    </div>
+                  ))}
                 </div>
               </div>
-
-              {/* Export all */}
               <div style={{ ...st.card, marginTop: '16px' }}>
-                <div style={{ fontWeight: '800', fontSize: '14px', marginBottom: '16px' }}>📥 تصدير البيانات</div>
+                <div style={{ fontWeight: '800', marginBottom: '16px' }}>📥 تصدير البيانات</div>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '10px' }}>
-                  <button onClick={exportVehicles} style={{ ...st.btn('#ff6b00'), textAlign: 'center', padding: '12px' }}>🚛 المركبات</button>
-                  <button onClick={exportDrivers} style={{ ...st.btn('#2563eb'), textAlign: 'center', padding: '12px' }}>👤 السائقون</button>
-                  <button onClick={exportMaintenance} style={{ ...st.btn('#d97706'), textAlign: 'center', padding: '12px' }}>🔧 الصيانة</button>
-                  <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), textAlign: 'center', padding: '12px' }}>⛽ الوقود</button>
+                  <button onClick={exportVehicles} style={{ ...st.btn('#ff6b00'), padding: '12px' }}>🚛 المركبات</button>
+                  <button onClick={exportDrivers} style={{ ...st.btn('#2563eb'), padding: '12px' }}>👤 السائقون</button>
+                  <button onClick={exportMaintenance} style={{ ...st.btn('#d97706'), padding: '12px' }}>🔧 الصيانة</button>
+                  <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '12px' }}>⛽ الوقود</button>
                 </div>
               </div>
             </div>
@@ -547,7 +555,6 @@ export default function Dashboard() {
                 <div style={{ ...st.card, textAlign: 'center', padding: '60px' }}>
                   <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
                   <div style={{ fontSize: '16px', fontWeight: '700', color: '#16a34a' }}>لا توجد تنبيهات</div>
-                  <div style={{ color: C.muted, fontSize: '13px', marginTop: '8px' }}>كل الرخص والمواعيد سليمة</div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -558,7 +565,7 @@ export default function Dashboard() {
                         <div style={{ fontWeight: '700', color: alertColor(a.type), fontSize: '14px' }}>{a.title}</div>
                         <div style={{ color: C.muted, fontSize: '12px', marginTop: '4px' }}>{a.detail}</div>
                       </div>
-                      <div style={{ background: alertColor(a.type), color: '#fff', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                      <div style={{ background: alertColor(a.type), color: '#fff', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '700' }}>
                         {a.type === 'expired' ? 'منتهي' : a.type === 'critical' ? 'حرج' : a.type === 'warning' ? 'تحذير' : 'تنبيه'}
                       </div>
                     </div>
@@ -573,7 +580,7 @@ export default function Dashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🚛 المركبات ({filteredVehicles.length})</div>
-                <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowVehicleForm(true)}>+ إضافة</button>
+                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowVehicleForm(true)}>+ إضافة</button>}
               </div>
               <input style={{ ...st.input, marginBottom: '16px' }} placeholder="🔍 بحث برقم اللوحة، الكود، الماركة..." value={vehicleSearch} onChange={e => setVehicleSearch(e.target.value)} />
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
@@ -582,7 +589,9 @@ export default function Dashboard() {
                     <th style={st.th}>صورة</th><th style={st.th}>اللوحة</th><th style={st.th}>الكود</th>
                     {!isMobile && <><th style={st.th}>الماركة</th><th style={st.th}>الموديل</th><th style={st.th}>السنة</th></>}
                     <th style={st.th}>الحالة</th><th style={st.th}>التجهيز</th>
-                    <th style={st.th}>استمارة</th><th style={st.th}>✏️</th><th style={st.th}>🗑️</th>
+                    <th style={st.th}>استمارة</th>
+                    {canEdit && <th style={st.th}>✏️</th>}
+                    {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
                     {filteredVehicles.map(v => (
@@ -593,13 +602,15 @@ export default function Dashboard() {
                         {!isMobile && <><td style={st.td}>{v.brand}</td><td style={st.td}>{v.model}</td><td style={st.td}>{v.year}</td></>}
                         <td style={st.td}><span style={st.badge(v.status)}>{statusLabel(v.status)}</span></td>
                         <td style={st.td}>
-                          <select value={v.preparation_status || 'not_ready'} onChange={e => updatePreparation(v.id, e.target.value)} style={st.prepSelect(v.preparation_status || 'not_ready')}>
-                            <option value="not_ready">❌</option><option value="in_progress">🔄</option><option value="ready">✅</option>
-                          </select>
+                          {canEdit ? (
+                            <select value={v.preparation_status || 'not_ready'} onChange={e => updatePreparation(v.id, e.target.value)} style={st.prepSelect(v.preparation_status || 'not_ready')}>
+                              <option value="not_ready">❌</option><option value="in_progress">🔄</option><option value="ready">✅</option>
+                            </select>
+                          ) : <span style={{ fontSize: '16px' }}>{v.preparation_status === 'ready' ? '✅' : v.preparation_status === 'in_progress' ? '🔄' : '❌'}</span>}
                         </td>
                         <td style={st.td}>{v.istimara_image ? <span style={imgLink} onClick={() => setPreviewImage(v.istimara_image)}>عرض</span> : '—'}</td>
-                        <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('vehicle', v)}>✏️</button></td>
-                        <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteVehicle(v.id)}>🗑️</button></td>
+                        {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('vehicle', v)}>✏️</button></td>}
+                        {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteVehicle(v.id)}>🗑️</button></td>}
                       </tr>
                     ))}
                   </tbody>
@@ -614,7 +625,7 @@ export default function Dashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>👤 السائقون ({filteredDrivers.length})</div>
-                <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowDriverForm(true)}>+ إضافة</button>
+                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowDriverForm(true)}>+ إضافة</button>}
               </div>
               <input style={{ ...st.input, marginBottom: '16px' }} placeholder="🔍 بحث بالاسم، الهوية، الجواز، الجوال..." value={driverSearch} onChange={e => setDriverSearch(e.target.value)} />
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
@@ -623,7 +634,9 @@ export default function Dashboard() {
                     <th style={st.th}>الاسم</th><th style={st.th}>الهوية</th>
                     {!isMobile && <><th style={st.th}>الجواز</th><th style={st.th}>الجوال</th><th style={st.th}>الرخصة</th><th style={st.th}>الانتهاء</th></>}
                     <th style={st.th}>إقامة</th><th style={st.th}>رخصة</th>
-                    <th style={st.th}>الحالة</th><th style={st.th}>✏️</th><th style={st.th}>🗑️</th>
+                    <th style={st.th}>الحالة</th>
+                    {canEdit && <th style={st.th}>✏️</th>}
+                    {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
                     {filteredDrivers.map(d => {
@@ -638,8 +651,8 @@ export default function Dashboard() {
                           <td style={st.td}>{d.iqama_image ? <span style={imgLink} onClick={() => setPreviewImage(d.iqama_image)}>عرض</span> : '—'}</td>
                           <td style={st.td}>{d.license_image ? <span style={imgLink} onClick={() => setPreviewImage(d.license_image)}>عرض</span> : '—'}</td>
                           <td style={st.td}><span style={st.badge(d.status)}>{statusLabel(d.status)}</span></td>
-                          <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('driver', d)}>✏️</button></td>
-                          <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteDriver(d.id)}>🗑️</button></td>
+                          {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('driver', d)}>✏️</button></td>}
+                          {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteDriver(d.id)}>🗑️</button></td>}
                         </tr>
                       )
                     })}
@@ -655,7 +668,7 @@ export default function Dashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🔧 الصيانة</div>
-                <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowMaintenanceForm(true)}>+ إضافة</button>
+                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowMaintenanceForm(true)}>+ إضافة</button>}
               </div>
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
@@ -663,7 +676,9 @@ export default function Dashboard() {
                     <th style={st.th}>المركبة</th><th style={st.th}>النوع</th>
                     {!isMobile && <><th style={st.th}>الوصف</th><th style={st.th}>التاريخ</th></>}
                     <th style={st.th}>التكلفة</th><th style={st.th}>الموعد القادم</th>
-                    <th style={st.th}>الحالة</th><th style={st.th}>✏️</th><th style={st.th}>🗑️</th>
+                    <th style={st.th}>الحالة</th>
+                    {canEdit && <th style={st.th}>✏️</th>}
+                    {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
                     {maintenance.map(m => {
@@ -677,8 +692,8 @@ export default function Dashboard() {
                           <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{m.cost} ر.س</span></td>
                           <td style={st.td}><span style={{ color: expiring ? '#dc2626' : C.text, fontWeight: expiring ? '700' : '400' }}>{m.next_date || '—'}{expiring && ' ⚠️'}</span></td>
                           <td style={st.td}><span style={st.badge(m.status)}>{statusLabel(m.status)}</span></td>
-                          <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('maintenance', m)}>✏️</button></td>
-                          <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteMaintenance(m.id)}>🗑️</button></td>
+                          {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('maintenance', m)}>✏️</button></td>}
+                          {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteMaintenance(m.id)}>🗑️</button></td>}
                         </tr>
                       )
                     })}
@@ -694,7 +709,7 @@ export default function Dashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>⛽ الوقود</div>
-                <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowFuelForm(true)}>+ إضافة</button>
+                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowFuelForm(true)}>+ إضافة</button>}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px', borderTop: '4px solid #ff6b00' }}>
@@ -711,7 +726,9 @@ export default function Dashboard() {
                   <thead><tr>
                     <th style={st.th}>المركبة</th><th style={st.th}>السائق</th>
                     {!isMobile && <><th style={st.th}>التاريخ</th><th style={st.th}>اللترات</th></>}
-                    <th style={st.th}>الإجمالي</th><th style={st.th}>✏️</th><th style={st.th}>🗑️</th>
+                    <th style={st.th}>الإجمالي</th>
+                    {canEdit && <th style={st.th}>✏️</th>}
+                    {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
                     {fuelLogs.map(f => (
@@ -720,8 +737,8 @@ export default function Dashboard() {
                         <td style={st.td}>{f.drivers?.full_name}</td>
                         {!isMobile && <><td style={st.td}>{f.date}</td><td style={st.td}>{f.liters}</td></>}
                         <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{f.total_cost} ر.س</span></td>
-                        <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('fuel', f)}>✏️</button></td>
-                        <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteFuel(f.id)}>🗑️</button></td>
+                        {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('fuel', f)}>✏️</button></td>}
+                        {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteFuel(f.id)}>🗑️</button></td>}
                       </tr>
                     ))}
                   </tbody>
@@ -848,9 +865,9 @@ export default function Dashboard() {
       {/* Mobile bottom nav */}
       {isMobile && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: C.white, borderTop: `2px solid ${C.border}`, display: 'flex', justifyContent: 'space-around', padding: '6px 0', zIndex: 15 }}>
-          {navItems.map(([id, icon, label]) => (
-            <div key={id} onClick={() => setActiveTab(id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', cursor: 'pointer', color: activeTab === id ? C.orange : C.muted, fontSize: '9px', fontWeight: activeTab === id ? '700' : '400', minWidth: '40px', position: 'relative' }}>
-              <span style={{ fontSize: '17px' }}>{icon}</span>
+          {navItems.filter(([id]) => id !== 'users' || currentRole === 'admin').map(([id, icon, label]) => (
+            <div key={id} onClick={() => setActiveTab(id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', cursor: 'pointer', color: activeTab === id ? C.orange : C.muted, fontSize: '9px', fontWeight: activeTab === id ? '700' : '400', minWidth: '36px', position: 'relative' }}>
+              <span style={{ fontSize: '16px' }}>{icon}</span>
               <span>{label.split(' ')[0]}</span>
               {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ position: 'absolute', top: '-2px', right: '2px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '13px', height: '13px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>}
             </div>
