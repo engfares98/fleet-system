@@ -31,6 +31,10 @@ export default function Dashboard() {
   const [editItem, setEditItem] = useState(null)
   const [editType, setEditType] = useState(null)
   const [editForm, setEditForm] = useState({})
+  const [editVehicleImage, setEditVehicleImage] = useState(null)
+  const [editIstamaraImage, setEditIstamaraImage] = useState(null)
+  const [editIqamaImage, setEditIqamaImage] = useState(null)
+  const [editLicenseImage, setEditLicenseImage] = useState(null)
 
   const [previewImage, setPreviewImage] = useState(null)
 
@@ -69,6 +73,10 @@ export default function Dashboard() {
     setEditType(type)
     setEditItem(item)
     setEditForm({ ...item })
+    setEditVehicleImage(null)
+    setEditIstamaraImage(null)
+    setEditIqamaImage(null)
+    setEditLicenseImage(null)
   }
 
   // Save edit
@@ -84,6 +92,16 @@ export default function Dashboard() {
 
     if (editType === 'fuel_logs') {
       updateData.total_cost = updateData.liters * updateData.cost_per_liter
+    }
+
+    if (editType === 'vehicle') {
+      if (editVehicleImage) updateData.vehicle_image = await uploadFile(editVehicleImage, 'vehicles')
+      if (editIstamaraImage) updateData.istimara_image = await uploadFile(editIstamaraImage, 'istimara')
+    }
+
+    if (editType === 'driver') {
+      if (editIqamaImage) updateData.iqama_image = await uploadFile(editIqamaImage, 'iqama')
+      if (editLicenseImage) updateData.license_image = await uploadFile(editLicenseImage, 'licenses')
     }
 
     await supabase.from(table).update(updateData).eq('id', editItem.id)
@@ -245,6 +263,8 @@ export default function Dashboard() {
                 <InputField label="نوع الوقود" field="fuel_type" />
                 <SelectField label="الحالة" field="status" options={[['active','نشط'],['inactive','غير نشط'],['pending','معلق']]} />
                 <SelectField label="حالة التجهيز" field="preparation_status" options={[['not_ready','غير جاهزة ❌'],['in_progress','قيد التجهيز 🔄'],['ready','جاهزة ✅']]} />
+                <FileInput label="تغيير صورة المركبة" icon="🚛" onChange={setEditVehicleImage} file={editVehicleImage} />
+                <FileInput label="تغيير صورة الاستمارة" icon="📄" onChange={setEditIstamaraImage} file={editIstamaraImage} />
               </div>
             )}
 
@@ -257,6 +277,8 @@ export default function Dashboard() {
                 <InputField label="رقم الرخصة" field="license_number" />
                 <InputField label="انتهاء الرخصة" field="license_expiry" type="date" />
                 <SelectField label="الحالة" field="status" options={[['active','نشط'],['inactive','غير نشط']]} />
+                <FileInput label="تغيير صورة الإقامة" icon="🪪" onChange={setEditIqamaImage} file={editIqamaImage} />
+                <FileInput label="تغيير صورة الرخصة" icon="🚗" onChange={setEditLicenseImage} file={editLicenseImage} />
               </div>
             )}
 
