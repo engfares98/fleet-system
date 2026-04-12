@@ -12,11 +12,9 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
-  // Search states
   const [vehicleSearch, setVehicleSearch] = useState('')
   const [driverSearch, setDriverSearch] = useState('')
 
-  // Add forms
   const [showVehicleForm, setShowVehicleForm] = useState(false)
   const [vehicleForm, setVehicleForm] = useState({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
   const [vehicleImage, setVehicleImage] = useState(null)
@@ -33,7 +31,6 @@ export default function Dashboard() {
   const [showFuelForm, setShowFuelForm] = useState(false)
   const [fuelForm, setFuelForm] = useState({ vehicle_id: '', driver_id: '', date: '', liters: '', cost_per_liter: '', odometer: '' })
 
-  // Edit forms
   const [editItem, setEditItem] = useState(null)
   const [editType, setEditType] = useState(null)
   const [editForm, setEditForm] = useState({})
@@ -71,6 +68,54 @@ export default function Dashboard() {
     setFuelLogs(f.data || [])
   }
 
+  // Calculate days until expiry
+  const daysUntil = (dateStr) => {
+    if (!dateStr) return null
+    const today = new Date()
+    const expiry = new Date(dateStr)
+    const diff = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24))
+    return diff
+  }
+
+  // Get alerts
+  const getAlerts = () => {
+    const alerts = []
+    drivers.forEach(d => {
+      if (d.license_expiry) {
+        const days = daysUntil(d.license_expiry)
+        if (days !== null && days <= 60) {
+          alerts.push({
+            id: `lic-${d.id}`,
+            type: days < 0 ? 'expired' : days <= 14 ? 'critical' : days <= 30 ? 'warning' : 'info',
+            icon: '🪪',
+            title: `رخصة قيادة: ${d.full_name}`,
+            detail: days < 0 ? `منتهية منذ ${Math.abs(days)} يوم` : `تنتهي خلال ${days} يوم`,
+            days
+          })
+        }
+      }
+    })
+    maintenance.forEach(m => {
+      if (m.next_date) {
+        const days = daysUntil(m.next_date)
+        if (days !== null && days <= 30) {
+          alerts.push({
+            id: `maint-${m.id}`,
+            type: days < 0 ? 'expired' : days <= 7 ? 'critical' : 'warning',
+            icon: '🔧',
+            title: `صيانة: ${m.vehicles?.plate_number || ''}`,
+            detail: days < 0 ? `موعد الصيانة تأخر ${Math.abs(days)} يوم` : `موعد الصيانة خلال ${days} يوم`,
+            days
+          })
+        }
+      }
+    })
+    return alerts.sort((a, b) => a.days - b.days)
+  }
+
+  const alerts = getAlerts()
+  const criticalAlerts = alerts.filter(a => a.type === 'expired' || a.type === 'critical')
+
   const uploadFile = async (file, folder) => {
     if (!file) return null
     const ext = file.name.split('.').pop()
@@ -82,23 +127,15 @@ export default function Dashboard() {
   }
 
   const openEdit = (type, item) => {
-    setEditType(type)
-    setEditItem(item)
-    setEditForm({ ...item })
-    setEditVehicleImage(null)
-    setEditIstamaraImage(null)
-    setEditIqamaImage(null)
-    setEditLicenseImage(null)
+    setEditType(type); setEditItem(item); setEditForm({ ...item })
+    setEditVehicleImage(null); setEditIstamaraImage(null); setEditIqamaImage(null); setEditLicenseImage(null)
   }
 
   const saveEdit = async () => {
     setUploading(true)
     const table = editType === 'vehicle' ? 'vehicles' : editType === 'driver' ? 'drivers' : editType === 'maintenance' ? 'maintenance' : 'fuel_logs'
     const updateData = { ...editForm }
-    delete updateData.id
-    delete updateData.created_at
-    delete updateData.vehicles
-    delete updateData.drivers
+    delete updateData.id; delete updateData.created_at; delete updateData.vehicles; delete updateData.drivers
     if (editType === 'fuel') updateData.total_cost = updateData.liters * updateData.cost_per_liter
     if (editType === 'vehicle') {
       if (editVehicleImage) updateData.vehicle_image = await uploadFile(editVehicleImage, 'vehicles')
@@ -164,6 +201,9 @@ export default function Dashboard() {
   const prepColor = (s) => s === 'ready' ? '#16a34a' : s === 'in_progress' ? '#d97706' : '#dc2626'
   const prepBg = (s) => s === 'ready' ? '#f0fdf4' : s === 'in_progress' ? '#fffbeb' : '#fef2f2'
 
+  const alertColor = (type) => type === 'expired' ? '#dc2626' : type === 'critical' ? '#ea580c' : type === 'warning' ? '#d97706' : '#2563eb'
+  const alertBg = (type) => type === 'expired' ? '#fef2f2' : type === 'critical' ? '#fff7ed' : type === 'warning' ? '#fffbeb' : '#eff6ff'
+
   const filteredVehicles = vehicles.filter(v =>
     (v.plate_number || '').includes(vehicleSearch) ||
     (v.vehicle_code || '').includes(vehicleSearch) ||
@@ -178,18 +218,9 @@ export default function Dashboard() {
     (d.phone || '').includes(driverSearch)
   )
 
-  const C = {
-    orange: '#ff6b00', orangeLight: '#fff7f2', orangeBorder: 'rgba(255,107,0,0.15)',
-    white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8',
-  }
+  const C = { orange: '#ff6b00', orangeLight: '#fff7f2', white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8' }
 
-  const navItems = [
-    ['dashboard','📊','لوحة التحكم'],
-    ['vehicles','🚛','المركبات'],
-    ['drivers','👤','السائقون'],
-    ['maintenance','🔧','الصيانة'],
-    ['fuel','⛽','الوقود']
-  ]
+  const navItems = [['dashboard','📊','لوحة التحكم'],['vehicles','🚛','المركبات'],['drivers','👤','السائقون'],['maintenance','🔧','الصيانة'],['fuel','⛽','الوقود'],['alerts','🔔','التنبيهات']]
 
   const st = {
     input: { width: '100%', padding: '10px 14px', background: '#fafafa', border: `1.5px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box' },
@@ -197,7 +228,7 @@ export default function Dashboard() {
     btn: (c, outline) => ({ background: outline ? C.white : (c || C.orange), color: outline ? (c || C.orange) : C.white, border: `2px solid ${c || C.orange}`, borderRadius: '9px', padding: '9px 18px', fontSize: '13px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer' }),
     badge: (s) => ({ background: statusBg(s), color: statusColor(s), padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', display: 'inline-block' }),
     modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' },
-    modalBox: { background: C.white, borderRadius: '18px', padding: isMobile ? '20px' : '32px', width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(0,0,0,0.15)' },
+    modalBox: { background: C.white, borderRadius: '18px', padding: isMobile ? '20px' : '32px', width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto' },
     formGrid: { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' },
     card: { background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: isMobile ? '14px' : '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
     th: { padding: '10px 12px', textAlign: 'right', color: C.muted, fontSize: '11px', fontWeight: '600', borderBottom: `2px solid ${C.border}`, background: '#fafafa', whiteSpace: 'nowrap' },
@@ -205,7 +236,6 @@ export default function Dashboard() {
     editBtn: { background: '#fff7f2', border: '1px solid #ffccaa', color: C.orange, borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '600' },
     deleteBtn: { background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '15px' },
     prepSelect: (s) => ({ background: prepBg(s), color: prepColor(s), border: `1.5px solid ${prepColor(s)}`, borderRadius: '8px', padding: '3px 6px', fontSize: '10px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer', outline: 'none' }),
-    searchBox: { width: '100%', padding: '10px 16px', background: C.white, border: `1.5px solid ${C.border}`, borderRadius: '10px', fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box', marginBottom: '16px' },
   }
 
   const FileInput = ({ label, icon, onChange, file }) => (
@@ -241,7 +271,6 @@ export default function Dashboard() {
     <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: 'Cairo, sans-serif', direction: 'rtl' }}>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
 
-      {/* Image Preview */}
       {previewImage && (
         <div style={{ ...st.modal, zIndex: 200 }} onClick={() => setPreviewImage(null)}>
           <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: '14px', padding: '16px', maxWidth: '90vw' }}>
@@ -253,7 +282,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Mobile sidebar overlay */}
       {isMobile && sidebarOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 30 }} onClick={() => setSidebarOpen(false)} />
       )}
@@ -261,41 +289,29 @@ export default function Dashboard() {
       {/* Top Bar */}
       <div style={{ background: C.white, borderBottom: `3px solid ${C.orange}`, padding: isMobile ? '8px 16px' : '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20, boxShadow: '0 2px 12px rgba(255,107,0,0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {isMobile && (
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: C.orange }}>☰</button>
-          )}
-          <img src="/logo-madinah.jpeg" alt="أمانة المدينة" style={{ height: isMobile ? '36px' : '50px', objectFit: 'contain' }} />
+          {isMobile && <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: C.orange }}>☰</button>}
+          <img src="/logo-madinah.jpeg" alt="" style={{ height: isMobile ? '36px' : '50px', objectFit: 'contain' }} />
         </div>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: isMobile ? '11px' : '15px', fontWeight: '900', color: C.orange }}>
             {isMobile ? 'أسطول نظافة المدينة' : 'أسطول مشاريع نظافة المدينة المنورة'}
           </div>
-          {!isMobile && <div style={{ fontSize: '11px', color: C.muted }}>Cleaning Fleet Management System</div>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {!isMobile && <img src="/logo-mag.jpeg" alt="MAG" style={{ height: '40px', objectFit: 'contain' }} />}
+          {criticalAlerts.length > 0 && (
+            <div onClick={() => setActiveTab('alerts')} style={{ position: 'relative', cursor: 'pointer' }}>
+              <span style={{ fontSize: '22px' }}>🔔</span>
+              <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>
+            </div>
+          )}
+          {!isMobile && <img src="/logo-mag.jpeg" alt="" style={{ height: '40px', objectFit: 'contain' }} />}
           <button onClick={handleLogout} style={{ ...st.btn('#dc2626', true), padding: isMobile ? '6px 10px' : '9px 18px', fontSize: isMobile ? '11px' : '13px' }}>خروج</button>
         </div>
       </div>
 
       <div style={{ display: 'flex' }}>
         {/* Sidebar */}
-        <div style={{
-          width: '220px',
-          background: C.white,
-          borderLeft: `1px solid ${C.border}`,
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '16px 0',
-          position: isMobile ? 'fixed' : 'sticky',
-          right: isMobile ? (sidebarOpen ? 0 : '-220px') : 0,
-          top: isMobile ? 0 : '63px',
-          height: isMobile ? '100vh' : 'calc(100vh - 63px)',
-          overflowY: 'auto',
-          zIndex: isMobile ? 40 : 10,
-          transition: 'right 0.3s ease',
-          boxShadow: isMobile && sidebarOpen ? '-4px 0 20px rgba(0,0,0,0.15)' : 'none'
-        }}>
+        <div style={{ width: '220px', background: C.white, borderLeft: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', padding: '16px 0', position: isMobile ? 'fixed' : 'sticky', right: isMobile ? (sidebarOpen ? 0 : '-220px') : 0, top: isMobile ? 0 : '63px', height: isMobile ? '100vh' : 'calc(100vh - 63px)', overflowY: 'auto', zIndex: isMobile ? 40 : 10, transition: 'right 0.3s ease' }}>
           {isMobile && (
             <div style={{ padding: '16px 20px 8px', borderBottom: `1px solid ${C.border}`, marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: '14px', fontWeight: '700', color: C.orange }}>القائمة</div>
@@ -303,9 +319,13 @@ export default function Dashboard() {
             </div>
           )}
           {navItems.map(([id, icon, label]) => (
-            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === id ? '700' : '400', color: activeTab === id ? C.orange : C.muted, background: activeTab === id ? C.orangeLight : 'transparent', borderRight: activeTab === id ? `3px solid ${C.orange}` : '3px solid transparent' }}
+            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === id ? '700' : '400', color: activeTab === id ? C.orange : C.muted, background: activeTab === id ? C.orangeLight : 'transparent', borderRight: activeTab === id ? `3px solid ${C.orange}` : '3px solid transparent', position: 'relative' }}
               onClick={() => { setActiveTab(id); if (isMobile) setSidebarOpen(false) }}>
-              <span style={{ fontSize: '17px' }}>{icon}</span><span>{label}</span>
+              <span style={{ fontSize: '17px' }}>{icon}</span>
+              <span>{label}</span>
+              {id === 'alerts' && criticalAlerts.length > 0 && (
+                <span style={{ marginRight: 'auto', background: '#dc2626', color: '#fff', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: '700' }}>{criticalAlerts.length}</span>
+              )}
             </div>
           ))}
           <div style={{ flex: 1 }} />
@@ -320,39 +340,83 @@ export default function Dashboard() {
           {/* Dashboard */}
           {activeTab === 'dashboard' && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <div style={{ color: C.text, fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>📊 لوحة التحكم</div>
-              </div>
+              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>📊 لوحة التحكم</div>
+
+              {/* Alerts banner */}
+              {criticalAlerts.length > 0 && (
+                <div onClick={() => setActiveTab('alerts')} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '24px' }}>🚨</span>
+                  <div>
+                    <div style={{ fontWeight: '700', color: '#dc2626', fontSize: '14px' }}>يوجد {criticalAlerts.length} تنبيه حرج!</div>
+                    <div style={{ color: '#888', fontSize: '12px' }}>اضغط لعرض التفاصيل</div>
+                  </div>
+                  <div style={{ marginRight: 'auto', color: '#dc2626', fontSize: '20px' }}>←</div>
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[['🚛','المركبات',vehicles.length,'#ff6b00'],['👤','السائقون',drivers.length,'#16a34a'],['🔧','الصيانة',maintenance.length,'#d97706'],['⛽','تكلفة الوقود',totalFuelCost.toFixed(0)+' ر.س','#7c3aed']].map(([icon,label,val,color]) => (
+                {[['🚛','المركبات',vehicles.length,'#ff6b00'],['👤','السائقون',drivers.length,'#16a34a'],['🔧','الصيانة',maintenance.length,'#d97706'],['🔔','تنبيهات',alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
                   <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: isMobile ? '14px' : '20px', borderTop: `4px solid ${color}` }}>
                     <div style={{ color: C.muted, fontSize: '11px', marginBottom: '6px', fontWeight: '600' }}>{icon} {label}</div>
                     <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: '900', color }}>{val}</div>
                   </div>
                 ))}
               </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
                 <div style={st.card}>
-                  <div style={{ fontWeight: '800', marginBottom: '14px', fontSize: '14px' }}>🚛 آخر المركبات</div>
+                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>🚛 آخر المركبات</div>
                   {vehicles.slice(0,5).map(v => (
-                    <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+                    <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: '13px', fontWeight: '600' }}>{v.plate_number}</div>
                       <span style={st.badge(v.status)}>{statusLabel(v.status)}</span>
                     </div>
                   ))}
-                  {vehicles.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '20px' }}>لا توجد مركبات</div>}
                 </div>
                 <div style={st.card}>
-                  <div style={{ fontWeight: '800', marginBottom: '14px', fontSize: '14px' }}>👤 آخر السائقين</div>
-                  {drivers.slice(0,5).map(d => (
-                    <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
-                      <div style={{ fontSize: '13px', fontWeight: '600' }}>{d.full_name}</div>
-                      <span style={st.badge(d.status)}>{statusLabel(d.status)}</span>
+                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>🔔 آخر التنبيهات</div>
+                  {alerts.slice(0,5).map(a => (
+                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+                      <span style={{ fontSize: '16px' }}>{a.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: alertColor(a.type) }}>{a.title}</div>
+                        <div style={{ fontSize: '11px', color: C.muted }}>{a.detail}</div>
+                      </div>
                     </div>
                   ))}
-                  {drivers.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '20px' }}>لا يوجد سائقون</div>}
+                  {alerts.length === 0 && <div style={{ color: '#16a34a', textAlign: 'center', padding: '20px', fontSize: '13px' }}>✅ لا توجد تنبيهات</div>}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Alerts Tab */}
+          {activeTab === 'alerts' && (
+            <div>
+              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>🔔 التنبيهات ({alerts.length})</div>
+
+              {alerts.length === 0 ? (
+                <div style={{ ...st.card, textAlign: 'center', padding: '60px' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+                  <div style={{ fontSize: '16px', fontWeight: '700', color: '#16a34a' }}>لا توجد تنبيهات</div>
+                  <div style={{ color: C.muted, fontSize: '13px', marginTop: '8px' }}>كل الرخص والمواعيد سليمة</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {alerts.map(a => (
+                    <div key={a.id} style={{ background: alertBg(a.type), border: `1px solid ${alertColor(a.type)}33`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderRight: `4px solid ${alertColor(a.type)}` }}>
+                      <span style={{ fontSize: '28px' }}>{a.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '700', color: alertColor(a.type), fontSize: '14px' }}>{a.title}</div>
+                        <div style={{ color: C.muted, fontSize: '12px', marginTop: '4px' }}>{a.detail}</div>
+                      </div>
+                      <div style={{ background: alertColor(a.type), color: '#fff', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                        {a.type === 'expired' ? 'منتهي' : a.type === 'critical' ? 'حرج' : a.type === 'warning' ? 'تحذير' : 'تنبيه'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -363,19 +427,14 @@ export default function Dashboard() {
                 <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🚛 المركبات ({filteredVehicles.length})</div>
                 <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowVehicleForm(true)}>+ إضافة</button>
               </div>
-              <input style={st.searchBox} placeholder="🔍 بحث برقم اللوحة، الكود، الماركة..." value={vehicleSearch} onChange={e => setVehicleSearch(e.target.value)} />
+              <input style={{ ...st.input, marginBottom: '16px' }} placeholder="🔍 بحث برقم اللوحة، الكود، الماركة..." value={vehicleSearch} onChange={e => setVehicleSearch(e.target.value)} />
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: isMobile ? '600px' : 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                   <thead><tr>
-                    <th style={st.th}>صورة</th>
-                    <th style={st.th}>اللوحة</th>
-                    <th style={st.th}>الكود</th>
+                    <th style={st.th}>صورة</th><th style={st.th}>اللوحة</th><th style={st.th}>الكود</th>
                     {!isMobile && <><th style={st.th}>الماركة</th><th style={st.th}>الموديل</th><th style={st.th}>السنة</th></>}
-                    <th style={st.th}>الحالة</th>
-                    <th style={st.th}>التجهيز</th>
-                    <th style={st.th}>استمارة</th>
-                    <th style={st.th}>تعديل</th>
-                    <th style={st.th}>حذف</th>
+                    <th style={st.th}>الحالة</th><th style={st.th}>التجهيز</th>
+                    <th style={st.th}>استمارة</th><th style={st.th}>✏️</th><th style={st.th}>🗑️</th>
                   </tr></thead>
                   <tbody>
                     {filteredVehicles.map(v => (
@@ -411,32 +470,39 @@ export default function Dashboard() {
                 <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>👤 السائقون ({filteredDrivers.length})</div>
                 <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowDriverForm(true)}>+ إضافة</button>
               </div>
-              <input style={st.searchBox} placeholder="🔍 بحث بالاسم، الهوية، الجواز، الجوال..." value={driverSearch} onChange={e => setDriverSearch(e.target.value)} />
+              <input style={{ ...st.input, marginBottom: '16px' }} placeholder="🔍 بحث بالاسم، الهوية، الجواز، الجوال..." value={driverSearch} onChange={e => setDriverSearch(e.target.value)} />
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: isMobile ? '500px' : 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
                   <thead><tr>
-                    <th style={st.th}>الاسم</th>
-                    <th style={st.th}>الهوية</th>
+                    <th style={st.th}>الاسم</th><th style={st.th}>الهوية</th>
                     {!isMobile && <><th style={st.th}>الجواز</th><th style={st.th}>الجوال</th><th style={st.th}>الرخصة</th><th style={st.th}>الانتهاء</th></>}
-                    <th style={st.th}>إقامة</th>
-                    <th style={st.th}>رخصة</th>
-                    <th style={st.th}>الحالة</th>
-                    <th style={st.th}>✏️</th>
-                    <th style={st.th}>🗑️</th>
+                    <th style={st.th}>إقامة</th><th style={st.th}>رخصة</th>
+                    <th style={st.th}>الحالة</th><th style={st.th}>✏️</th><th style={st.th}>🗑️</th>
                   </tr></thead>
                   <tbody>
-                    {filteredDrivers.map(d => (
-                      <tr key={d.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                        <td style={{ ...st.td, fontWeight: '700' }}>{d.full_name}</td>
-                        <td style={st.td}>{d.national_id || '—'}</td>
-                        {!isMobile && <><td style={st.td}>{d.passport_number || '—'}</td><td style={st.td}>{d.phone || '—'}</td><td style={st.td}>{d.license_number || '—'}</td><td style={st.td}>{d.license_expiry || '—'}</td></>}
-                        <td style={st.td}>{d.iqama_image ? <span style={imgLink} onClick={() => setPreviewImage(d.iqama_image)}>عرض</span> : '—'}</td>
-                        <td style={st.td}>{d.license_image ? <span style={imgLink} onClick={() => setPreviewImage(d.license_image)}>عرض</span> : '—'}</td>
-                        <td style={st.td}><span style={st.badge(d.status)}>{statusLabel(d.status)}</span></td>
-                        <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('driver', d)}>✏️</button></td>
-                        <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteDriver(d.id)}>🗑️</button></td>
-                      </tr>
-                    ))}
+                    {filteredDrivers.map(d => {
+                      const days = daysUntil(d.license_expiry)
+                      const expiring = days !== null && days <= 30
+                      return (
+                        <tr key={d.id} style={{ background: expiring ? '#fffbeb' : 'transparent' }} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background = expiring ? '#fffbeb' : 'transparent'}>
+                          <td style={{ ...st.td, fontWeight: '700' }}>{d.full_name}</td>
+                          <td style={st.td}>{d.national_id || '—'}</td>
+                          {!isMobile && <><td style={st.td}>{d.passport_number || '—'}</td><td style={st.td}>{d.phone || '—'}</td><td style={st.td}>{d.license_number || '—'}</td>
+                          <td style={st.td}>
+                            <span style={{ color: days !== null && days < 0 ? '#dc2626' : days !== null && days <= 14 ? '#ea580c' : days !== null && days <= 30 ? '#d97706' : C.text, fontWeight: expiring ? '700' : '400' }}>
+                              {d.license_expiry || '—'}
+                              {expiring && days >= 0 && <span style={{ fontSize: '10px', marginRight: '4px' }}>({days} يوم)</span>}
+                              {days !== null && days < 0 && <span style={{ fontSize: '10px', marginRight: '4px' }}>⚠️ منتهية</span>}
+                            </span>
+                          </td></>}
+                          <td style={st.td}>{d.iqama_image ? <span style={imgLink} onClick={() => setPreviewImage(d.iqama_image)}>عرض</span> : '—'}</td>
+                          <td style={st.td}>{d.license_image ? <span style={imgLink} onClick={() => setPreviewImage(d.license_image)}>عرض</span> : '—'}</td>
+                          <td style={st.td}><span style={st.badge(d.status)}>{statusLabel(d.status)}</span></td>
+                          <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('driver', d)}>✏️</button></td>
+                          <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteDriver(d.id)}>🗑️</button></td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
                 {filteredDrivers.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد نتائج</div>}
@@ -456,21 +522,31 @@ export default function Dashboard() {
                   <thead><tr>
                     <th style={st.th}>المركبة</th><th style={st.th}>النوع</th>
                     {!isMobile && <><th style={st.th}>الوصف</th><th style={st.th}>التاريخ</th></>}
-                    <th style={st.th}>التكلفة</th><th style={st.th}>الحالة</th>
-                    <th style={st.th}>✏️</th><th style={st.th}>🗑️</th>
+                    <th style={st.th}>التكلفة</th><th style={st.th}>الموعد القادم</th>
+                    <th style={st.th}>الحالة</th><th style={st.th}>✏️</th><th style={st.th}>🗑️</th>
                   </tr></thead>
                   <tbody>
-                    {maintenance.map(m => (
-                      <tr key={m.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                        <td style={{ ...st.td, fontWeight: '700' }}>{m.vehicles?.plate_number}</td>
-                        <td style={st.td}>{m.type}</td>
-                        {!isMobile && <><td style={st.td}>{m.description}</td><td style={st.td}>{m.date}</td></>}
-                        <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{m.cost} ر.س</span></td>
-                        <td style={st.td}><span style={st.badge(m.status)}>{statusLabel(m.status)}</span></td>
-                        <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('maintenance', m)}>✏️</button></td>
-                        <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteMaintenance(m.id)}>🗑️</button></td>
-                      </tr>
-                    ))}
+                    {maintenance.map(m => {
+                      const days = daysUntil(m.next_date)
+                      const expiring = days !== null && days <= 7
+                      return (
+                        <tr key={m.id} style={{ background: expiring ? '#fff7ed' : 'transparent' }} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background = expiring ? '#fff7ed' : 'transparent'}>
+                          <td style={{ ...st.td, fontWeight: '700' }}>{m.vehicles?.plate_number}</td>
+                          <td style={st.td}>{m.type}</td>
+                          {!isMobile && <><td style={st.td}>{m.description}</td><td style={st.td}>{m.date}</td></>}
+                          <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{m.cost} ر.س</span></td>
+                          <td style={st.td}>
+                            <span style={{ color: expiring ? '#dc2626' : C.text, fontWeight: expiring ? '700' : '400' }}>
+                              {m.next_date || '—'}
+                              {expiring && days >= 0 && <span style={{ fontSize: '10px', marginRight: '4px' }}>⚠️</span>}
+                            </span>
+                          </td>
+                          <td style={st.td}><span style={st.badge(m.status)}>{statusLabel(m.status)}</span></td>
+                          <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('maintenance', m)}>✏️</button></td>
+                          <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteMaintenance(m.id)}>🗑️</button></td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
                 {maintenance.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد سجلات</div>}
@@ -500,8 +576,7 @@ export default function Dashboard() {
                   <thead><tr>
                     <th style={st.th}>المركبة</th><th style={st.th}>السائق</th>
                     {!isMobile && <><th style={st.th}>التاريخ</th><th style={st.th}>اللترات</th></>}
-                    <th style={st.th}>الإجمالي</th>
-                    <th style={st.th}>✏️</th><th style={st.th}>🗑️</th>
+                    <th style={st.th}>الإجمالي</th><th style={st.th}>✏️</th><th style={st.th}>🗑️</th>
                   </tr></thead>
                   <tbody>
                     {fuelLogs.map(f => (
@@ -561,19 +636,17 @@ export default function Dashboard() {
             )}
             {editType === 'maintenance' && (
               <div style={st.formGrid}>
-                <div><label style={st.label}>المركبة</label><select style={st.input} value={editForm.vehicle_id || ''} onChange={e => setEditForm({...editForm,vehicle_id:e.target.value})}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-                <InputField label="النوع" field="type" />
-                <InputField label="الوصف" field="description" />
-                <InputField label="التكلفة" field="cost" />
-                <InputField label="التاريخ" field="date" type="date" />
+                <div><label style={st.label}>المركبة</label><select style={st.input} value={editForm.vehicle_id||''} onChange={e=>setEditForm({...editForm,vehicle_id:e.target.value})}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
+                <InputField label="النوع" field="type" /><InputField label="الوصف" field="description" />
+                <InputField label="التكلفة" field="cost" /><InputField label="التاريخ" field="date" type="date" />
                 <InputField label="الموعد القادم" field="next_date" type="date" />
                 <SelectField label="الحالة" field="status" options={[['pending','معلق'],['active','مكتمل'],['inactive','ملغي']]} />
               </div>
             )}
             {editType === 'fuel' && (
               <div style={st.formGrid}>
-                <div><label style={st.label}>المركبة</label><select style={st.input} value={editForm.vehicle_id || ''} onChange={e => setEditForm({...editForm,vehicle_id:e.target.value})}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-                <div><label style={st.label}>السائق</label><select style={st.input} value={editForm.driver_id || ''} onChange={e => setEditForm({...editForm,driver_id:e.target.value})}>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
+                <div><label style={st.label}>المركبة</label><select style={st.input} value={editForm.vehicle_id||''} onChange={e=>setEditForm({...editForm,vehicle_id:e.target.value})}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
+                <div><label style={st.label}>السائق</label><select style={st.input} value={editForm.driver_id||''} onChange={e=>setEditForm({...editForm,driver_id:e.target.value})}>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
                 <InputField label="التاريخ" field="date" type="date" />
                 <InputField label="اللترات" field="liters" type="number" />
                 <InputField label="سعر اللتر" field="cost_per_liter" type="number" />
@@ -588,7 +661,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Vehicle Add Modal */}
+      {/* Add Modals */}
       {showVehicleForm && (
         <div style={st.modal}>
           <div style={st.modalBox}>
@@ -610,7 +683,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Driver Add Modal */}
       {showDriverForm && (
         <div style={st.modal}>
           <div style={st.modalBox}>
@@ -632,7 +704,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Maintenance Add Modal */}
       {showMaintenanceForm && (
         <div style={st.modal}>
           <div style={st.modalBox}>
@@ -654,7 +725,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Fuel Add Modal */}
       {showFuelForm && (
         <div style={st.modal}>
           <div style={st.modalBox}>
@@ -675,18 +745,20 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Bottom nav for mobile */}
+      {/* Mobile bottom nav */}
       {isMobile && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: C.white, borderTop: `2px solid ${C.border}`, display: 'flex', justifyContent: 'space-around', padding: '8px 0', zIndex: 15 }}>
           {navItems.map(([id, icon, label]) => (
-            <div key={id} onClick={() => setActiveTab(id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', cursor: 'pointer', color: activeTab === id ? C.orange : C.muted, fontSize: '10px', fontWeight: activeTab === id ? '700' : '400', minWidth: '50px' }}>
-              <span style={{ fontSize: '20px' }}>{icon}</span>
+            <div key={id} onClick={() => setActiveTab(id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', cursor: 'pointer', color: activeTab === id ? C.orange : C.muted, fontSize: '10px', fontWeight: activeTab === id ? '700' : '400', minWidth: '44px', position: 'relative' }}>
+              <span style={{ fontSize: '18px' }}>{icon}</span>
               <span>{label.split(' ')[0]}</span>
+              {id === 'alerts' && criticalAlerts.length > 0 && (
+                <span style={{ position: 'absolute', top: '-2px', right: '4px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '14px', height: '14px', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>
+              )}
             </div>
           ))}
         </div>
       )}
-
       {isMobile && <div style={{ height: '70px' }} />}
     </div>
   )
