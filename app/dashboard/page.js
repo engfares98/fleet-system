@@ -1,8 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
+import { translations } from './translations'
 
 export default function Dashboard() {
+  const [lang, setLang] = useState('ar')
+  const t = translations[lang]
+  const isRTL = lang === 'ar'
+
   const [vehicles, setVehicles] = useState([])
   const [drivers, setDrivers] = useState([])
   const [maintenance, setMaintenance] = useState([])
@@ -41,16 +46,23 @@ export default function Dashboard() {
   const [editIstamaraImage, setEditIstamaraImage] = useState(null)
   const [editIqamaImage, setEditIqamaImage] = useState(null)
   const [editLicenseImage, setEditLicenseImage] = useState(null)
-
   const [previewImage, setPreviewImage] = useState(null)
 
   useEffect(() => {
+    const savedLang = localStorage.getItem('lang') || 'ar'
+    setLang(savedLang)
     checkAuth(); fetchData()
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  const switchLang = () => {
+    const newLang = lang === 'ar' ? 'en' : 'ar'
+    setLang(newLang)
+    localStorage.setItem('lang', newLang)
+  }
 
   const checkAuth = async () => {
     const { data } = await supabase.auth.getSession()
@@ -83,13 +95,23 @@ export default function Dashboard() {
     drivers.forEach(d => {
       if (d.license_expiry) {
         const days = daysUntil(d.license_expiry)
-        if (days !== null && days <= 60) alerts.push({ id: `lic-${d.id}`, type: days < 0 ? 'expired' : days <= 14 ? 'critical' : days <= 30 ? 'warning' : 'info', icon: '🪪', title: `رخصة: ${d.full_name}`, detail: days < 0 ? `منتهية منذ ${Math.abs(days)} يوم` : `تنتهي خلال ${days} يوم`, days })
+        if (days !== null && days <= 60) {
+          const detail = days < 0
+            ? t.expiredDays.replace('{n}', Math.abs(days))
+            : t.expiresIn.replace('{n}', days)
+          alerts.push({ id: `lic-${d.id}`, type: days < 0 ? 'expired' : days <= 14 ? 'critical' : days <= 30 ? 'warning' : 'info', icon: '🪪', title: `${t.licenseAlert}: ${d.full_name}`, detail, days })
+        }
       }
     })
     maintenance.forEach(m => {
       if (m.next_date) {
         const days = daysUntil(m.next_date)
-        if (days !== null && days <= 30) alerts.push({ id: `maint-${m.id}`, type: days < 0 ? 'expired' : days <= 7 ? 'critical' : 'warning', icon: '🔧', title: `صيانة: ${m.vehicles?.plate_number || ''}`, detail: days < 0 ? `تأخر ${Math.abs(days)} يوم` : `خلال ${days} يوم`, days })
+        if (days !== null && days <= 30) {
+          const detail = days < 0
+            ? t.maintenanceLate.replace('{n}', Math.abs(days))
+            : t.maintenanceIn.replace('{n}', days)
+          alerts.push({ id: `maint-${m.id}`, type: days < 0 ? 'expired' : days <= 7 ? 'critical' : 'warning', icon: '🔧', title: `${t.maintenanceAlert}: ${m.vehicles?.plate_number || ''}`, detail, days })
+        }
       }
     })
     return alerts.sort((a, b) => a.days - b.days)
@@ -108,10 +130,10 @@ export default function Dashboard() {
     URL.revokeObjectURL(url)
   }
 
-  const exportVehicles = () => exportToCSV(vehicles.map(v => ({ 'رقم اللوحة': v.plate_number || '', 'كود المركبة': v.vehicle_code || '', 'النوع': v.type || '', 'الماركة': v.brand || '', 'الموديل': v.model || '', 'السنة': v.year || '', 'اللون': v.color || '', 'نوع الوقود': v.fuel_type || '', 'الحالة': v.status === 'active' ? 'نشط' : 'غير نشط', 'حالة التجهيز': v.preparation_status === 'ready' ? 'جاهزة' : v.preparation_status === 'in_progress' ? 'قيد التجهيز' : 'غير جاهزة' })), 'المركبات')
-  const exportDrivers = () => exportToCSV(drivers.map(d => ({ 'الاسم': d.full_name || '', 'رقم الهوية': d.national_id || '', 'رقم الجواز': d.passport_number || '', 'الجوال': d.phone || '', 'رقم الرخصة': d.license_number || '', 'انتهاء الرخصة': d.license_expiry || '', 'الحالة': d.status === 'active' ? 'نشط' : 'غير نشط' })), 'السائقون')
-  const exportMaintenance = () => exportToCSV(maintenance.map(m => ({ 'المركبة': m.vehicles?.plate_number || '', 'النوع': m.type || '', 'الوصف': m.description || '', 'التاريخ': m.date || '', 'التكلفة': m.cost || '', 'الموعد القادم': m.next_date || '', 'الحالة': m.status === 'active' ? 'مكتمل' : m.status === 'pending' ? 'معلق' : 'ملغي' })), 'الصيانة')
-  const exportFuel = () => exportToCSV(fuelLogs.map(f => ({ 'المركبة': f.vehicles?.plate_number || '', 'السائق': f.drivers?.full_name || '', 'التاريخ': f.date || '', 'اللترات': f.liters || '', 'سعر اللتر': f.cost_per_liter || '', 'الإجمالي': f.total_cost || '', 'قراءة العداد': f.odometer || '' })), 'الوقود')
+  const exportVehicles = () => exportToCSV(vehicles.map(v => ({ [t.plateNumber]: v.plate_number || '', [t.vehicleCode]: v.vehicle_code || '', [t.type]: v.type || '', [t.brand]: v.brand || '', [t.model]: v.model || '', [t.year]: v.year || '', [t.color]: v.color || '', [t.fuelType]: v.fuel_type || '', [t.status]: v.status === 'active' ? t.active : t.inactive })), t.vehicles)
+  const exportDrivers = () => exportToCSV(drivers.map(d => ({ [t.fullName]: d.full_name || '', [t.nationalId]: d.national_id || '', [t.passportNumber]: d.passport_number || '', [t.phone]: d.phone || '', [t.licenseNumber]: d.license_number || '', [t.licenseExpiry]: d.license_expiry || '', [t.status]: d.status === 'active' ? t.active : t.inactive })), t.drivers)
+  const exportMaintenance = () => exportToCSV(maintenance.map(m => ({ [t.vehicle]: m.vehicles?.plate_number || '', [t.type]: m.type || '', [t.description]: m.description || '', [t.date]: m.date || '', [t.cost]: m.cost || '', [t.nextDate]: m.next_date || '' })), t.maintenance)
+  const exportFuel = () => exportToCSV(fuelLogs.map(f => ({ [t.vehicle]: f.vehicles?.plate_number || '', [t.driver]: f.drivers?.full_name || '', [t.date]: f.date || '', [t.liters]: f.liters || '', [t.pricePerLiter]: f.cost_per_liter || '', [t.total]: f.total_cost || '' })), t.fuel)
 
   const uploadFile = async (file, folder) => {
     if (!file) return null
@@ -190,7 +212,7 @@ export default function Dashboard() {
   }
 
   const deleteUserRole = async (userId) => {
-    if (!confirm('هل أنت متأكد؟')) return
+    if (!confirm(lang === 'ar' ? 'هل أنت متأكد؟' : 'Are you sure?')) return
     await supabase.from('user_roles').delete().eq('user_id', userId); fetchData()
   }
 
@@ -212,12 +234,13 @@ export default function Dashboard() {
 
   const statusColor = (s) => s === 'active' ? '#16a34a' : s === 'pending' ? '#d97706' : '#dc2626'
   const statusBg = (s) => s === 'active' ? '#f0fdf4' : s === 'pending' ? '#fffbeb' : '#fef2f2'
-  const statusLabel = (s) => s === 'active' ? 'نشط' : s === 'pending' ? 'معلق' : 'غير نشط'
+  const statusLabel = (s) => s === 'active' ? t.active : s === 'pending' ? t.pending : t.inactive
   const prepColor = (s) => s === 'ready' ? '#16a34a' : s === 'in_progress' ? '#d97706' : '#dc2626'
   const prepBg = (s) => s === 'ready' ? '#f0fdf4' : s === 'in_progress' ? '#fffbeb' : '#fef2f2'
-  const alertColor = (t) => t === 'expired' ? '#dc2626' : t === 'critical' ? '#ea580c' : t === 'warning' ? '#d97706' : '#2563eb'
-  const alertBg = (t) => t === 'expired' ? '#fef2f2' : t === 'critical' ? '#fff7ed' : t === 'warning' ? '#fffbeb' : '#eff6ff'
-  const roleLabel = (r) => r === 'admin' ? '👑 مدير' : r === 'editor' ? '✏️ محرر' : '👁️ مشاهد'
+  const alertColor = (tp) => tp === 'expired' ? '#dc2626' : tp === 'critical' ? '#ea580c' : tp === 'warning' ? '#d97706' : '#2563eb'
+  const alertBg = (tp) => tp === 'expired' ? '#fef2f2' : tp === 'critical' ? '#fff7ed' : tp === 'warning' ? '#fffbeb' : '#eff6ff'
+  const alertLabel = (tp) => tp === 'expired' ? t.expiredLabel : tp === 'critical' ? t.criticalLabel : tp === 'warning' ? t.warningLabel : t.infoLabel
+  const roleLabel = (r) => r === 'admin' ? t.adminRole : r === 'editor' ? t.editorRole : t.viewerRole
   const roleColor = (r) => r === 'admin' ? '#7c3aed' : r === 'editor' ? '#ff6b00' : '#16a34a'
   const roleBg = (r) => r === 'admin' ? '#f5f3ff' : r === 'editor' ? '#fff7f2' : '#f0fdf4'
 
@@ -225,11 +248,11 @@ export default function Dashboard() {
   const filteredDrivers = drivers.filter(d => (d.full_name || '').includes(driverSearch) || (d.national_id || '').includes(driverSearch) || (d.passport_number || '').includes(driverSearch) || (d.phone || '').includes(driverSearch))
 
   const vehicleTypes = vehicles.reduce((acc, v) => { const key = v.preparation_status || 'not_ready'; acc[key] = (acc[key] || 0) + 1; return acc }, {})
-  const fuelByVehicle = fuelLogs.reduce((acc, f) => { const key = f.vehicles?.plate_number || 'غير محدد'; acc[key] = (acc[key] || 0) + (Number(f.total_cost) || 0); return acc }, {})
+  const fuelByVehicle = fuelLogs.reduce((acc, f) => { const key = f.vehicles?.plate_number || '?'; acc[key] = (acc[key] || 0) + (Number(f.total_cost) || 0); return acc }, {})
   const topFuelVehicles = Object.entries(fuelByVehicle).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   const C = { orange: '#ff6b00', orangeLight: '#fff7f2', white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8' }
-  const navItems = [['dashboard','📊','لوحة التحكم'],['vehicles','🚛','المركبات'],['drivers','👤','السائقون'],['maintenance','🔧','الصيانة'],['fuel','⛽','الوقود'],['reports','📈','التقارير'],['alerts','🔔','التنبيهات'],['users','👥','المستخدمون']]
+  const navItems = [['dashboard','📊',t.dashboard],['vehicles','🚛',t.vehicles],['drivers','👤',t.drivers],['maintenance','🔧',t.maintenance],['fuel','⛽',t.fuel],['reports','📈',t.reports],['alerts','🔔',t.alerts],['users','👥',t.users]]
 
   const st = {
     input: { width: '100%', padding: '10px 14px', background: '#fafafa', border: `1.5px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box' },
@@ -240,7 +263,7 @@ export default function Dashboard() {
     modalBox: { background: C.white, borderRadius: '18px', padding: isMobile ? '20px' : '32px', width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto' },
     formGrid: { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' },
     card: { background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: isMobile ? '14px' : '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
-    th: { padding: '10px 12px', textAlign: 'right', color: C.muted, fontSize: '11px', fontWeight: '600', borderBottom: `2px solid ${C.border}`, background: '#fafafa', whiteSpace: 'nowrap' },
+    th: { padding: '10px 12px', textAlign: isRTL ? 'right' : 'left', color: C.muted, fontSize: '11px', fontWeight: '600', borderBottom: `2px solid ${C.border}`, background: '#fafafa', whiteSpace: 'nowrap' },
     td: { padding: '10px 12px', color: C.text, fontSize: '12px', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' },
     editBtn: { background: '#fff7f2', border: '1px solid #ffccaa', color: C.orange, borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '600' },
     deleteBtn: { background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '15px' },
@@ -251,7 +274,7 @@ export default function Dashboard() {
     <div>
       <label style={st.label}>{icon} {label}</label>
       <label style={{ width: '100%', padding: '10px', background: file ? '#fff7f2' : '#fafafa', border: `2px dashed ${file ? C.orange : C.border}`, borderRadius: '8px', color: file ? C.orange : C.muted, fontSize: '12px', cursor: 'pointer', textAlign: 'center', display: 'block', boxSizing: 'border-box', fontWeight: '600' }}>
-        {file ? `✅ ${file.name}` : `📎 ${label}`}
+        {file ? `${t.fileSelected} ${file.name}` : `${t.uploadFile} ${label}`}
         <input type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={e => onChange(e.target.files[0])} />
       </label>
     </div>
@@ -293,14 +316,14 @@ export default function Dashboard() {
   const imgLink = { color: C.orange, fontSize: '11px', cursor: 'pointer', fontWeight: '600' }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: 'Cairo, sans-serif', direction: 'rtl' }}>
+    <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: 'Cairo, sans-serif', direction: isRTL ? 'rtl' : 'ltr' }}>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
 
       {previewImage && (
         <div style={{ ...st.modal, zIndex: 200 }} onClick={() => setPreviewImage(null)}>
           <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: '14px', padding: '16px', maxWidth: '90vw' }}>
             <img src={previewImage} style={{ maxWidth: '80vw', maxHeight: '80vh', borderRadius: '8px' }} alt="preview" />
-            <div style={{ textAlign: 'center', marginTop: '12px' }}><button style={st.btn('#888', true)} onClick={() => setPreviewImage(null)}>إغلاق</button></div>
+            <div style={{ textAlign: 'center', marginTop: '12px' }}><button style={st.btn('#888', true)} onClick={() => setPreviewImage(null)}>{t.close}</button></div>
           </div>
         </div>
       )}
@@ -314,10 +337,16 @@ export default function Dashboard() {
           <img src="/logo-madinah.jpeg" alt="" style={{ height: isMobile ? '36px' : '50px', objectFit: 'contain' }} />
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: isMobile ? '11px' : '15px', fontWeight: '900', color: C.orange }}>{isMobile ? 'أسطول نظافة المدينة' : 'أسطول مشاريع نظافة المدينة المنورة'}</div>
-          {!isMobile && <div style={{ fontSize: '11px', color: C.muted }}>صلاحيتك: <span style={{ color: roleColor(currentRole), fontWeight: '700' }}>{roleLabel(currentRole)}</span></div>}
+          <div style={{ fontSize: isMobile ? '11px' : '15px', fontWeight: '900', color: C.orange }}>
+            {isMobile ? (isRTL ? 'أسطول نظافة المدينة' : 'Cleaning Fleet') : (isRTL ? 'أسطول مشاريع نظافة المدينة المنورة' : 'Madinah Cleaning Fleet Management')}
+          </div>
+          {!isMobile && <div style={{ fontSize: '11px', color: C.muted }}>{t.yourPermission}: <span style={{ color: roleColor(currentRole), fontWeight: '700' }}>{roleLabel(currentRole)}</span></div>}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Language Switch */}
+          <button onClick={switchLang} style={{ background: C.orangeLight, border: `1.5px solid ${C.orange}`, borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: C.orange, fontFamily: 'Cairo, sans-serif' }}>
+            {lang === 'ar' ? '🇬🇧 EN' : '🇸🇦 AR'}
+          </button>
           {criticalAlerts.length > 0 && (
             <div onClick={() => setActiveTab('alerts')} style={{ position: 'relative', cursor: 'pointer' }}>
               <span style={{ fontSize: '22px' }}>🔔</span>
@@ -325,51 +354,51 @@ export default function Dashboard() {
             </div>
           )}
           {!isMobile && <img src="/logo-mag.jpeg" alt="" style={{ height: '40px', objectFit: 'contain' }} />}
-          <button onClick={handleLogout} style={{ ...st.btn('#dc2626', true), padding: isMobile ? '6px 10px' : '9px 18px', fontSize: isMobile ? '11px' : '13px' }}>خروج</button>
+          <button onClick={handleLogout} style={{ ...st.btn('#dc2626', true), padding: isMobile ? '6px 10px' : '9px 18px', fontSize: isMobile ? '11px' : '13px' }}>{t.logout}</button>
         </div>
       </div>
 
       <div style={{ display: 'flex' }}>
         {/* Sidebar */}
-        <div style={{ width: '220px', background: C.white, borderLeft: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', padding: '16px 0', position: isMobile ? 'fixed' : 'sticky', right: isMobile ? (sidebarOpen ? 0 : '-220px') : 0, top: isMobile ? 0 : '63px', height: isMobile ? '100vh' : 'calc(100vh - 63px)', overflowY: 'auto', zIndex: isMobile ? 40 : 10, transition: 'right 0.3s ease' }}>
+        <div style={{ width: '220px', background: C.white, borderLeft: isRTL ? `1px solid ${C.border}` : 'none', borderRight: isRTL ? 'none' : `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', padding: '16px 0', position: isMobile ? 'fixed' : 'sticky', [isRTL ? 'right' : 'left']: isMobile ? (sidebarOpen ? 0 : (isRTL ? '-220px' : '-220px')) : 0, top: isMobile ? 0 : '63px', height: isMobile ? '100vh' : 'calc(100vh - 63px)', overflowY: 'auto', zIndex: isMobile ? 40 : 10, transition: `${isRTL ? 'right' : 'left'} 0.3s ease` }}>
           {isMobile && (
             <div style={{ padding: '16px 20px 8px', borderBottom: `1px solid ${C.border}`, marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: C.orange }}>القائمة</div>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: C.orange }}>{t.menu}</div>
               <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
           )}
           {navItems.map(([id, icon, label]) => (
             (!['users'].includes(id) || currentRole === 'admin') && (
-              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === id ? '700' : '400', color: activeTab === id ? C.orange : C.muted, background: activeTab === id ? C.orangeLight : 'transparent', borderRight: activeTab === id ? `3px solid ${C.orange}` : '3px solid transparent', position: 'relative' }}
+              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === id ? '700' : '400', color: activeTab === id ? C.orange : C.muted, background: activeTab === id ? C.orangeLight : 'transparent', borderRight: isRTL && activeTab === id ? `3px solid ${C.orange}` : isRTL ? '3px solid transparent' : 'none', borderLeft: !isRTL && activeTab === id ? `3px solid ${C.orange}` : !isRTL ? '3px solid transparent' : 'none', position: 'relative' }}
                 onClick={() => { setActiveTab(id); if (isMobile) setSidebarOpen(false) }}>
                 <span style={{ fontSize: '17px' }}>{icon}</span>
                 <span>{label}</span>
-                {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ marginRight: 'auto', background: '#dc2626', color: '#fff', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: '700' }}>{criticalAlerts.length}</span>}
+                {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ marginRight: isRTL ? 'auto' : 0, marginLeft: isRTL ? 0 : 'auto', background: '#dc2626', color: '#fff', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: '700' }}>{criticalAlerts.length}</span>}
               </div>
             )
           ))}
           <div style={{ flex: 1 }} />
           <div style={{ padding: '16px 20px', borderTop: `1px solid ${C.border}` }}>
-            <button onClick={handleLogout} style={{ ...st.btn('#dc2626', true), width: '100%' }}>تسجيل الخروج</button>
+            <button onClick={handleLogout} style={{ ...st.btn('#dc2626', true), width: '100%' }}>{t.logout}</button>
           </div>
         </div>
 
         {/* Main */}
-        <div style={{ flex: 1, padding: isMobile ? '16px' : '24px', overflowX: 'auto', marginRight: isMobile ? 0 : '220px' }}>
+        <div style={{ flex: 1, padding: isMobile ? '16px' : '24px', overflowX: 'auto', [isRTL ? 'marginRight' : 'marginLeft']: isMobile ? 0 : '220px' }}>
 
           {/* Dashboard */}
           {activeTab === 'dashboard' && (
             <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>📊 لوحة التحكم</div>
+              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>📊 {t.dashboardTitle}</div>
               {criticalAlerts.length > 0 && (
                 <div onClick={() => setActiveTab('alerts')} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontSize: '24px' }}>🚨</span>
-                  <div><div style={{ fontWeight: '700', color: '#dc2626', fontSize: '14px' }}>يوجد {criticalAlerts.length} تنبيه حرج!</div><div style={{ color: '#888', fontSize: '12px' }}>اضغط لعرض التفاصيل</div></div>
-                  <div style={{ marginRight: 'auto', color: '#dc2626', fontSize: '20px' }}>←</div>
+                  <div><div style={{ fontWeight: '700', color: '#dc2626', fontSize: '14px' }}>{t.criticalAlert.replace('{n}', criticalAlerts.length)}</div><div style={{ color: '#888', fontSize: '12px' }}>{t.clickToView}</div></div>
+                  <div style={{ marginRight: isRTL ? 'auto' : 0, marginLeft: isRTL ? 0 : 'auto', color: '#dc2626', fontSize: '20px' }}>{isRTL ? '←' : '→'}</div>
                 </div>
               )}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[['🚛','المركبات',vehicles.length,'#ff6b00'],['👤','السائقون',drivers.length,'#16a34a'],['🔧','الصيانة',maintenance.length,'#d97706'],['🔔','تنبيهات',alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
+                {[['🚛',t.vehicles,vehicles.length,'#ff6b00'],['👤',t.drivers,drivers.length,'#16a34a'],['🔧',t.maintenance,maintenance.length,'#d97706'],['🔔',t.alerts,alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
                   <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: isMobile ? '14px' : '20px', borderTop: `4px solid ${color}` }}>
                     <div style={{ color: C.muted, fontSize: '11px', marginBottom: '6px', fontWeight: '600' }}>{icon} {label}</div>
                     <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: '900', color }}>{val}</div>
@@ -378,7 +407,7 @@ export default function Dashboard() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
                 <div style={st.card}>
-                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>🚛 آخر المركبات</div>
+                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>🚛 {t.latestVehicles}</div>
                   {vehicles.slice(0,5).map(v => (
                     <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: '13px', fontWeight: '600' }}>{v.plate_number}</div>
@@ -387,7 +416,7 @@ export default function Dashboard() {
                   ))}
                 </div>
                 <div style={st.card}>
-                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>🔔 آخر التنبيهات</div>
+                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>🔔 {t.latestAlerts}</div>
                   {alerts.slice(0,5).map(a => (
                     <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
                       <span>{a.icon}</span>
@@ -397,181 +426,9 @@ export default function Dashboard() {
                       </div>
                     </div>
                   ))}
-                  {alerts.length === 0 && <div style={{ color: '#16a34a', textAlign: 'center', padding: '20px', fontSize: '13px' }}>✅ لا توجد تنبيهات</div>}
+                  {alerts.length === 0 && <div style={{ color: '#16a34a', textAlign: 'center', padding: '20px', fontSize: '13px' }}>{t.noAlerts}</div>}
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Users Management */}
-          {activeTab === 'users' && currentRole === 'admin' && (
-            <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>👥 إدارة المستخدمين</div>
-
-              {/* Role cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[['admin','👑 مدير','صلاحيات كاملة','#7c3aed'],['editor','✏️ محرر','إضافة وتعديل فقط','#ff6b00'],['viewer','👁️ مشاهد','مشاهدة فقط','#16a34a']].map(([role,label,desc,color]) => (
-                  <div key={role} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', borderTop: `3px solid ${color}` }}>
-                    <div style={{ fontWeight: '700', color, marginBottom: '4px' }}>{label}</div>
-                    <div style={{ fontSize: '12px', color: C.muted }}>{desc}</div>
-                    <div style={{ fontSize: '20px', fontWeight: '900', color, marginTop: '8px' }}>{userRoles.filter(u => u.role === role).length}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* How to add user */}
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
-                <div style={{ fontWeight: '700', color: '#1d4ed8', marginBottom: '8px' }}>💡 كيف تضيف مستخدم جديد؟</div>
-                <div style={{ fontSize: '13px', color: '#1e40af' }}>
-                  1. روح Supabase ← Authentication ← Users ← Add User<br/>
-                  2. أدخل البريد الإلكتروني وكلمة المرور<br/>
-                  3. بعد إنشاء الحساب، غيّر صلاحيته من الجدول أدناه
-                </div>
-              </div>
-
-              {/* Users table */}
-              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr>
-                    <th style={st.th}>المستخدم</th>
-                    <th style={st.th}>الصلاحية الحالية</th>
-                    <th style={st.th}>تغيير الصلاحية</th>
-                    <th style={st.th}>حذف</th>
-                  </tr></thead>
-                  <tbody>
-                    {userRoles.map(u => (
-                      <tr key={u.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                        <td style={st.td}>
-                          <div style={{ fontWeight: '700' }}>{u.full_name || 'مستخدم'}</div>
-                          <div style={{ fontSize: '11px', color: C.muted }}>{u.user_id?.substring(0, 16)}...</div>
-                        </td>
-                        <td style={st.td}>
-                          <span style={{ background: roleBg(u.role), color: roleColor(u.role), padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' }}>{roleLabel(u.role)}</span>
-                        </td>
-                        <td style={st.td}>
-                          {u.user_id !== currentUser?.id ? (
-                            <select value={u.role} onChange={e => updateUserRole(u.user_id, e.target.value)} style={{ ...st.input, width: 'auto', padding: '6px 10px', fontSize: '12px' }}>
-                              <option value="admin">👑 مدير</option>
-                              <option value="editor">✏️ محرر</option>
-                              <option value="viewer">👁️ مشاهد</option>
-                            </select>
-                          ) : <span style={{ color: C.muted, fontSize: '12px' }}>أنت</span>}
-                        </td>
-                        <td style={st.td}>
-                          {u.user_id !== currentUser?.id ? (
-                            <button onClick={() => deleteUserRole(u.user_id)} style={st.deleteBtn}>🗑️</button>
-                          ) : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {userRoles.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا يوجد مستخدمون</div>}
-              </div>
-            </div>
-          )}
-
-          {/* Reports */}
-          {activeTab === 'reports' && (
-            <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>📈 التقارير والإحصائيات</div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[['🚛','إجمالي المركبات',vehicles.length,'#ff6b00'],['✅','مركبات نشطة',activeVehicles,'#16a34a'],['🟢','مركبات جاهزة',readyVehicles,'#16a34a'],['👤','إجمالي السائقين',drivers.length,'#2563eb'],['👍','سائقون نشطون',activeDrivers,'#16a34a'],['🔔','تنبيهات نشطة',alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
-                  <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', borderTop: `3px solid ${color}` }}>
-                    <div style={{ color: C.muted, fontSize: '11px', marginBottom: '6px' }}>{icon} {label}</div>
-                    <div style={{ fontSize: '26px', fontWeight: '900', color }}>{val}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div style={st.card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ fontWeight: '800' }}>⛽ تقرير الوقود</div>
-                    <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>📥 تصدير</button>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                    <div style={{ background: '#fff7f2', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: C.orange }}>{totalFuelCost.toFixed(0)}</div>
-                      <div style={{ fontSize: '11px', color: C.muted }}>إجمالي التكلفة (ر.س)</div>
-                    </div>
-                    <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#16a34a' }}>{totalFuelLiters.toFixed(0)}</div>
-                      <div style={{ fontSize: '11px', color: C.muted }}>إجمالي اللترات</div>
-                    </div>
-                  </div>
-                  <div style={{ fontWeight: '700', fontSize: '12px', marginBottom: '10px', color: C.muted }}>أعلى 5 مركبات استهلاكاً</div>
-                  <BarChart data={topFuelVehicles} maxVal={topFuelVehicles[0]?.[1] || 1} color={C.orange} />
-                </div>
-                <div style={st.card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ fontWeight: '800' }}>🔧 تقرير الصيانة</div>
-                    <button onClick={exportMaintenance} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>📥 تصدير</button>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                    <div style={{ background: '#fffbeb', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#d97706' }}>{totalMaintenanceCost.toFixed(0)}</div>
-                      <div style={{ fontSize: '11px', color: C.muted }}>إجمالي التكلفة (ر.س)</div>
-                    </div>
-                    <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#16a34a' }}>{maintenance.filter(m => m.status === 'active').length}</div>
-                      <div style={{ fontSize: '11px', color: C.muted }}>صيانة مكتملة</div>
-                    </div>
-                  </div>
-                  <BarChart data={[['مكتملة',maintenance.filter(m=>m.status==='active').length],['معلقة',maintenance.filter(m=>m.status==='pending').length],['ملغاة',maintenance.filter(m=>m.status==='inactive').length]]} maxVal={maintenance.length||1} color="#d97706" />
-                </div>
-              </div>
-              <div style={st.card}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div style={{ fontWeight: '800' }}>🚛 تقرير المركبات</div>
-                  <button onClick={exportVehicles} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>📥 تصدير</button>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-                  {[['جاهزة ✅',readyVehicles,'#16a34a'],['قيد التجهيز 🔄',vehicleTypes['in_progress']||0,'#d97706'],['غير جاهزة ❌',vehicleTypes['not_ready']||0,'#dc2626']].map(([label,val,color]) => (
-                    <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '26px', fontWeight: '900', color }}>{val}</div>
-                      <div style={{ fontSize: '12px', color: C.muted }}>{label}</div>
-                      <div style={{ fontSize: '11px', color, fontWeight: '700' }}>{vehicles.length > 0 ? ((val/vehicles.length)*100).toFixed(0) : 0}%</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div style={{ ...st.card, marginTop: '16px' }}>
-                <div style={{ fontWeight: '800', marginBottom: '16px' }}>📥 تصدير البيانات</div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '10px' }}>
-                  <button onClick={exportVehicles} style={{ ...st.btn('#ff6b00'), padding: '12px' }}>🚛 المركبات</button>
-                  <button onClick={exportDrivers} style={{ ...st.btn('#2563eb'), padding: '12px' }}>👤 السائقون</button>
-                  <button onClick={exportMaintenance} style={{ ...st.btn('#d97706'), padding: '12px' }}>🔧 الصيانة</button>
-                  <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '12px' }}>⛽ الوقود</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Alerts */}
-          {activeTab === 'alerts' && (
-            <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>🔔 التنبيهات ({alerts.length})</div>
-              {alerts.length === 0 ? (
-                <div style={{ ...st.card, textAlign: 'center', padding: '60px' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
-                  <div style={{ fontSize: '16px', fontWeight: '700', color: '#16a34a' }}>لا توجد تنبيهات</div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {alerts.map(a => (
-                    <div key={a.id} style={{ background: alertBg(a.type), border: `1px solid ${alertColor(a.type)}33`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderRight: `4px solid ${alertColor(a.type)}` }}>
-                      <span style={{ fontSize: '28px' }}>{a.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: '700', color: alertColor(a.type), fontSize: '14px' }}>{a.title}</div>
-                        <div style={{ color: C.muted, fontSize: '12px', marginTop: '4px' }}>{a.detail}</div>
-                      </div>
-                      <div style={{ background: alertColor(a.type), color: '#fff', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '700' }}>
-                        {a.type === 'expired' ? 'منتهي' : a.type === 'critical' ? 'حرج' : a.type === 'warning' ? 'تحذير' : 'تنبيه'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 
@@ -579,18 +436,18 @@ export default function Dashboard() {
           {activeTab === 'vehicles' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🚛 المركبات ({filteredVehicles.length})</div>
-                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowVehicleForm(true)}>+ إضافة</button>}
+                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🚛 {t.vehiclesTitle} ({filteredVehicles.length})</div>
+                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowVehicleForm(true)}>{t.addVehicle}</button>}
               </div>
-              <input style={{ ...st.input, marginBottom: '16px' }} placeholder="🔍 بحث برقم اللوحة، الكود، الماركة..." value={vehicleSearch} onChange={e => setVehicleSearch(e.target.value)} />
+              <input style={{ ...st.input, marginBottom: '16px' }} placeholder={t.searchVehicles} value={vehicleSearch} onChange={e => setVehicleSearch(e.target.value)} />
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                   <thead><tr>
-                    <th style={st.th}>صورة</th><th style={st.th}>اللوحة</th><th style={st.th}>الكود</th>
-                    {!isMobile && <><th style={st.th}>الماركة</th><th style={st.th}>الموديل</th><th style={st.th}>السنة</th></>}
-                    <th style={st.th}>الحالة</th><th style={st.th}>التجهيز</th>
-                    <th style={st.th}>استمارة</th>
-                    {canEdit && <th style={st.th}>✏️</th>}
+                    <th style={st.th}>{t.image}</th><th style={st.th}>{t.plateNumber}</th><th style={st.th}>{t.code}</th>
+                    {!isMobile && <><th style={st.th}>{t.brand}</th><th style={st.th}>{t.model}</th><th style={st.th}>{t.year}</th></>}
+                    <th style={st.th}>{t.status}</th><th style={st.th}>{t.preparationStatus}</th>
+                    <th style={st.th}>{t.istimara}</th>
+                    {canEdit && <th style={st.th}>{t.edit}</th>}
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
@@ -606,16 +463,16 @@ export default function Dashboard() {
                             <select value={v.preparation_status || 'not_ready'} onChange={e => updatePreparation(v.id, e.target.value)} style={st.prepSelect(v.preparation_status || 'not_ready')}>
                               <option value="not_ready">❌</option><option value="in_progress">🔄</option><option value="ready">✅</option>
                             </select>
-                          ) : <span style={{ fontSize: '16px' }}>{v.preparation_status === 'ready' ? '✅' : v.preparation_status === 'in_progress' ? '🔄' : '❌'}</span>}
+                          ) : <span>{v.preparation_status === 'ready' ? '✅' : v.preparation_status === 'in_progress' ? '🔄' : '❌'}</span>}
                         </td>
-                        <td style={st.td}>{v.istimara_image ? <span style={imgLink} onClick={() => setPreviewImage(v.istimara_image)}>عرض</span> : '—'}</td>
+                        <td style={st.td}>{v.istimara_image ? <span style={imgLink} onClick={() => setPreviewImage(v.istimara_image)}>{t.view}</span> : '—'}</td>
                         {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('vehicle', v)}>✏️</button></td>}
                         {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteVehicle(v.id)}>🗑️</button></td>}
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {filteredVehicles.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد نتائج</div>}
+                {filteredVehicles.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>{t.noResults}</div>}
               </div>
             </div>
           )}
@@ -624,18 +481,18 @@ export default function Dashboard() {
           {activeTab === 'drivers' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>👤 السائقون ({filteredDrivers.length})</div>
-                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowDriverForm(true)}>+ إضافة</button>}
+                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>👤 {t.driversTitle} ({filteredDrivers.length})</div>
+                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowDriverForm(true)}>{t.addDriver}</button>}
               </div>
-              <input style={{ ...st.input, marginBottom: '16px' }} placeholder="🔍 بحث بالاسم، الهوية، الجواز، الجوال..." value={driverSearch} onChange={e => setDriverSearch(e.target.value)} />
+              <input style={{ ...st.input, marginBottom: '16px' }} placeholder={t.searchDrivers} value={driverSearch} onChange={e => setDriverSearch(e.target.value)} />
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
                   <thead><tr>
-                    <th style={st.th}>الاسم</th><th style={st.th}>الهوية</th>
-                    {!isMobile && <><th style={st.th}>الجواز</th><th style={st.th}>الجوال</th><th style={st.th}>الرخصة</th><th style={st.th}>الانتهاء</th></>}
-                    <th style={st.th}>إقامة</th><th style={st.th}>رخصة</th>
-                    <th style={st.th}>الحالة</th>
-                    {canEdit && <th style={st.th}>✏️</th>}
+                    <th style={st.th}>{t.fullName}</th><th style={st.th}>{t.nationalId}</th>
+                    {!isMobile && <><th style={st.th}>{t.passport}</th><th style={st.th}>{t.phone}</th><th style={st.th}>{t.license}</th><th style={st.th}>{t.expiry}</th></>}
+                    <th style={st.th}>{t.iqama}</th><th style={st.th}>{t.license}</th>
+                    <th style={st.th}>{t.status}</th>
+                    {canEdit && <th style={st.th}>{t.edit}</th>}
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
@@ -648,8 +505,8 @@ export default function Dashboard() {
                           <td style={st.td}>{d.national_id || '—'}</td>
                           {!isMobile && <><td style={st.td}>{d.passport_number || '—'}</td><td style={st.td}>{d.phone || '—'}</td><td style={st.td}>{d.license_number || '—'}</td>
                           <td style={st.td}><span style={{ color: days !== null && days < 0 ? '#dc2626' : days !== null && days <= 14 ? '#ea580c' : days !== null && days <= 30 ? '#d97706' : C.text, fontWeight: expiring ? '700' : '400' }}>{d.license_expiry || '—'}{days !== null && days < 0 && ' ⚠️'}</span></td></>}
-                          <td style={st.td}>{d.iqama_image ? <span style={imgLink} onClick={() => setPreviewImage(d.iqama_image)}>عرض</span> : '—'}</td>
-                          <td style={st.td}>{d.license_image ? <span style={imgLink} onClick={() => setPreviewImage(d.license_image)}>عرض</span> : '—'}</td>
+                          <td style={st.td}>{d.iqama_image ? <span style={imgLink} onClick={() => setPreviewImage(d.iqama_image)}>{t.view}</span> : '—'}</td>
+                          <td style={st.td}>{d.license_image ? <span style={imgLink} onClick={() => setPreviewImage(d.license_image)}>{t.view}</span> : '—'}</td>
                           <td style={st.td}><span style={st.badge(d.status)}>{statusLabel(d.status)}</span></td>
                           {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('driver', d)}>✏️</button></td>}
                           {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteDriver(d.id)}>🗑️</button></td>}
@@ -658,7 +515,7 @@ export default function Dashboard() {
                     })}
                   </tbody>
                 </table>
-                {filteredDrivers.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد نتائج</div>}
+                {filteredDrivers.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>{t.noResults}</div>}
               </div>
             </div>
           )}
@@ -667,17 +524,17 @@ export default function Dashboard() {
           {activeTab === 'maintenance' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🔧 الصيانة</div>
-                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowMaintenanceForm(true)}>+ إضافة</button>}
+                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🔧 {t.maintenanceTitle}</div>
+                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowMaintenanceForm(true)}>{t.addMaintenance}</button>}
               </div>
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
                   <thead><tr>
-                    <th style={st.th}>المركبة</th><th style={st.th}>النوع</th>
-                    {!isMobile && <><th style={st.th}>الوصف</th><th style={st.th}>التاريخ</th></>}
-                    <th style={st.th}>التكلفة</th><th style={st.th}>الموعد القادم</th>
-                    <th style={st.th}>الحالة</th>
-                    {canEdit && <th style={st.th}>✏️</th>}
+                    <th style={st.th}>{t.vehicle}</th><th style={st.th}>{t.type}</th>
+                    {!isMobile && <><th style={st.th}>{t.description}</th><th style={st.th}>{t.date}</th></>}
+                    <th style={st.th}>{t.cost}</th><th style={st.th}>{t.nextDate}</th>
+                    <th style={st.th}>{t.status}</th>
+                    {canEdit && <th style={st.th}>{t.edit}</th>}
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
@@ -689,7 +546,7 @@ export default function Dashboard() {
                           <td style={{ ...st.td, fontWeight: '700' }}>{m.vehicles?.plate_number}</td>
                           <td style={st.td}>{m.type}</td>
                           {!isMobile && <><td style={st.td}>{m.description}</td><td style={st.td}>{m.date}</td></>}
-                          <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{m.cost} ر.س</span></td>
+                          <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{m.cost} {t.sar}</span></td>
                           <td style={st.td}><span style={{ color: expiring ? '#dc2626' : C.text, fontWeight: expiring ? '700' : '400' }}>{m.next_date || '—'}{expiring && ' ⚠️'}</span></td>
                           <td style={st.td}><span style={st.badge(m.status)}>{statusLabel(m.status)}</span></td>
                           {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('maintenance', m)}>✏️</button></td>}
@@ -699,7 +556,7 @@ export default function Dashboard() {
                     })}
                   </tbody>
                 </table>
-                {maintenance.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد سجلات</div>}
+                {maintenance.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>{t.noMaintenance}</div>}
               </div>
             </div>
           )}
@@ -708,26 +565,26 @@ export default function Dashboard() {
           {activeTab === 'fuel' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>⛽ الوقود</div>
-                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowFuelForm(true)}>+ إضافة</button>}
+                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>⛽ {t.fuelTitle}</div>
+                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowFuelForm(true)}>{t.addFuel}</button>}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px', borderTop: '4px solid #ff6b00' }}>
-                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>⛽ إجمالي التكلفة</div>
-                  <div style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: '900', color: '#ff6b00' }}>{totalFuelCost.toFixed(0)} ر.س</div>
+                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>⛽ {t.totalCost}</div>
+                  <div style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: '900', color: '#ff6b00' }}>{totalFuelCost.toFixed(0)} {t.sar}</div>
                 </div>
                 <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px', borderTop: '4px solid #7c3aed' }}>
-                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>📋 عدد السجلات</div>
+                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>📋 {t.totalRecords}</div>
                   <div style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: '900', color: '#7c3aed' }}>{fuelLogs.length}</div>
                 </div>
               </div>
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
                   <thead><tr>
-                    <th style={st.th}>المركبة</th><th style={st.th}>السائق</th>
-                    {!isMobile && <><th style={st.th}>التاريخ</th><th style={st.th}>اللترات</th></>}
-                    <th style={st.th}>الإجمالي</th>
-                    {canEdit && <th style={st.th}>✏️</th>}
+                    <th style={st.th}>{t.vehicle}</th><th style={st.th}>{t.driver}</th>
+                    {!isMobile && <><th style={st.th}>{t.date}</th><th style={st.th}>{t.liters}</th></>}
+                    <th style={st.th}>{t.total}</th>
+                    {canEdit && <th style={st.th}>{t.edit}</th>}
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
@@ -736,14 +593,171 @@ export default function Dashboard() {
                         <td style={{ ...st.td, fontWeight: '700' }}>{f.vehicles?.plate_number}</td>
                         <td style={st.td}>{f.drivers?.full_name}</td>
                         {!isMobile && <><td style={st.td}>{f.date}</td><td style={st.td}>{f.liters}</td></>}
-                        <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{f.total_cost} ر.س</span></td>
+                        <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{f.total_cost} {t.sar}</span></td>
                         {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('fuel', f)}>✏️</button></td>}
                         {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteFuel(f.id)}>🗑️</button></td>}
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {fuelLogs.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد سجلات</div>}
+                {fuelLogs.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>{t.noFuel}</div>}
+              </div>
+            </div>
+          )}
+
+          {/* Reports */}
+          {activeTab === 'reports' && (
+            <div>
+              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>📈 {t.reportsTitle}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
+                {[[`🚛`,t.totalVehicles,vehicles.length,'#ff6b00'],[`✅`,t.activeVehicles,activeVehicles,'#16a34a'],[`🟢`,t.readyVehicles,readyVehicles,'#16a34a'],[`👤`,t.totalDrivers,drivers.length,'#2563eb'],[`👍`,t.activeDrivers,activeDrivers,'#16a34a'],[`🔔`,t.activeAlerts,alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
+                  <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', borderTop: `3px solid ${color}` }}>
+                    <div style={{ color: C.muted, fontSize: '11px', marginBottom: '6px' }}>{icon} {label}</div>
+                    <div style={{ fontSize: '26px', fontWeight: '900', color }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div style={st.card}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div style={{ fontWeight: '800' }}>⛽ {t.fuelReport}</div>
+                    <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>{t.export}</button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{ background: '#fff7f2', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '20px', fontWeight: '900', color: C.orange }}>{totalFuelCost.toFixed(0)}</div>
+                      <div style={{ fontSize: '11px', color: C.muted }}>{t.totalFuelCost}</div>
+                    </div>
+                    <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#16a34a' }}>{totalFuelLiters.toFixed(0)}</div>
+                      <div style={{ fontSize: '11px', color: C.muted }}>{t.totalLiters}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontWeight: '700', fontSize: '12px', marginBottom: '10px', color: C.muted }}>{t.top5Fuel}</div>
+                  <BarChart data={topFuelVehicles} maxVal={topFuelVehicles[0]?.[1] || 1} color={C.orange} />
+                </div>
+                <div style={st.card}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div style={{ fontWeight: '800' }}>🔧 {t.maintenanceReport}</div>
+                    <button onClick={exportMaintenance} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>{t.export}</button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{ background: '#fffbeb', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#d97706' }}>{totalMaintenanceCost.toFixed(0)}</div>
+                      <div style={{ fontSize: '11px', color: C.muted }}>{t.totalFuelCost}</div>
+                    </div>
+                    <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#16a34a' }}>{maintenance.filter(m => m.status === 'active').length}</div>
+                      <div style={{ fontSize: '11px', color: C.muted }}>{t.completedMaintenance}</div>
+                    </div>
+                  </div>
+                  <BarChart data={[[t.completedLabel,maintenance.filter(m=>m.status==='active').length],[t.pendingLabel,maintenance.filter(m=>m.status==='pending').length],[t.cancelledLabel,maintenance.filter(m=>m.status==='inactive').length]]} maxVal={maintenance.length||1} color="#d97706" />
+                </div>
+              </div>
+              <div style={st.card}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div style={{ fontWeight: '800' }}>🚛 {t.vehiclesReport}</div>
+                  <button onClick={exportVehicles} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>{t.export}</button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
+                  {[[t.ready,readyVehicles,'#16a34a'],[t.inProgress,vehicleTypes['in_progress']||0,'#d97706'],[t.notReady,vehicleTypes['not_ready']||0,'#dc2626']].map(([label,val,color]) => (
+                    <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '26px', fontWeight: '900', color }}>{val}</div>
+                      <div style={{ fontSize: '12px', color: C.muted }}>{label}</div>
+                      <div style={{ fontSize: '11px', color, fontWeight: '700' }}>{vehicles.length > 0 ? ((val/vehicles.length)*100).toFixed(0) : 0}%</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ ...st.card, marginTop: '16px' }}>
+                <div style={{ fontWeight: '800', marginBottom: '16px' }}>📥 {t.exportData}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '10px' }}>
+                  <button onClick={exportVehicles} style={{ ...st.btn('#ff6b00'), padding: '12px' }}>🚛 {t.vehicles}</button>
+                  <button onClick={exportDrivers} style={{ ...st.btn('#2563eb'), padding: '12px' }}>👤 {t.drivers}</button>
+                  <button onClick={exportMaintenance} style={{ ...st.btn('#d97706'), padding: '12px' }}>🔧 {t.maintenance}</button>
+                  <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '12px' }}>⛽ {t.fuel}</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Alerts */}
+          {activeTab === 'alerts' && (
+            <div>
+              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>🔔 {t.alertsTitle} ({alerts.length})</div>
+              {alerts.length === 0 ? (
+                <div style={{ ...st.card, textAlign: 'center', padding: '60px' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+                  <div style={{ fontSize: '16px', fontWeight: '700', color: '#16a34a' }}>{t.noAlertsTitle}</div>
+                  <div style={{ color: C.muted, fontSize: '13px', marginTop: '8px' }}>{t.noAlertsDesc}</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {alerts.map(a => (
+                    <div key={a.id} style={{ background: alertBg(a.type), border: `1px solid ${alertColor(a.type)}33`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', [isRTL ? 'borderRight' : 'borderLeft']: `4px solid ${alertColor(a.type)}` }}>
+                      <span style={{ fontSize: '28px' }}>{a.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '700', color: alertColor(a.type), fontSize: '14px' }}>{a.title}</div>
+                        <div style={{ color: C.muted, fontSize: '12px', marginTop: '4px' }}>{a.detail}</div>
+                      </div>
+                      <div style={{ background: alertColor(a.type), color: '#fff', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '700' }}>{alertLabel(a.type)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Users */}
+          {activeTab === 'users' && currentRole === 'admin' && (
+            <div>
+              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>👥 {t.usersTitle}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
+                {[['admin',t.adminRole,t.adminDesc,'#7c3aed'],['editor',t.editorRole,t.editorDesc,'#ff6b00'],['viewer',t.viewerRole,t.viewerDesc,'#16a34a']].map(([role,label,desc,color]) => (
+                  <div key={role} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', borderTop: `3px solid ${color}` }}>
+                    <div style={{ fontWeight: '700', color, marginBottom: '4px' }}>{label}</div>
+                    <div style={{ fontSize: '12px', color: C.muted }}>{desc}</div>
+                    <div style={{ fontSize: '20px', fontWeight: '900', color, marginTop: '8px' }}>{userRoles.filter(u => u.role === role).length}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+                <div style={{ fontWeight: '700', color: '#1d4ed8', marginBottom: '8px' }}>{t.howToAdd}</div>
+                <div style={{ fontSize: '13px', color: '#1e40af' }}>{t.howToAddDesc}</div>
+              </div>
+              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr>
+                    <th style={st.th}>{t.user}</th>
+                    <th style={st.th}>{t.currentRole}</th>
+                    <th style={st.th}>{t.changeRole}</th>
+                    <th style={st.th}>{t.delete}</th>
+                  </tr></thead>
+                  <tbody>
+                    {userRoles.map(u => (
+                      <tr key={u.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <td style={st.td}>
+                          <div style={{ fontWeight: '700' }}>{u.full_name || t.user}</div>
+                          <div style={{ fontSize: '11px', color: C.muted }}>{u.user_id?.substring(0, 16)}...</div>
+                        </td>
+                        <td style={st.td}><span style={{ background: roleBg(u.role), color: roleColor(u.role), padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' }}>{roleLabel(u.role)}</span></td>
+                        <td style={st.td}>
+                          {u.user_id !== currentUser?.id ? (
+                            <select value={u.role} onChange={e => updateUserRole(u.user_id, e.target.value)} style={{ ...st.input, width: 'auto', padding: '6px 10px', fontSize: '12px' }}>
+                              <option value="admin">{t.adminRole}</option>
+                              <option value="editor">{t.editorRole}</option>
+                              <option value="viewer">{t.viewerRole}</option>
+                            </select>
+                          ) : <span style={{ color: C.muted, fontSize: '12px' }}>{t.you}</span>}
+                        </td>
+                        <td style={st.td}>
+                          {u.user_id !== currentUser?.id ? <button onClick={() => deleteUserRole(u.user_id)} style={st.deleteBtn}>🗑️</button> : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {userRoles.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>{t.noUsers}</div>}
               </div>
             </div>
           )}
@@ -754,111 +768,125 @@ export default function Dashboard() {
       {editItem && (
         <div style={st.modal}>
           <div style={st.modalBox}>
-            <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '20px' }}>✏️ تعديل {editType === 'vehicle' ? 'مركبة' : editType === 'driver' ? 'سائق' : editType === 'maintenance' ? 'صيانة' : 'وقود'}</div>
+            <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '20px' }}>✏️ {t.edit} {editType === 'vehicle' ? t.vehicles : editType === 'driver' ? t.drivers : editType === 'maintenance' ? t.maintenance : t.fuel}</div>
             {editType === 'vehicle' && (<div style={st.formGrid}>
-              <InputField label="رقم اللوحة" field="plate_number" /><InputField label="كود المركبة" field="vehicle_code" />
-              <InputField label="النوع" field="type" /><InputField label="الماركة" field="brand" />
-              <InputField label="الموديل" field="model" /><InputField label="السنة" field="year" />
-              <InputField label="اللون" field="color" /><InputField label="نوع الوقود" field="fuel_type" />
-              <SelectField label="الحالة" field="status" options={[['active','نشط'],['inactive','غير نشط'],['pending','معلق']]} />
-              <SelectField label="حالة التجهيز" field="preparation_status" options={[['not_ready','غير جاهزة ❌'],['in_progress','قيد التجهيز 🔄'],['ready','جاهزة ✅']]} />
-              <FileInput label="تغيير صورة المركبة" icon="🚛" onChange={setEditVehicleImage} file={editVehicleImage} />
-              <FileInput label="تغيير صورة الاستمارة" icon="📄" onChange={setEditIstamaraImage} file={editIstamaraImage} />
+              <div><label style={st.label}>{t.plateNumber}</label><input style={st.input} value={editForm.plate_number||''} onChange={e=>setEditForm({...editForm,plate_number:e.target.value})} /></div>
+              <div><label style={st.label}>{t.vehicleCode}</label><input style={st.input} value={editForm.vehicle_code||''} onChange={e=>setEditForm({...editForm,vehicle_code:e.target.value})} /></div>
+              <div><label style={st.label}>{t.type}</label><input style={st.input} value={editForm.type||''} onChange={e=>setEditForm({...editForm,type:e.target.value})} /></div>
+              <div><label style={st.label}>{t.brand}</label><input style={st.input} value={editForm.brand||''} onChange={e=>setEditForm({...editForm,brand:e.target.value})} /></div>
+              <div><label style={st.label}>{t.model}</label><input style={st.input} value={editForm.model||''} onChange={e=>setEditForm({...editForm,model:e.target.value})} /></div>
+              <div><label style={st.label}>{t.year}</label><input style={st.input} value={editForm.year||''} onChange={e=>setEditForm({...editForm,year:e.target.value})} /></div>
+              <div><label style={st.label}>{t.color}</label><input style={st.input} value={editForm.color||''} onChange={e=>setEditForm({...editForm,color:e.target.value})} /></div>
+              <div><label style={st.label}>{t.fuelType}</label><input style={st.input} value={editForm.fuel_type||''} onChange={e=>setEditForm({...editForm,fuel_type:e.target.value})} /></div>
+              <div><label style={st.label}>{t.status}</label><select style={st.input} value={editForm.status||''} onChange={e=>setEditForm({...editForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option><option value="pending">{t.pending}</option></select></div>
+              <div><label style={st.label}>{t.preparationStatus}</label><select style={st.input} value={editForm.preparation_status||''} onChange={e=>setEditForm({...editForm,preparation_status:e.target.value})}><option value="not_ready">{t.notReady}</option><option value="in_progress">{t.inProgress}</option><option value="ready">{t.ready}</option></select></div>
+              <FileInput label={t.vehicleImage} icon="🚛" onChange={setEditVehicleImage} file={editVehicleImage} />
+              <FileInput label={t.istamaraImage} icon="📄" onChange={setEditIstamaraImage} file={editIstamaraImage} />
             </div>)}
             {editType === 'driver' && (<div style={st.formGrid}>
-              <InputField label="الاسم الكامل" field="full_name" /><InputField label="رقم الهوية" field="national_id" />
-              <InputField label="رقم الجواز" field="passport_number" /><InputField label="الجوال" field="phone" />
-              <InputField label="رقم الرخصة" field="license_number" /><InputField label="انتهاء الرخصة" field="license_expiry" type="date" />
-              <SelectField label="الحالة" field="status" options={[['active','نشط'],['inactive','غير نشط']]} />
-              <FileInput label="تغيير صورة الإقامة" icon="🪪" onChange={setEditIqamaImage} file={editIqamaImage} />
-              <FileInput label="تغيير صورة الرخصة" icon="🚗" onChange={setEditLicenseImage} file={editLicenseImage} />
+              <div><label style={st.label}>{t.fullName}</label><input style={st.input} value={editForm.full_name||''} onChange={e=>setEditForm({...editForm,full_name:e.target.value})} /></div>
+              <div><label style={st.label}>{t.nationalId}</label><input style={st.input} value={editForm.national_id||''} onChange={e=>setEditForm({...editForm,national_id:e.target.value})} /></div>
+              <div><label style={st.label}>{t.passportNumber}</label><input style={st.input} value={editForm.passport_number||''} onChange={e=>setEditForm({...editForm,passport_number:e.target.value})} /></div>
+              <div><label style={st.label}>{t.phone}</label><input style={st.input} value={editForm.phone||''} onChange={e=>setEditForm({...editForm,phone:e.target.value})} /></div>
+              <div><label style={st.label}>{t.licenseNumber}</label><input style={st.input} value={editForm.license_number||''} onChange={e=>setEditForm({...editForm,license_number:e.target.value})} /></div>
+              <div><label style={st.label}>{t.licenseExpiry}</label><input type="date" style={st.input} value={editForm.license_expiry||''} onChange={e=>setEditForm({...editForm,license_expiry:e.target.value})} /></div>
+              <div><label style={st.label}>{t.status}</label><select style={st.input} value={editForm.status||''} onChange={e=>setEditForm({...editForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option></select></div>
+              <FileInput label={t.iqamaImage} icon="🪪" onChange={setEditIqamaImage} file={editIqamaImage} />
+              <FileInput label={t.licenseImage} icon="🚗" onChange={setEditLicenseImage} file={editLicenseImage} />
             </div>)}
             {editType === 'maintenance' && (<div style={st.formGrid}>
-              <div><label style={st.label}>المركبة</label><select style={st.input} value={editForm.vehicle_id||''} onChange={e=>setEditForm({...editForm,vehicle_id:e.target.value})}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-              <InputField label="النوع" field="type" /><InputField label="الوصف" field="description" />
-              <InputField label="التكلفة" field="cost" /><InputField label="التاريخ" field="date" type="date" />
-              <InputField label="الموعد القادم" field="next_date" type="date" />
-              <SelectField label="الحالة" field="status" options={[['pending','معلق'],['active','مكتمل'],['inactive','ملغي']]} />
+              <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={editForm.vehicle_id||''} onChange={e=>setEditForm({...editForm,vehicle_id:e.target.value})}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
+              <div><label style={st.label}>{t.type}</label><input style={st.input} value={editForm.type||''} onChange={e=>setEditForm({...editForm,type:e.target.value})} /></div>
+              <div><label style={st.label}>{t.description}</label><input style={st.input} value={editForm.description||''} onChange={e=>setEditForm({...editForm,description:e.target.value})} /></div>
+              <div><label style={st.label}>{t.cost}</label><input style={st.input} value={editForm.cost||''} onChange={e=>setEditForm({...editForm,cost:e.target.value})} /></div>
+              <div><label style={st.label}>{t.date}</label><input type="date" style={st.input} value={editForm.date||''} onChange={e=>setEditForm({...editForm,date:e.target.value})} /></div>
+              <div><label style={st.label}>{t.nextDate}</label><input type="date" style={st.input} value={editForm.next_date||''} onChange={e=>setEditForm({...editForm,next_date:e.target.value})} /></div>
+              <div><label style={st.label}>{t.status}</label><select style={st.input} value={editForm.status||''} onChange={e=>setEditForm({...editForm,status:e.target.value})}><option value="pending">{t.pending}</option><option value="active">{t.completed}</option><option value="inactive">{t.cancelled}</option></select></div>
             </div>)}
             {editType === 'fuel' && (<div style={st.formGrid}>
-              <div><label style={st.label}>المركبة</label><select style={st.input} value={editForm.vehicle_id||''} onChange={e=>setEditForm({...editForm,vehicle_id:e.target.value})}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-              <div><label style={st.label}>السائق</label><select style={st.input} value={editForm.driver_id||''} onChange={e=>setEditForm({...editForm,driver_id:e.target.value})}>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
-              <InputField label="التاريخ" field="date" type="date" /><InputField label="اللترات" field="liters" type="number" />
-              <InputField label="سعر اللتر" field="cost_per_liter" type="number" /><InputField label="العداد" field="odometer" type="number" />
+              <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={editForm.vehicle_id||''} onChange={e=>setEditForm({...editForm,vehicle_id:e.target.value})}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
+              <div><label style={st.label}>{t.driver}</label><select style={st.input} value={editForm.driver_id||''} onChange={e=>setEditForm({...editForm,driver_id:e.target.value})}>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
+              <div><label style={st.label}>{t.date}</label><input type="date" style={st.input} value={editForm.date||''} onChange={e=>setEditForm({...editForm,date:e.target.value})} /></div>
+              <div><label style={st.label}>{t.liters}</label><input type="number" style={st.input} value={editForm.liters||''} onChange={e=>setEditForm({...editForm,liters:e.target.value})} /></div>
+              <div><label style={st.label}>{t.pricePerLiter}</label><input type="number" style={st.input} value={editForm.cost_per_liter||''} onChange={e=>setEditForm({...editForm,cost_per_liter:e.target.value})} /></div>
+              <div><label style={st.label}>{t.odometer}</label><input type="number" style={st.input} value={editForm.odometer||''} onChange={e=>setEditForm({...editForm,odometer:e.target.value})} /></div>
             </div>)}
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button style={st.btn()} onClick={saveEdit} disabled={uploading}>{uploading ? '⏳ جاري...' : '💾 حفظ'}</button>
-              <button style={st.btn('#888', true)} onClick={() => setEditItem(null)}>إلغاء</button>
+              <button style={st.btn()} onClick={saveEdit} disabled={uploading}>{uploading ? t.saving : `💾 ${t.save}`}</button>
+              <button style={st.btn('#888', true)} onClick={() => setEditItem(null)}>{t.cancel}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Add Modals */}
+      {/* Add Vehicle Modal */}
       {showVehicleForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>🚛 إضافة مركبة</div>
+        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>🚛 {t.addVehicleTitle}</div>
         <div style={st.formGrid}>
-          {[['plate_number','رقم اللوحة'],['vehicle_code','كود المركبة'],['type','النوع'],['brand','الماركة'],['model','الموديل'],['year','السنة'],['color','اللون'],['fuel_type','نوع الوقود']].map(([key,label]) => (
+          {[[`plate_number`,t.plateNumber],[`vehicle_code`,t.vehicleCode],[`type`,t.type],[`brand`,t.brand],[`model`,t.model],[`year`,t.year],[`color`,t.color],[`fuel_type`,t.fuelType]].map(([key,label]) => (
             <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={vehicleForm[key]} onChange={e => setVehicleForm({...vehicleForm,[key]:e.target.value})} /></div>
           ))}
-          <div><label style={st.label}>الحالة</label><select style={st.input} value={vehicleForm.status} onChange={e => setVehicleForm({...vehicleForm,status:e.target.value})}><option value="active">نشط</option><option value="inactive">غير نشط</option><option value="pending">معلق</option></select></div>
-          <div><label style={st.label}>حالة التجهيز</label><select style={st.input} value={vehicleForm.preparation_status} onChange={e => setVehicleForm({...vehicleForm,preparation_status:e.target.value})}><option value="not_ready">غير جاهزة ❌</option><option value="in_progress">قيد التجهيز 🔄</option><option value="ready">جاهزة ✅</option></select></div>
-          <FileInput label="صورة المركبة" icon="🚛" onChange={setVehicleImage} file={vehicleImage} />
-          <FileInput label="صورة الاستمارة" icon="📄" onChange={setIstamaraImage} file={istamaraImage} />
+          <div><label style={st.label}>{t.status}</label><select style={st.input} value={vehicleForm.status} onChange={e => setVehicleForm({...vehicleForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option><option value="pending">{t.pending}</option></select></div>
+          <div><label style={st.label}>{t.preparationStatus}</label><select style={st.input} value={vehicleForm.preparation_status} onChange={e => setVehicleForm({...vehicleForm,preparation_status:e.target.value})}><option value="not_ready">{t.notReady}</option><option value="in_progress">{t.inProgress}</option><option value="ready">{t.ready}</option></select></div>
+          <FileInput label={t.vehicleImage} icon="🚛" onChange={setVehicleImage} file={vehicleImage} />
+          <FileInput label={t.istamaraImage} icon="📄" onChange={setIstamaraImage} file={istamaraImage} />
         </div>
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button style={st.btn()} onClick={addVehicle} disabled={uploading}>{uploading ? '⏳ جاري الرفع...' : 'حفظ'}</button>
-          <button style={st.btn('#888', true)} onClick={() => setShowVehicleForm(false)}>إلغاء</button>
+          <button style={st.btn()} onClick={addVehicle} disabled={uploading}>{uploading ? t.uploading : t.save}</button>
+          <button style={st.btn('#888', true)} onClick={() => setShowVehicleForm(false)}>{t.cancel}</button>
         </div>
       </div></div>)}
 
+      {/* Add Driver Modal */}
       {showDriverForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>👤 إضافة سائق</div>
+        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>👤 {t.addDriverTitle}</div>
         <div style={st.formGrid}>
-          {[['full_name','الاسم الكامل'],['national_id','رقم الهوية'],['passport_number','رقم الجواز'],['phone','الجوال'],['license_number','رقم الرخصة']].map(([key,label]) => (
+          {[[`full_name`,t.fullName],[`national_id`,t.nationalId],[`passport_number`,t.passportNumber],[`phone`,t.phone],[`license_number`,t.licenseNumber]].map(([key,label]) => (
             <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={driverForm[key]} onChange={e => setDriverForm({...driverForm,[key]:e.target.value})} /></div>
           ))}
-          <div><label style={st.label}>انتهاء الرخصة</label><input type="date" style={st.input} value={driverForm.license_expiry} onChange={e => setDriverForm({...driverForm,license_expiry:e.target.value})} /></div>
-          <div><label style={st.label}>الحالة</label><select style={st.input} value={driverForm.status} onChange={e => setDriverForm({...driverForm,status:e.target.value})}><option value="active">نشط</option><option value="inactive">غير نشط</option></select></div>
-          <FileInput label="صورة الإقامة" icon="🪪" onChange={setIqamaImage} file={iqamaImage} />
-          <FileInput label="صورة الرخصة" icon="🚗" onChange={setLicenseImage} file={licenseImage} />
+          <div><label style={st.label}>{t.licenseExpiry}</label><input type="date" style={st.input} value={driverForm.license_expiry} onChange={e => setDriverForm({...driverForm,license_expiry:e.target.value})} /></div>
+          <div><label style={st.label}>{t.status}</label><select style={st.input} value={driverForm.status} onChange={e => setDriverForm({...driverForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option></select></div>
+          <FileInput label={t.iqamaImage} icon="🪪" onChange={setIqamaImage} file={iqamaImage} />
+          <FileInput label={t.licenseImage} icon="🚗" onChange={setLicenseImage} file={licenseImage} />
         </div>
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button style={st.btn()} onClick={addDriver} disabled={uploading}>{uploading ? '⏳ جاري الرفع...' : 'حفظ'}</button>
-          <button style={st.btn('#888', true)} onClick={() => setShowDriverForm(false)}>إلغاء</button>
+          <button style={st.btn()} onClick={addDriver} disabled={uploading}>{uploading ? t.uploading : t.save}</button>
+          <button style={st.btn('#888', true)} onClick={() => setShowDriverForm(false)}>{t.cancel}</button>
         </div>
       </div></div>)}
 
+      {/* Add Maintenance Modal */}
       {showMaintenanceForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>🔧 إضافة صيانة</div>
+        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>🔧 {t.addMaintenanceTitle}</div>
         <div style={st.formGrid}>
-          <div><label style={st.label}>المركبة</label><select style={st.input} value={maintenanceForm.vehicle_id} onChange={e => setMaintenanceForm({...maintenanceForm,vehicle_id:e.target.value})}><option value="">اختر مركبة</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-          {[['type','نوع الصيانة'],['description','الوصف'],['cost','التكلفة']].map(([key,label]) => (
-            <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={maintenanceForm[key]} onChange={e => setMaintenanceForm({...maintenanceForm,[key]:e.target.value})} /></div>
-          ))}
-          <div><label style={st.label}>التاريخ</label><input type="date" style={st.input} value={maintenanceForm.date} onChange={e => setMaintenanceForm({...maintenanceForm,date:e.target.value})} /></div>
-          <div><label style={st.label}>الموعد القادم</label><input type="date" style={st.input} value={maintenanceForm.next_date} onChange={e => setMaintenanceForm({...maintenanceForm,next_date:e.target.value})} /></div>
-          <div><label style={st.label}>الحالة</label><select style={st.input} value={maintenanceForm.status} onChange={e => setMaintenanceForm({...maintenanceForm,status:e.target.value})}><option value="pending">معلق</option><option value="active">مكتمل</option><option value="inactive">ملغي</option></select></div>
+          <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={maintenanceForm.vehicle_id} onChange={e => setMaintenanceForm({...maintenanceForm,vehicle_id:e.target.value})}><option value="">{t.selectVehicle}</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
+          <div><label style={st.label}>{t.type}</label><input style={st.input} value={maintenanceForm.type} onChange={e => setMaintenanceForm({...maintenanceForm,type:e.target.value})} /></div>
+          <div><label style={st.label}>{t.description}</label><input style={st.input} value={maintenanceForm.description} onChange={e => setMaintenanceForm({...maintenanceForm,description:e.target.value})} /></div>
+          <div><label style={st.label}>{t.cost}</label><input style={st.input} value={maintenanceForm.cost} onChange={e => setMaintenanceForm({...maintenanceForm,cost:e.target.value})} /></div>
+          <div><label style={st.label}>{t.date}</label><input type="date" style={st.input} value={maintenanceForm.date} onChange={e => setMaintenanceForm({...maintenanceForm,date:e.target.value})} /></div>
+          <div><label style={st.label}>{t.nextDate}</label><input type="date" style={st.input} value={maintenanceForm.next_date} onChange={e => setMaintenanceForm({...maintenanceForm,next_date:e.target.value})} /></div>
+          <div><label style={st.label}>{t.status}</label><select style={st.input} value={maintenanceForm.status} onChange={e => setMaintenanceForm({...maintenanceForm,status:e.target.value})}><option value="pending">{t.pending}</option><option value="active">{t.completed}</option><option value="inactive">{t.cancelled}</option></select></div>
         </div>
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button style={st.btn()} onClick={addMaintenance}>حفظ</button>
-          <button style={st.btn('#888', true)} onClick={() => setShowMaintenanceForm(false)}>إلغاء</button>
+          <button style={st.btn()} onClick={addMaintenance}>{t.save}</button>
+          <button style={st.btn('#888', true)} onClick={() => setShowMaintenanceForm(false)}>{t.cancel}</button>
         </div>
       </div></div>)}
 
+      {/* Add Fuel Modal */}
       {showFuelForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>⛽ إضافة تزود وقود</div>
+        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>⛽ {t.addFuelTitle}</div>
         <div style={st.formGrid}>
-          <div><label style={st.label}>المركبة</label><select style={st.input} value={fuelForm.vehicle_id} onChange={e => setFuelForm({...fuelForm,vehicle_id:e.target.value})}><option value="">اختر مركبة</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-          <div><label style={st.label}>السائق</label><select style={st.input} value={fuelForm.driver_id} onChange={e => setFuelForm({...fuelForm,driver_id:e.target.value})}><option value="">اختر سائق</option>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
-          <div><label style={st.label}>التاريخ</label><input type="date" style={st.input} value={fuelForm.date} onChange={e => setFuelForm({...fuelForm,date:e.target.value})} /></div>
-          {[['liters','اللترات'],['cost_per_liter','سعر اللتر'],['odometer','العداد']].map(([key,label]) => (
-            <div key={key}><label style={st.label}>{label}</label><input type="number" style={st.input} value={fuelForm[key]} onChange={e => setFuelForm({...fuelForm,[key]:e.target.value})} /></div>
-          ))}
+          <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={fuelForm.vehicle_id} onChange={e => setFuelForm({...fuelForm,vehicle_id:e.target.value})}><option value="">{t.selectVehicle}</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
+          <div><label style={st.label}>{t.driver}</label><select style={st.input} value={fuelForm.driver_id} onChange={e => setFuelForm({...fuelForm,driver_id:e.target.value})}><option value="">{t.selectDriver}</option>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
+          <div><label style={st.label}>{t.date}</label><input type="date" style={st.input} value={fuelForm.date} onChange={e => setFuelForm({...fuelForm,date:e.target.value})} /></div>
+          <div><label style={st.label}>{t.liters}</label><input type="number" style={st.input} value={fuelForm.liters} onChange={e => setFuelForm({...fuelForm,liters:e.target.value})} /></div>
+          <div><label style={st.label}>{t.pricePerLiter}</label><input type="number" style={st.input} value={fuelForm.cost_per_liter} onChange={e => setFuelForm({...fuelForm,cost_per_liter:e.target.value})} /></div>
+          <div><label style={st.label}>{t.odometer}</label><input type="number" style={st.input} value={fuelForm.odometer} onChange={e => setFuelForm({...fuelForm,odometer:e.target.value})} /></div>
         </div>
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button style={st.btn()} onClick={addFuel}>حفظ</button>
-          <button style={st.btn('#888', true)} onClick={() => setShowFuelForm(false)}>إلغاء</button>
+          <button style={st.btn()} onClick={addFuel}>{t.save}</button>
+          <button style={st.btn('#888', true)} onClick={() => setShowFuelForm(false)}>{t.cancel}</button>
         </div>
       </div></div>)}
 
