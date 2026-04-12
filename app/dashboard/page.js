@@ -449,13 +449,7 @@ export default function Dashboard() {
                           <span style={{ background: roleBg(u.role), color: roleColor(u.role), padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' }}>{roleLabel(u.role)}</span>
                         </td>
                         <td style={st.td}>
-                          {u.user_id !== currentUser?.id ? (
-                            <select value={u.role} onChange={e => updateUserRole(u.user_id, e.target.value)} style={{ ...st.input, width: 'auto', padding: '6px 10px', fontSize: '12px' }}>
-                              <option value="admin">👑 مدير</option>
-                              <option value="editor">✏️ محرر</option>
-                              <option value="viewer">👁️ مشاهد</option>
-                            </select>
-                          ) : <span style={{ color: C.muted, fontSize: '12px' }}>أنت</span>}
+                          <span style={{ color: C.muted, fontSize: '12px' }}>{u.user_id === currentUser?.id ? 'أنت' : 'ثابتة'}</span>
                         </td>
                         <td style={st.td}>
                           {u.user_id !== currentUser?.id ? (
