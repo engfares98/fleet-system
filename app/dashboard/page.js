@@ -25,6 +25,11 @@ export default function Dashboard() {
   const [editMode, setEditMode] = useState(false)
   const [editItem, setEditItem] = useState(null)
   
+  // البحث الذكي
+  const [showDriverPicker, setShowDriverPicker] = useState(false)
+  const [showVehiclePicker, setShowVehiclePicker] = useState(false)
+  const [pickerSearch, setPickerSearch] = useState('')
+  
   // حقول النماذج
   const [formData, setFormData] = useState({})
   
@@ -429,10 +434,36 @@ export default function Dashboard() {
     } else if (activeTab === 'maintenance') {
       return (
         <>
-          <select value={formData.vehicle_id || ''} onChange={e => setFormData({...formData, vehicle_id: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
-            <option value="">{t[lang].vehicle}</option>
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}
-          </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].vehicle}</label>
+            {formData.vehicle_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-blue-900 text-sm">
+                    {vehicles.find(v => v.id === formData.vehicle_id)?.plate_number}
+                  </div>
+                  <div className="text-xs text-blue-600">
+                    {vehicles.find(v => v.id === formData.vehicle_id)?.type}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowVehiclePicker(true)}
+                  className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  {lang === 'ar' ? 'تغيير' : 'Change'}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowVehiclePicker(true)}
+                className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-600"
+              >
+                {lang === 'ar' ? 'اضغط لاختيار مركبة' : 'Click to select vehicle'}
+              </button>
+            )}
+          </div>
           <input value={formData.maintenance_type || ''} onChange={e => setFormData({...formData, maintenance_type: e.target.value})} placeholder={t[lang].type} className="w-full px-3 py-2 border rounded-lg" />
           <input value={formData.maintenance_date || ''} onChange={e => setFormData({...formData, maintenance_date: e.target.value})} type="date" className="w-full px-3 py-2 border rounded-lg" />
           <input value={formData.cost || ''} onChange={e => setFormData({...formData, cost: e.target.value})} placeholder={t[lang].cost} type="number" className="w-full px-3 py-2 border rounded-lg" />
@@ -442,14 +473,47 @@ export default function Dashboard() {
     } else if (activeTab === 'fuel') {
       return (
         <>
-          <select value={formData.vehicle_id || ''} onChange={e => setFormData({...formData, vehicle_id: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
-            <option value="">{t[lang].vehicle}</option>
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}
-          </select>
-          <select value={formData.driver_id || ''} onChange={e => setFormData({...formData, driver_id: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
-            <option value="">{t[lang].driver}</option>
-            {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].vehicle}</label>
+            {formData.vehicle_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-blue-900 text-sm">
+                    {vehicles.find(v => v.id === formData.vehicle_id)?.plate_number}
+                  </div>
+                </div>
+                <button type="button" onClick={() => setShowVehiclePicker(true)} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">
+                  {lang === 'ar' ? 'تغيير' : 'Change'}
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowVehiclePicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-600">
+                {lang === 'ar' ? 'اضغط لاختيار مركبة' : 'Click to select vehicle'}
+              </button>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].driver} ({lang === 'ar' ? 'اختياري' : 'Optional'})</label>
+            {formData.driver_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-green-900 text-sm">
+                    {drivers.find(d => d.id === formData.driver_id)?.name}
+                  </div>
+                </div>
+                <button type="button" onClick={() => setFormData({...formData, driver_id: ''})} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
+                  {lang === 'ar' ? 'إزالة' : 'Remove'}
+                </button>
+                <button type="button" onClick={() => setShowDriverPicker(true)} className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">
+                  {lang === 'ar' ? 'تغيير' : 'Change'}
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowDriverPicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition text-sm text-gray-600">
+                {lang === 'ar' ? 'اضغط لاختيار سائق (اختياري)' : 'Click to select driver (optional)'}
+              </button>
+            )}
+          </div>
           <input value={formData.date || ''} onChange={e => setFormData({...formData, date: e.target.value})} type="date" className="w-full px-3 py-2 border rounded-lg" />
           <input value={formData.quantity || ''} onChange={e => setFormData({...formData, quantity: e.target.value})} placeholder={t[lang].quantity} type="number" className="w-full px-3 py-2 border rounded-lg" />
           <input value={formData.cost || ''} onChange={e => setFormData({...formData, cost: e.target.value})} placeholder={t[lang].cost} type="number" className="w-full px-3 py-2 border rounded-lg" />
@@ -459,14 +523,29 @@ export default function Dashboard() {
     } else if (activeTab === 'incidents') {
       return (
         <>
-          <select value={formData.vehicle_id || ''} onChange={e => setFormData({...formData, vehicle_id: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
-            <option value="">{t[lang].vehicle}</option>
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}
-          </select>
-          <select value={formData.driver_id || ''} onChange={e => setFormData({...formData, driver_id: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
-            <option value="">{t[lang].driver}</option>
-            {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].vehicle}</label>
+            {formData.vehicle_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex-1"><div className="font-medium text-blue-900 text-sm">{vehicles.find(v => v.id === formData.vehicle_id)?.plate_number}</div></div>
+                <button type="button" onClick={() => setShowVehiclePicker(true)} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">{lang === 'ar' ? 'تغيير' : 'Change'}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowVehiclePicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-600">{lang === 'ar' ? 'اضغط لاختيار مركبة' : 'Click to select vehicle'}</button>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].driver} ({lang === 'ar' ? 'اختياري' : 'Optional'})</label>
+            {formData.driver_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex-1"><div className="font-medium text-green-900 text-sm">{drivers.find(d => d.id === formData.driver_id)?.name}</div></div>
+                <button type="button" onClick={() => setFormData({...formData, driver_id: ''})} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">{lang === 'ar' ? 'إزالة' : 'Remove'}</button>
+                <button type="button" onClick={() => setShowDriverPicker(true)} className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">{lang === 'ar' ? 'تغيير' : 'Change'}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowDriverPicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition text-sm text-gray-600">{lang === 'ar' ? 'اضغط لاختيار سائق (اختياري)' : 'Click to select driver (optional)'}</button>
+            )}
+          </div>
           <input value={formData.incident_date || ''} onChange={e => setFormData({...formData, incident_date: e.target.value})} type="date" className="w-full px-3 py-2 border rounded-lg" />
           <input value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} placeholder={t[lang].description} className="w-full px-3 py-2 border rounded-lg" />
           <input value={formData.location || ''} onChange={e => setFormData({...formData, location: e.target.value})} placeholder={t[lang].location} className="w-full px-3 py-2 border rounded-lg" />
@@ -481,14 +560,29 @@ export default function Dashboard() {
     } else if (activeTab === 'violations') {
       return (
         <>
-          <select value={formData.vehicle_id || ''} onChange={e => setFormData({...formData, vehicle_id: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
-            <option value="">{t[lang].vehicle}</option>
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}
-          </select>
-          <select value={formData.driver_id || ''} onChange={e => setFormData({...formData, driver_id: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
-            <option value="">{t[lang].driver}</option>
-            {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].vehicle}</label>
+            {formData.vehicle_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex-1"><div className="font-medium text-blue-900 text-sm">{vehicles.find(v => v.id === formData.vehicle_id)?.plate_number}</div></div>
+                <button type="button" onClick={() => setShowVehiclePicker(true)} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">{lang === 'ar' ? 'تغيير' : 'Change'}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowVehiclePicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-600">{lang === 'ar' ? 'اضغط لاختيار مركبة' : 'Click to select vehicle'}</button>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].driver} ({lang === 'ar' ? 'اختياري' : 'Optional'})</label>
+            {formData.driver_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex-1"><div className="font-medium text-green-900 text-sm">{drivers.find(d => d.id === formData.driver_id)?.name}</div></div>
+                <button type="button" onClick={() => setFormData({...formData, driver_id: ''})} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">{lang === 'ar' ? 'إزالة' : 'Remove'}</button>
+                <button type="button" onClick={() => setShowDriverPicker(true)} className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">{lang === 'ar' ? 'تغيير' : 'Change'}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowDriverPicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition text-sm text-gray-600">{lang === 'ar' ? 'اضغط لاختيار سائق (اختياري)' : 'Click to select driver (optional)'}</button>
+            )}
+          </div>
           <input value={formData.violation_date || ''} onChange={e => setFormData({...formData, violation_date: e.target.value})} type="date" className="w-full px-3 py-2 border rounded-lg" />
           <input value={formData.violation_number || ''} onChange={e => setFormData({...formData, violation_number: e.target.value})} placeholder={t[lang].violationNumber} className="w-full px-3 py-2 border rounded-lg" />
           <input value={formData.violation_type || ''} onChange={e => setFormData({...formData, violation_type: e.target.value})} placeholder={t[lang].type} className="w-full px-3 py-2 border rounded-lg" />
@@ -636,6 +730,102 @@ export default function Dashboard() {
                 {t[lang].cancel}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      
+      {/* نافذة البحث عن مركبة */}
+      {showVehiclePicker && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-4">{lang === 'ar' ? 'اختيار مركبة' : 'Select Vehicle'}</h3>
+            <input
+              type="text"
+              value={pickerSearch}
+              onChange={e => setPickerSearch(e.target.value)}
+              placeholder={lang === 'ar' ? 'ابحث برقم اللوحة أو النوع...' : 'Search by plate or type...'}
+              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg mb-4 focus:border-blue-500 focus:outline-none"
+              autoFocus
+            />
+            <div className="max-h-96 overflow-y-auto space-y-2">
+              {vehicles.filter(v => 
+                v.plate_number?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                v.type?.toLowerCase().includes(pickerSearch.toLowerCase())
+              ).map(vehicle => (
+                <button
+                  key={vehicle.id}
+                  onClick={() => {
+                    setFormData({...formData, vehicle_id: vehicle.id})
+                    setShowVehiclePicker(false)
+                    setPickerSearch('')
+                  }}
+                  className="w-full text-start px-4 py-3 bg-gray-50 hover:bg-blue-50 rounded-lg transition border border-gray-200 hover:border-blue-300"
+                >
+                  <div className="font-medium text-gray-900">{vehicle.plate_number}</div>
+                  <div className="text-sm text-gray-600">{vehicle.type} • {vehicle.model || '-'}</div>
+                </button>
+              ))}
+              {vehicles.filter(v => 
+                v.plate_number?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                v.type?.toLowerCase().includes(pickerSearch.toLowerCase())
+              ).length === 0 && (
+                <div className="text-center py-8 text-gray-500">{lang === 'ar' ? 'لا توجد نتائج' : 'No results'}</div>
+              )}
+            </div>
+            <button
+              onClick={() => { setShowVehiclePicker(false); setPickerSearch('') }}
+              className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+            >
+              {t[lang].cancel}
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* نافذة البحث عن سائق */}
+      {showDriverPicker && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-4">{lang === 'ar' ? 'اختيار سائق' : 'Select Driver'}</h3>
+            <input
+              type="text"
+              value={pickerSearch}
+              onChange={e => setPickerSearch(e.target.value)}
+              placeholder={lang === 'ar' ? 'ابحث بالاسم أو رقم الرخصة...' : 'Search by name or license...'}
+              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg mb-4 focus:border-blue-500 focus:outline-none"
+              autoFocus
+            />
+            <div className="max-h-96 overflow-y-auto space-y-2">
+              {drivers.filter(d => 
+                d.name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                d.license_number?.toLowerCase().includes(pickerSearch.toLowerCase())
+              ).map(driver => (
+                <button
+                  key={driver.id}
+                  onClick={() => {
+                    setFormData({...formData, driver_id: driver.id})
+                    setShowDriverPicker(false)
+                    setPickerSearch('')
+                  }}
+                  className="w-full text-start px-4 py-3 bg-gray-50 hover:bg-green-50 rounded-lg transition border border-gray-200 hover:border-green-300"
+                >
+                  <div className="font-medium text-gray-900">{driver.name}</div>
+                  <div className="text-sm text-gray-600">{driver.license_number} • {driver.phone || '-'}</div>
+                </button>
+              ))}
+              {drivers.filter(d => 
+                d.name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                d.license_number?.toLowerCase().includes(pickerSearch.toLowerCase())
+              ).length === 0 && (
+                <div className="text-center py-8 text-gray-500">{lang === 'ar' ? 'لا توجد نتائج' : 'No results'}</div>
+              )}
+            </div>
+            <button
+              onClick={() => { setShowDriverPicker(false); setPickerSearch('') }}
+              className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+            >
+              {t[lang].cancel}
+            </button>
           </div>
         </div>
       )}
