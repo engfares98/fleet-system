@@ -110,12 +110,47 @@ export default function Dashboard() {
     
     if (activeTab === 'vehicles') {
       if (!formData.plate_number || !formData.type) { alert(t[lang].plateNumber + ' & ' + t[lang].vehicleType + ' required'); return }
+      
+      let imageUrl = editMode ? editItem?.image : null
+      let istimaraUrl = editMode ? editItem?.istimara_pdf : null
+      let insuranceUrl = editMode ? editItem?.insurance_pdf : null
+      
+      if (formData.imageFile) imageUrl = await uploadFile(formData.imageFile, 'vehicles')
+      if (formData.istimaraPdfFile) istimaraUrl = await uploadFile(formData.istimaraPdfFile, 'documents')
+      if (formData.insurancePdfFile) insuranceUrl = await uploadFile(formData.insurancePdfFile, 'documents')
+      
       table = 'vehicles'
-      data = { plate_number: formData.plate_number, type: formData.type, model: formData.model || '', year: formData.year ? parseInt(formData.year) : null, status: formData.status || 'active' }
+      data = { 
+        plate_number: formData.plate_number, 
+        type: formData.type, 
+        model: formData.model || '', 
+        year: formData.year ? parseInt(formData.year) : null, 
+        status: formData.status || 'active',
+        image: imageUrl,
+        istimara_pdf: istimaraUrl,
+        insurance_pdf: insuranceUrl
+      }
     } else if (activeTab === 'drivers') {
       if (!formData.name || !formData.license_number) { alert(t[lang].driverName + ' & ' + t[lang].licenseNumber + ' required'); return }
+      
+      let imageUrl = editMode ? editItem?.image : null
+      let licenseUrl = editMode ? editItem?.license_pdf : null
+      let iqamaUrl = editMode ? editItem?.iqama_pdf : null
+      
+      if (formData.imageFile) imageUrl = await uploadFile(formData.imageFile, 'drivers')
+      if (formData.licensePdfFile) licenseUrl = await uploadFile(formData.licensePdfFile, 'documents')
+      if (formData.iqamaPdfFile) iqamaUrl = await uploadFile(formData.iqamaPdfFile, 'documents')
+      
       table = 'drivers'
-      data = { name: formData.name, license_number: formData.license_number, phone: formData.phone || '', status: formData.status || 'active' }
+      data = { 
+        name: formData.name, 
+        license_number: formData.license_number, 
+        phone: formData.phone || '', 
+        status: formData.status || 'active',
+        image: imageUrl,
+        license_pdf: licenseUrl,
+        iqama_pdf: iqamaUrl
+      }
     } else if (activeTab === 'maintenance') {
       if (!formData.vehicle_id || !formData.maintenance_type || !formData.maintenance_date) { alert('Required fields missing'); return }
       table = 'maintenance'
@@ -162,6 +197,17 @@ export default function Dashboard() {
     a.href = url; a.download = `${filename}.csv`; a.click()
   }
   
+  const uploadFile = async (file, folder = 'vehicles') => {
+    if (!file) return null
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Math.random()}.${fileExt}`
+    const filePath = `${folder}/${fileName}`
+    const { error } = await supabase.storage.from('fleet-files').upload(filePath, file)
+    if (error) { console.error('Upload error:', error); return null }
+    const { data } = supabase.storage.from('fleet-files').getPublicUrl(filePath)
+    return data.publicUrl
+  }
+  
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-xl">{lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}</div></div>
   
   const renderTable = () => {
@@ -175,7 +221,8 @@ export default function Dashboard() {
         { key: 'type', label: t[lang].vehicleType },
         { key: 'model', label: t[lang].model },
         { key: 'year', label: t[lang].year },
-        { key: 'status', label: t[lang].status, badge: true }
+        { key: 'status', label: t[lang].status, badge: true },
+        { key: 'image', label: lang === 'ar' ? 'الصورة' : 'Image', isImage: true }
       ]
     } else if (activeTab === 'drivers') {
       data = drivers
@@ -184,7 +231,8 @@ export default function Dashboard() {
         { key: 'name', label: t[lang].driverName },
         { key: 'license_number', label: t[lang].licenseNumber },
         { key: 'phone', label: t[lang].phone },
-        { key: 'status', label: t[lang].status, badge: true }
+        { key: 'status', label: t[lang].status, badge: true },
+        { key: 'image', label: lang === 'ar' ? 'الصورة' : 'Image', isImage: true }
       ]
     } else if (activeTab === 'maintenance') {
       data = maintenance
@@ -262,7 +310,13 @@ export default function Dashboard() {
               <tr key={item.id} className="hover:bg-gray-50">
                 {columns.map(col => (
                   <td key={col.key} className="px-4 py-3 text-sm text-gray-700">
-                    {col.badge ? (
+                    {col.isImage ? (
+                      getValue(item, col.key) ? (
+                        <img src={getValue(item, col.key)} alt="" className="w-14 h-14 object-cover rounded-lg shadow-sm" />
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )
+                    ) : col.badge ? (
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
                         (getValue(item, col.key) === 'active' || getValue(item, col.key) === 'paid' || getValue(item, col.key) === 'closed') ? 'bg-green-100 text-green-700' : 
                         (getValue(item, col.key) === 'admin') ? 'bg-purple-100 text-purple-700' :
@@ -304,6 +358,33 @@ export default function Dashboard() {
             <option value="active">{t[lang].active}</option>
             <option value="inactive">{t[lang].inactive}</option>
           </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'صورة المركبة' : 'Vehicle Image'}</label>
+            <input type="file" accept="image/*" onChange={e => setFormData({...formData, imageFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.image && !formData.imageFile && (
+              <a href={editItem.image} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                {lang === 'ar' ? 'عرض الصورة الحالية' : 'View current image'}
+              </a>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'الاستمارة (PDF)' : 'Registration (PDF)'}</label>
+            <input type="file" accept=".pdf" onChange={e => setFormData({...formData, istimaraPdfFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.istimara_pdf && !formData.istimaraPdfFile && (
+              <a href={editItem.istimara_pdf} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                📄 {lang === 'ar' ? 'عرض PDF الحالي' : 'View current PDF'}
+              </a>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'التأمين (PDF)' : 'Insurance (PDF)'}</label>
+            <input type="file" accept=".pdf" onChange={e => setFormData({...formData, insurancePdfFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.insurance_pdf && !formData.insurancePdfFile && (
+              <a href={editItem.insurance_pdf} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                📄 {lang === 'ar' ? 'عرض PDF الحالي' : 'View current PDF'}
+              </a>
+            )}
+          </div>
         </>
       )
     } else if (activeTab === 'drivers') {
@@ -316,6 +397,33 @@ export default function Dashboard() {
             <option value="active">{t[lang].active}</option>
             <option value="inactive">{t[lang].inactive}</option>
           </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'صورة السائق' : 'Driver Image'}</label>
+            <input type="file" accept="image/*" onChange={e => setFormData({...formData, imageFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.image && !formData.imageFile && (
+              <a href={editItem.image} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                {lang === 'ar' ? 'عرض الصورة الحالية' : 'View current image'}
+              </a>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'الرخصة (PDF)' : 'License (PDF)'}</label>
+            <input type="file" accept=".pdf" onChange={e => setFormData({...formData, licensePdfFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.license_pdf && !formData.licensePdfFile && (
+              <a href={editItem.license_pdf} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                📄 {lang === 'ar' ? 'عرض PDF الحالي' : 'View current PDF'}
+              </a>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'الإقامة (PDF)' : 'Iqama (PDF)'}</label>
+            <input type="file" accept=".pdf" onChange={e => setFormData({...formData, iqamaPdfFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.iqama_pdf && !formData.iqamaPdfFile && (
+              <a href={editItem.iqama_pdf} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                📄 {lang === 'ar' ? 'عرض PDF الحالي' : 'View current PDF'}
+              </a>
+            )}
+          </div>
         </>
       )
     } else if (activeTab === 'maintenance') {
