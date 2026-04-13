@@ -39,6 +39,21 @@ export default function Dashboard() {
   const [showFuelForm, setShowFuelForm] = useState(false)
   const [fuelForm, setFuelForm] = useState({ vehicle_id: '', driver_id: '', date: '', liters: '', cost_per_liter: '', odometer: '' })
 
+  const [incidents, setIncidents] = useState([])
+  const [violations, setViolations] = useState([])
+  const [showIncidentForm, setShowIncidentForm] = useState(false)
+  const [incidentForm, setIncidentForm] = useState({ vehicle_id: '', driver_id: '', incident_date: '', incident_type: 'accident', description: '', location: '', repair_cost: '', status: 'open', notes: '' })
+  const [incidentImg1, setIncidentImg1] = useState(null)
+  const [incidentImg2, setIncidentImg2] = useState(null)
+  const [incidentImg3, setIncidentImg3] = useState(null)
+  const [showViolationForm, setShowViolationForm] = useState(false)
+  const [violationForm, setViolationForm] = useState({ vehicle_id: '', driver_id: '', violation_date: '', violation_number: '', violation_type: '', location: '', fine_amount: '', status: 'unpaid', notes: '' })
+  const [violationImg, setViolationImg] = useState(null)
+  const [editIncidentImg1, setEditIncidentImg1] = useState(null)
+  const [editIncidentImg2, setEditIncidentImg2] = useState(null)
+  const [editIncidentImg3, setEditIncidentImg3] = useState(null)
+  const [editViolationImg, setEditViolationImg] = useState(null)
+
   const [editItem, setEditItem] = useState(null)
   const [editType, setEditType] = useState(null)
   const [editForm, setEditForm] = useState({})
@@ -73,16 +88,19 @@ export default function Dashboard() {
   }
 
   const fetchData = async () => {
-    const [v, d, m, f, ur] = await Promise.all([
+    const [v, d, m, f, ur, inc, vio] = await Promise.all([
       supabase.from('vehicles').select('*').order('created_at', { ascending: false }),
       supabase.from('drivers').select('*').order('created_at', { ascending: false }),
       supabase.from('maintenance').select('*, vehicles(plate_number)').order('created_at', { ascending: false }),
       supabase.from('fuel_logs').select('*, vehicles(plate_number), drivers(full_name)').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('*').order('created_at', { ascending: false }),
+      supabase.from('incidents').select('*, vehicles(plate_number), drivers(full_name)').order('created_at', { ascending: false }),
+      supabase.from('violations').select('*, vehicles(plate_number), drivers(full_name)').order('created_at', { ascending: false }),
     ])
     setVehicles(v.data || []); setDrivers(d.data || [])
     setMaintenance(m.data || []); setFuelLogs(f.data || [])
     setUserRoles(ur.data || [])
+    setIncidents(inc.data || []); setViolations(vio.data || [])
   }
 
   const daysUntil = (dateStr) => {
@@ -148,11 +166,12 @@ export default function Dashboard() {
   const openEdit = (type, item) => {
     setEditType(type); setEditItem(item); setEditForm({ ...item })
     setEditVehicleImage(null); setEditIstamaraImage(null); setEditIqamaImage(null); setEditLicenseImage(null)
+    setEditIncidentImg1(null); setEditIncidentImg2(null); setEditIncidentImg3(null); setEditViolationImg(null)
   }
 
   const saveEdit = async () => {
     setUploading(true)
-    const table = editType === 'vehicle' ? 'vehicles' : editType === 'driver' ? 'drivers' : editType === 'maintenance' ? 'maintenance' : 'fuel_logs'
+    const table = editType === 'vehicle' ? 'vehicles' : editType === 'driver' ? 'drivers' : editType === 'maintenance' ? 'maintenance' : editType === 'fuel' ? 'fuel_logs' : editType === 'incident' ? 'incidents' : 'violations'
     const updateData = { ...editForm }
     delete updateData.id; delete updateData.created_at; delete updateData.vehicles; delete updateData.drivers
     if (editType === 'fuel') updateData.total_cost = updateData.liters * updateData.cost_per_liter
@@ -163,6 +182,20 @@ export default function Dashboard() {
     if (editType === 'driver') {
       if (editIqamaImage) updateData.iqama_image = await uploadFile(editIqamaImage, 'iqama')
       if (editLicenseImage) updateData.license_image = await uploadFile(editLicenseImage, 'licenses')
+    }
+    if (editType === 'incident') {
+      if (!updateData.vehicle_id) delete updateData.vehicle_id
+      if (!updateData.driver_id) delete updateData.driver_id
+      updateData.repair_cost = Number(updateData.repair_cost) || 0
+      if (editIncidentImg1) updateData.image1 = await uploadFile(editIncidentImg1, 'incidents')
+      if (editIncidentImg2) updateData.image2 = await uploadFile(editIncidentImg2, 'incidents')
+      if (editIncidentImg3) updateData.image3 = await uploadFile(editIncidentImg3, 'incidents')
+    }
+    if (editType === 'violation') {
+      if (!updateData.vehicle_id) delete updateData.vehicle_id
+      if (!updateData.driver_id) delete updateData.driver_id
+      updateData.fine_amount = Number(updateData.fine_amount) || 0
+      if (editViolationImg) updateData.image = await uploadFile(editViolationImg, 'violations')
     }
     await supabase.from(table).update(updateData).eq('id', editItem.id)
     setEditItem(null); setEditType(null); setUploading(false); fetchData()
@@ -203,6 +236,34 @@ export default function Dashboard() {
     fetchData()
   }
 
+  const addIncident = async () => {
+    setUploading(true)
+    const data = { ...incidentForm }
+    if (!data.vehicle_id) delete data.vehicle_id
+    if (!data.driver_id) delete data.driver_id
+    data.repair_cost = Number(data.repair_cost) || 0
+    if (incidentImg1) data.image1 = await uploadFile(incidentImg1, 'incidents')
+    if (incidentImg2) data.image2 = await uploadFile(incidentImg2, 'incidents')
+    if (incidentImg3) data.image3 = await uploadFile(incidentImg3, 'incidents')
+    await supabase.from('incidents').insert([data])
+    setShowIncidentForm(false)
+    setIncidentForm({ vehicle_id: '', driver_id: '', incident_date: '', incident_type: 'accident', description: '', location: '', repair_cost: '', status: 'open', notes: '' })
+    setIncidentImg1(null); setIncidentImg2(null); setIncidentImg3(null); setUploading(false); fetchData()
+  }
+
+  const addViolation = async () => {
+    setUploading(true)
+    const data = { ...violationForm }
+    if (!data.vehicle_id) delete data.vehicle_id
+    if (!data.driver_id) delete data.driver_id
+    data.fine_amount = Number(data.fine_amount) || 0
+    if (violationImg) data.image = await uploadFile(violationImg, 'violations')
+    await supabase.from('violations').insert([data])
+    setShowViolationForm(false)
+    setViolationForm({ vehicle_id: '', driver_id: '', violation_date: '', violation_number: '', violation_type: '', location: '', fine_amount: '', status: 'unpaid', notes: '' })
+    setViolationImg(null); setUploading(false); fetchData()
+  }
+
   const updatePreparation = async (id, val) => {
     await supabase.from('vehicles').update({ preparation_status: val }).eq('id', id); fetchData()
   }
@@ -223,6 +284,8 @@ export default function Dashboard() {
   const deleteDriver = async (id) => { if (!canDelete) return; await supabase.from('drivers').delete().eq('id', id); fetchData() }
   const deleteMaintenance = async (id) => { if (!canDelete) return; await supabase.from('maintenance').delete().eq('id', id); fetchData() }
   const deleteFuel = async (id) => { if (!canDelete) return; await supabase.from('fuel_logs').delete().eq('id', id); fetchData() }
+  const deleteIncident = async (id) => { if (!canDelete) return; if (!confirm(lang==='ar'?'هل أنت متأكد؟':'Are you sure?')) return; await supabase.from('incidents').delete().eq('id', id); fetchData() }
+  const deleteViolation = async (id) => { if (!canDelete) return; if (!confirm(lang==='ar'?'هل أنت متأكد؟':'Are you sure?')) return; await supabase.from('violations').delete().eq('id', id); fetchData() }
   const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/' }
 
   const totalFuelCost = fuelLogs.reduce((a, b) => a + (b.total_cost || 0), 0)
@@ -252,7 +315,46 @@ export default function Dashboard() {
   const topFuelVehicles = Object.entries(fuelByVehicle).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   const C = { orange: '#ff6b00', orangeLight: '#fff7f2', white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8' }
-  const navItems = [['dashboard','📊',t.dashboard],['vehicles','🚛',t.vehicles],['drivers','👤',t.drivers],['maintenance','🔧',t.maintenance],['fuel','⛽',t.fuel],['reports','📈',t.reports],['alerts','🔔',t.alerts],['users','👥',t.users]]
+  const navItems = [['dashboard','📊',t.dashboard],['vehicles','🚛',t.vehicles],['drivers','👤',t.drivers],['maintenance','🔧',t.maintenance],['fuel','⛽',t.fuel],['incidents','🚨',lang==='ar'?'الحوادث':'Incidents'],['violations','🚦',lang==='ar'?'المخالفات':'Violations'],['reports','📈',t.reports],['alerts','🔔',t.alerts],['users','👥',t.users]]
+
+  const openIncidents = incidents.filter(i => i.status === 'open').length
+  const unpaidViolations = violations.filter(v => v.status === 'unpaid').length
+  const totalRepairCost = incidents.reduce((a, b) => a + (Number(b.repair_cost) || 0), 0)
+  const totalFines = violations.reduce((a, b) => a + (Number(b.fine_amount) || 0), 0)
+  const unpaidFines = violations.filter(v => v.status === 'unpaid').reduce((a, b) => a + (Number(b.fine_amount) || 0), 0)
+
+  const incStatusLabel = (s) => {
+    const ar = { open: 'قيد المعالجة', in_progress: 'جاري الإصلاح', closed: 'مغلق' }
+    const en = { open: 'Open', in_progress: 'In Progress', closed: 'Closed' }
+    return (lang === 'ar' ? ar : en)[s] || s
+  }
+  const incStatusColor = (s) => s === 'closed' ? '#16a34a' : s === 'in_progress' ? '#2563eb' : '#dc2626'
+  const incStatusBg = (s) => s === 'closed' ? '#f0fdf4' : s === 'in_progress' ? '#eff6ff' : '#fef2f2'
+  const vioStatusLabel = (s) => {
+    const ar = { unpaid: 'غير مدفوعة', paid: 'مدفوعة', disputed: 'اعتراض' }
+    const en = { unpaid: 'Unpaid', paid: 'Paid', disputed: 'Disputed' }
+    return (lang === 'ar' ? ar : en)[s] || s
+  }
+  const vioStatusColor = (s) => s === 'paid' ? '#16a34a' : s === 'disputed' ? '#d97706' : '#dc2626'
+  const vioStatusBg = (s) => s === 'paid' ? '#f0fdf4' : s === 'disputed' ? '#fffbeb' : '#fef2f2'
+
+  const exportIncidents = () => exportToCSV(incidents.map(i => ({
+    [t.vehicle]: i.vehicles?.plate_number || '', [t.driver]: i.drivers?.full_name || '',
+    [lang==='ar'?'التاريخ':'Date']: i.incident_date || '',
+    [lang==='ar'?'الوصف':'Description']: i.description || '',
+    [lang==='ar'?'الموقع':'Location']: i.location || '',
+    [lang==='ar'?'تكلفة الإصلاح':'Repair Cost']: i.repair_cost || 0,
+    [t.status]: incStatusLabel(i.status)
+  })), lang==='ar'?'الحوادث':'Incidents')
+
+  const exportViolations = () => exportToCSV(violations.map(v => ({
+    [t.vehicle]: v.vehicles?.plate_number || '', [t.driver]: v.drivers?.full_name || '',
+    [lang==='ar'?'التاريخ':'Date']: v.violation_date || '',
+    [lang==='ar'?'رقم المخالفة':'Violation Number']: v.violation_number || '',
+    [lang==='ar'?'النوع':'Type']: v.violation_type || '',
+    [lang==='ar'?'الغرامة':'Fine']: v.fine_amount || 0,
+    [t.status]: vioStatusLabel(v.status)
+  })), lang==='ar'?'المخالفات':'Violations')
 
   const st = {
     input: { width: '100%', padding: '10px 14px', background: '#fafafa', border: `1.5px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box' },
@@ -605,6 +707,129 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Incidents */}
+          {activeTab === 'incidents' && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🚨 {lang==='ar'?'الحوادث':'Incidents'} ({incidents.length})</div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={exportIncidents} style={{ ...st.btn('#16a34a'), padding: isMobile?'7px 12px':'9px 14px', fontSize: '12px' }}>📥 {t.export}</button>
+                  {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowIncidentForm(true)}>➕ {lang==='ar'?'إضافة حادث':'Add Incident'}</button>}
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile?'1fr 1fr':'repeat(3,1fr)', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', borderTop: '4px solid #dc2626' }}>
+                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>🚨 {lang==='ar'?'قيد المعالجة':'Open'}</div>
+                  <div style={{ fontSize: isMobile?'22px':'28px', fontWeight: '900', color: '#dc2626' }}>{openIncidents}</div>
+                </div>
+                <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', borderTop: '4px solid #16a34a' }}>
+                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>✅ {lang==='ar'?'مغلقة':'Closed'}</div>
+                  <div style={{ fontSize: isMobile?'22px':'28px', fontWeight: '900', color: '#16a34a' }}>{incidents.filter(i=>i.status==='closed').length}</div>
+                </div>
+                <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', borderTop: '4px solid #ff6b00' }}>
+                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>💰 {lang==='ar'?'إجمالي التكاليف':'Total Cost'}</div>
+                  <div style={{ fontSize: isMobile?'22px':'28px', fontWeight: '900', color: '#ff6b00' }}>{totalRepairCost.toFixed(0)} {t.sar}</div>
+                </div>
+              </div>
+              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+                  <thead><tr>
+                    <th style={st.th}>{t.vehicle}</th><th style={st.th}>{t.driver}</th>
+                    {!isMobile && <><th style={st.th}>{lang==='ar'?'التاريخ':'Date'}</th><th style={st.th}>{lang==='ar'?'الوصف':'Description'}</th></>}
+                    <th style={st.th}>{lang==='ar'?'التكلفة':'Cost'}</th>
+                    <th style={st.th}>{lang==='ar'?'الصور':'Images'}</th>
+                    <th style={st.th}>{t.status}</th>
+                    {canEdit && <th style={st.th}>{t.edit}</th>}
+                    {canDelete && <th style={st.th}>🗑️</th>}
+                  </tr></thead>
+                  <tbody>
+                    {incidents.map(i => (
+                      <tr key={i.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <td style={{ ...st.td, fontWeight: '700' }}>{i.vehicles?.plate_number || '—'}</td>
+                        <td style={st.td}>{i.drivers?.full_name || '—'}</td>
+                        {!isMobile && <><td style={st.td}>{i.incident_date || '—'}</td><td style={st.td}>{i.description || '—'}</td></>}
+                        <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{i.repair_cost || 0} {t.sar}</span></td>
+                        <td style={st.td}>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            {i.image1 && <img src={i.image1} style={thumb} onClick={() => setPreviewImage(i.image1)} alt="" />}
+                            {i.image2 && <img src={i.image2} style={thumb} onClick={() => setPreviewImage(i.image2)} alt="" />}
+                            {i.image3 && <img src={i.image3} style={thumb} onClick={() => setPreviewImage(i.image3)} alt="" />}
+                            {!i.image1 && !i.image2 && !i.image3 && '—'}
+                          </div>
+                        </td>
+                        <td style={st.td}><span style={{ background: incStatusBg(i.status), color: incStatusColor(i.status), padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{incStatusLabel(i.status)}</span></td>
+                        {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('incident', i)}>✏️</button></td>}
+                        {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteIncident(i.id)}>🗑️</button></td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {incidents.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>{lang==='ar'?'لا توجد حوادث':'No incidents'}</div>}
+              </div>
+            </div>
+          )}
+
+          {/* Violations */}
+          {activeTab === 'violations' && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🚦 {lang==='ar'?'المخالفات المرورية':'Traffic Violations'} ({violations.length})</div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={exportViolations} style={{ ...st.btn('#16a34a'), padding: isMobile?'7px 12px':'9px 14px', fontSize: '12px' }}>📥 {t.export}</button>
+                  {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowViolationForm(true)}>➕ {lang==='ar'?'إضافة مخالفة':'Add Violation'}</button>}
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile?'1fr 1fr':'repeat(4,1fr)', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', borderTop: '4px solid #dc2626' }}>
+                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>⚠️ {lang==='ar'?'غير مدفوعة':'Unpaid'}</div>
+                  <div style={{ fontSize: isMobile?'22px':'28px', fontWeight: '900', color: '#dc2626' }}>{unpaidViolations}</div>
+                </div>
+                <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', borderTop: '4px solid #16a34a' }}>
+                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>✅ {lang==='ar'?'مدفوعة':'Paid'}</div>
+                  <div style={{ fontSize: isMobile?'22px':'28px', fontWeight: '900', color: '#16a34a' }}>{violations.filter(v=>v.status==='paid').length}</div>
+                </div>
+                <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', borderTop: '4px solid #ff6b00' }}>
+                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>💰 {lang==='ar'?'إجمالي الغرامات':'Total Fines'}</div>
+                  <div style={{ fontSize: isMobile?'22px':'28px', fontWeight: '900', color: '#ff6b00' }}>{totalFines.toFixed(0)} {t.sar}</div>
+                </div>
+                <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', borderTop: '4px solid #dc2626' }}>
+                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>📌 {lang==='ar'?'المستحق':'Due'}</div>
+                  <div style={{ fontSize: isMobile?'22px':'28px', fontWeight: '900', color: '#dc2626' }}>{unpaidFines.toFixed(0)} {t.sar}</div>
+                </div>
+              </div>
+              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+                  <thead><tr>
+                    <th style={st.th}>{t.vehicle}</th><th style={st.th}>{t.driver}</th>
+                    {!isMobile && <><th style={st.th}>{lang==='ar'?'التاريخ':'Date'}</th><th style={st.th}>{lang==='ar'?'رقم المخالفة':'Number'}</th></>}
+                    <th style={st.th}>{lang==='ar'?'النوع':'Type'}</th>
+                    <th style={st.th}>{lang==='ar'?'الغرامة':'Fine'}</th>
+                    <th style={st.th}>{lang==='ar'?'صورة':'Image'}</th>
+                    <th style={st.th}>{t.status}</th>
+                    {canEdit && <th style={st.th}>{t.edit}</th>}
+                    {canDelete && <th style={st.th}>🗑️</th>}
+                  </tr></thead>
+                  <tbody>
+                    {violations.map(v => (
+                      <tr key={v.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <td style={{ ...st.td, fontWeight: '700' }}>{v.vehicles?.plate_number || '—'}</td>
+                        <td style={st.td}>{v.drivers?.full_name || '—'}</td>
+                        {!isMobile && <><td style={st.td}>{v.violation_date || '—'}</td><td style={st.td}>{v.violation_number || '—'}</td></>}
+                        <td style={st.td}>{v.violation_type || '—'}</td>
+                        <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{v.fine_amount || 0} {t.sar}</span></td>
+                        <td style={st.td}>{v.image ? <img src={v.image} style={thumb} onClick={() => setPreviewImage(v.image)} alt="" /> : '—'}</td>
+                        <td style={st.td}><span style={{ background: vioStatusBg(v.status), color: vioStatusColor(v.status), padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{vioStatusLabel(v.status)}</span></td>
+                        {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('violation', v)}>✏️</button></td>}
+                        {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteViolation(v.id)}>🗑️</button></td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {violations.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>{lang==='ar'?'لا توجد مخالفات':'No violations'}</div>}
+              </div>
+            </div>
+          )}
+
           {/* Reports */}
           {activeTab === 'reports' && (
             <div>
@@ -811,6 +1036,30 @@ export default function Dashboard() {
               <div><label style={st.label}>{t.pricePerLiter}</label><input type="number" style={st.input} value={editForm.cost_per_liter||''} onChange={e=>setEditForm({...editForm,cost_per_liter:e.target.value})} /></div>
               <div><label style={st.label}>{t.odometer}</label><input type="number" style={st.input} value={editForm.odometer||''} onChange={e=>setEditForm({...editForm,odometer:e.target.value})} /></div>
             </div>)}
+            {editType === 'incident' && (<div style={st.formGrid}>
+              <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={editForm.vehicle_id||''} onChange={e=>setEditForm({...editForm,vehicle_id:e.target.value})}><option value="">--</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
+              <div><label style={st.label}>{t.driver}</label><select style={st.input} value={editForm.driver_id||''} onChange={e=>setEditForm({...editForm,driver_id:e.target.value})}><option value="">--</option>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
+              <div><label style={st.label}>{lang==='ar'?'تاريخ الحادث':'Incident Date'}</label><input type="date" style={st.input} value={editForm.incident_date||''} onChange={e=>setEditForm({...editForm,incident_date:e.target.value})} /></div>
+              <div><label style={st.label}>{lang==='ar'?'نوع الحادث':'Type'}</label><select style={st.input} value={editForm.incident_type||'accident'} onChange={e=>setEditForm({...editForm,incident_type:e.target.value})}><option value="accident">{lang==='ar'?'حادث مروري':'Accident'}</option><option value="damage">{lang==='ar'?'ضرر':'Damage'}</option><option value="theft">{lang==='ar'?'سرقة':'Theft'}</option><option value="other">{lang==='ar'?'أخرى':'Other'}</option></select></div>
+              <div style={{ gridColumn: isMobile?'auto':'1/-1' }}><label style={st.label}>{lang==='ar'?'الوصف':'Description'}</label><textarea style={{...st.input, minHeight:'70px'}} value={editForm.description||''} onChange={e=>setEditForm({...editForm,description:e.target.value})} /></div>
+              <div><label style={st.label}>{lang==='ar'?'الموقع':'Location'}</label><input style={st.input} value={editForm.location||''} onChange={e=>setEditForm({...editForm,location:e.target.value})} /></div>
+              <div><label style={st.label}>{lang==='ar'?'تكلفة الإصلاح':'Repair Cost'}</label><input type="number" style={st.input} value={editForm.repair_cost||''} onChange={e=>setEditForm({...editForm,repair_cost:e.target.value})} /></div>
+              <div><label style={st.label}>{t.status}</label><select style={st.input} value={editForm.status||'open'} onChange={e=>setEditForm({...editForm,status:e.target.value})}><option value="open">{lang==='ar'?'قيد المعالجة':'Open'}</option><option value="in_progress">{lang==='ar'?'جاري الإصلاح':'In Progress'}</option><option value="closed">{lang==='ar'?'مغلق':'Closed'}</option></select></div>
+              <FileInput label={lang==='ar'?'صورة 1':'Image 1'} icon="📷" onChange={setEditIncidentImg1} file={editIncidentImg1} />
+              <FileInput label={lang==='ar'?'صورة 2':'Image 2'} icon="📷" onChange={setEditIncidentImg2} file={editIncidentImg2} />
+              <FileInput label={lang==='ar'?'صورة 3':'Image 3'} icon="📷" onChange={setEditIncidentImg3} file={editIncidentImg3} />
+            </div>)}
+            {editType === 'violation' && (<div style={st.formGrid}>
+              <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={editForm.vehicle_id||''} onChange={e=>setEditForm({...editForm,vehicle_id:e.target.value})}><option value="">--</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
+              <div><label style={st.label}>{t.driver}</label><select style={st.input} value={editForm.driver_id||''} onChange={e=>setEditForm({...editForm,driver_id:e.target.value})}><option value="">--</option>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
+              <div><label style={st.label}>{lang==='ar'?'تاريخ المخالفة':'Violation Date'}</label><input type="date" style={st.input} value={editForm.violation_date||''} onChange={e=>setEditForm({...editForm,violation_date:e.target.value})} /></div>
+              <div><label style={st.label}>{lang==='ar'?'رقم المخالفة':'Violation Number'}</label><input style={st.input} value={editForm.violation_number||''} onChange={e=>setEditForm({...editForm,violation_number:e.target.value})} /></div>
+              <div><label style={st.label}>{lang==='ar'?'نوع المخالفة':'Type'}</label><input style={st.input} value={editForm.violation_type||''} onChange={e=>setEditForm({...editForm,violation_type:e.target.value})} /></div>
+              <div><label style={st.label}>{lang==='ar'?'الموقع':'Location'}</label><input style={st.input} value={editForm.location||''} onChange={e=>setEditForm({...editForm,location:e.target.value})} /></div>
+              <div><label style={st.label}>{lang==='ar'?'مبلغ الغرامة':'Fine Amount'}</label><input type="number" style={st.input} value={editForm.fine_amount||''} onChange={e=>setEditForm({...editForm,fine_amount:e.target.value})} /></div>
+              <div><label style={st.label}>{t.status}</label><select style={st.input} value={editForm.status||'unpaid'} onChange={e=>setEditForm({...editForm,status:e.target.value})}><option value="unpaid">{lang==='ar'?'غير مدفوعة':'Unpaid'}</option><option value="paid">{lang==='ar'?'مدفوعة':'Paid'}</option><option value="disputed">{lang==='ar'?'اعتراض':'Disputed'}</option></select></div>
+              <FileInput label={lang==='ar'?'صورة المخالفة':'Violation Image'} icon="📷" onChange={setEditViolationImg} file={editViolationImg} />
+            </div>)}
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <button style={st.btn()} onClick={saveEdit} disabled={uploading}>{uploading ? t.saving : `💾 ${t.save}`}</button>
               <button style={st.btn('#888', true)} onClick={() => setEditItem(null)}>{t.cancel}</button>
@@ -887,6 +1136,48 @@ export default function Dashboard() {
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
           <button style={st.btn()} onClick={addFuel}>{t.save}</button>
           <button style={st.btn('#888', true)} onClick={() => setShowFuelForm(false)}>{t.cancel}</button>
+        </div>
+      </div></div>)}
+
+      {/* Add Incident Modal */}
+      {showIncidentForm && (<div style={st.modal}><div style={st.modalBox}>
+        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>🚨 {lang==='ar'?'إضافة حادث':'Add Incident'}</div>
+        <div style={st.formGrid}>
+          <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={incidentForm.vehicle_id} onChange={e => setIncidentForm({...incidentForm,vehicle_id:e.target.value})}><option value="">{t.selectVehicle}</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
+          <div><label style={st.label}>{t.driver}</label><select style={st.input} value={incidentForm.driver_id} onChange={e => setIncidentForm({...incidentForm,driver_id:e.target.value})}><option value="">{t.selectDriver}</option>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
+          <div><label style={st.label}>{lang==='ar'?'تاريخ الحادث':'Incident Date'}</label><input type="date" style={st.input} value={incidentForm.incident_date} onChange={e => setIncidentForm({...incidentForm,incident_date:e.target.value})} /></div>
+          <div><label style={st.label}>{lang==='ar'?'نوع الحادث':'Type'}</label><select style={st.input} value={incidentForm.incident_type} onChange={e => setIncidentForm({...incidentForm,incident_type:e.target.value})}><option value="accident">{lang==='ar'?'حادث مروري':'Accident'}</option><option value="damage">{lang==='ar'?'ضرر':'Damage'}</option><option value="theft">{lang==='ar'?'سرقة':'Theft'}</option><option value="other">{lang==='ar'?'أخرى':'Other'}</option></select></div>
+          <div style={{ gridColumn: isMobile?'auto':'1/-1' }}><label style={st.label}>{lang==='ar'?'الوصف':'Description'}</label><textarea style={{...st.input,minHeight:'70px'}} value={incidentForm.description} onChange={e => setIncidentForm({...incidentForm,description:e.target.value})} /></div>
+          <div><label style={st.label}>{lang==='ar'?'الموقع':'Location'}</label><input style={st.input} value={incidentForm.location} onChange={e => setIncidentForm({...incidentForm,location:e.target.value})} /></div>
+          <div><label style={st.label}>{lang==='ar'?'تكلفة الإصلاح':'Repair Cost'}</label><input type="number" style={st.input} value={incidentForm.repair_cost} onChange={e => setIncidentForm({...incidentForm,repair_cost:e.target.value})} /></div>
+          <div><label style={st.label}>{t.status}</label><select style={st.input} value={incidentForm.status} onChange={e => setIncidentForm({...incidentForm,status:e.target.value})}><option value="open">{lang==='ar'?'قيد المعالجة':'Open'}</option><option value="in_progress">{lang==='ar'?'جاري الإصلاح':'In Progress'}</option><option value="closed">{lang==='ar'?'مغلق':'Closed'}</option></select></div>
+          <FileInput label={lang==='ar'?'صورة 1':'Image 1'} icon="📷" onChange={setIncidentImg1} file={incidentImg1} />
+          <FileInput label={lang==='ar'?'صورة 2':'Image 2'} icon="📷" onChange={setIncidentImg2} file={incidentImg2} />
+          <FileInput label={lang==='ar'?'صورة 3':'Image 3'} icon="📷" onChange={setIncidentImg3} file={incidentImg3} />
+        </div>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <button style={st.btn()} onClick={addIncident} disabled={uploading}>{uploading ? t.uploading : t.save}</button>
+          <button style={st.btn('#888', true)} onClick={() => setShowIncidentForm(false)}>{t.cancel}</button>
+        </div>
+      </div></div>)}
+
+      {/* Add Violation Modal */}
+      {showViolationForm && (<div style={st.modal}><div style={st.modalBox}>
+        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>🚦 {lang==='ar'?'إضافة مخالفة':'Add Violation'}</div>
+        <div style={st.formGrid}>
+          <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={violationForm.vehicle_id} onChange={e => setViolationForm({...violationForm,vehicle_id:e.target.value})}><option value="">{t.selectVehicle}</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
+          <div><label style={st.label}>{t.driver}</label><select style={st.input} value={violationForm.driver_id} onChange={e => setViolationForm({...violationForm,driver_id:e.target.value})}><option value="">{t.selectDriver}</option>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
+          <div><label style={st.label}>{lang==='ar'?'تاريخ المخالفة':'Violation Date'}</label><input type="date" style={st.input} value={violationForm.violation_date} onChange={e => setViolationForm({...violationForm,violation_date:e.target.value})} /></div>
+          <div><label style={st.label}>{lang==='ar'?'رقم المخالفة':'Violation Number'}</label><input style={st.input} value={violationForm.violation_number} onChange={e => setViolationForm({...violationForm,violation_number:e.target.value})} /></div>
+          <div><label style={st.label}>{lang==='ar'?'نوع المخالفة':'Type'}</label><input style={st.input} placeholder={lang==='ar'?'مثال: تجاوز السرعة':'e.g., Speeding'} value={violationForm.violation_type} onChange={e => setViolationForm({...violationForm,violation_type:e.target.value})} /></div>
+          <div><label style={st.label}>{lang==='ar'?'الموقع':'Location'}</label><input style={st.input} value={violationForm.location} onChange={e => setViolationForm({...violationForm,location:e.target.value})} /></div>
+          <div><label style={st.label}>{lang==='ar'?'مبلغ الغرامة':'Fine Amount'}</label><input type="number" style={st.input} value={violationForm.fine_amount} onChange={e => setViolationForm({...violationForm,fine_amount:e.target.value})} /></div>
+          <div><label style={st.label}>{t.status}</label><select style={st.input} value={violationForm.status} onChange={e => setViolationForm({...violationForm,status:e.target.value})}><option value="unpaid">{lang==='ar'?'غير مدفوعة':'Unpaid'}</option><option value="paid">{lang==='ar'?'مدفوعة':'Paid'}</option><option value="disputed">{lang==='ar'?'اعتراض':'Disputed'}</option></select></div>
+          <FileInput label={lang==='ar'?'صورة المخالفة':'Violation Image'} icon="📷" onChange={setViolationImg} file={violationImg} />
+        </div>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <button style={st.btn()} onClick={addViolation} disabled={uploading}>{uploading ? t.uploading : t.save}</button>
+          <button style={st.btn('#888', true)} onClick={() => setShowViolationForm(false)}>{t.cancel}</button>
         </div>
       </div></div>)}
 
