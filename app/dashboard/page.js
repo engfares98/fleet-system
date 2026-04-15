@@ -1,880 +1,878 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { supabase } from '../supabase'
+import { createClient } from '@/utils/supabase/client'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export default function Dashboard() {
+  const supabase = createClient()
+  const router = useRouter()
+  
+  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(null)
+  const [userRole, setUserRole] = useState(null)
+  const [lang, setLang] = useState('ar')
+  
   const [vehicles, setVehicles] = useState([])
   const [drivers, setDrivers] = useState([])
   const [maintenance, setMaintenance] = useState([])
   const [fuelLogs, setFuelLogs] = useState([])
-  const [activeTab, setActiveTab] = useState('dashboard')
-  const [uploading, setUploading] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-  const [currentRole, setCurrentRole] = useState('viewer')
-  const [currentUser, setCurrentUser] = useState(null)
-  const [userRoles, setUserRoles] = useState([])
-
-  const [vehicleSearch, setVehicleSearch] = useState('')
-  const [driverSearch, setDriverSearch] = useState('')
-
-  const [showVehicleForm, setShowVehicleForm] = useState(false)
-  const [vehicleForm, setVehicleForm] = useState({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
-  const [vehicleImage, setVehicleImage] = useState(null)
-  const [istamaraImage, setIstamaraImage] = useState(null)
-
-  const [showDriverForm, setShowDriverForm] = useState(false)
-  const [driverForm, setDriverForm] = useState({ full_name: '', national_id: '', passport_number: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
-  const [iqamaImage, setIqamaImage] = useState(null)
-  const [licenseImage, setLicenseImage] = useState(null)
-
-  const [showMaintenanceForm, setShowMaintenanceForm] = useState(false)
-  const [maintenanceForm, setMaintenanceForm] = useState({ vehicle_id: '', type: '', description: '', date: '', cost: '', next_date: '', status: 'pending' })
-
-  const [showFuelForm, setShowFuelForm] = useState(false)
-  const [fuelForm, setFuelForm] = useState({ vehicle_id: '', driver_id: '', date: '', liters: '', cost_per_liter: '', odometer: '' })
-
+  const [incidents, setIncidents] = useState([])
+  const [violations, setViolations] = useState([])
+  const [users, setUsers] = useState([])
+  
+  const [activeTab, setActiveTab] = useState('vehicles')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [editMode, setEditMode] = useState(false)
   const [editItem, setEditItem] = useState(null)
-  const [editType, setEditType] = useState(null)
-  const [editForm, setEditForm] = useState({})
-  const [editVehicleImage, setEditVehicleImage] = useState(null)
-  const [editIstamaraImage, setEditIstamaraImage] = useState(null)
-  const [editIqamaImage, setEditIqamaImage] = useState(null)
-  const [editLicenseImage, setEditLicenseImage] = useState(null)
-
-  const [previewImage, setPreviewImage] = useState(null)
-
-  useEffect(() => {
-    checkAuth(); fetchData()
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
-
-  const checkAuth = async () => {
-    const { data } = await supabase.auth.getSession()
-    if (!data.session) { window.location.href = '/'; return }
-    setCurrentUser(data.session.user)
-    const { data: roleData } = await supabase.from('user_roles').select('*').eq('user_id', data.session.user.id).single()
-    setCurrentRole(roleData?.role || 'admin')
+  
+  // البحث الذكي
+  const [showDriverPicker, setShowDriverPicker] = useState(false)
+  const [showVehiclePicker, setShowVehiclePicker] = useState(false)
+  const [pickerSearch, setPickerSearch] = useState('')
+  
+  // حقول النماذج
+  const [formData, setFormData] = useState({})
+  
+  const t = {
+    ar: {
+      dashboard: 'لوحة التحكم', vehicles: 'المركبات', drivers: 'السائقين',
+      maintenance: 'الصيانة', fuel: 'الوقود', incidents: 'الحوادث',
+      violations: 'المخالفات', users: 'المستخدمين', reports: 'التقارير',
+      logout: 'تسجيل الخروج', add: 'إضافة', edit: 'تعديل', delete: 'حذف',
+      save: 'حفظ', cancel: 'إلغاء', export: 'تصدير Excel', total: 'الإجمالي',
+      active: 'نشط', inactive: 'غير نشط', open: 'مفتوح', closed: 'مغلق',
+      paid: 'مدفوع', unpaid: 'غير مدفوع', status: 'الحالة',
+      plateNumber: 'رقم اللوحة', vehicleType: 'نوع المركبة', model: 'الموديل',
+      year: 'السنة', driverName: 'اسم السائق', licenseNumber: 'رقم الرخصة',
+      phone: 'الجوال', date: 'التاريخ', type: 'النوع', cost: 'التكلفة',
+      notes: 'ملاحظات', driver: 'السائق', vehicle: 'المركبة', quantity: 'الكمية',
+      description: 'الوصف', location: 'الموقع', repairCost: 'تكلفة الإصلاح',
+      violationNumber: 'رقم المخالفة', fineAmount: 'مبلغ الغرامة',
+      email: 'البريد الإلكتروني', password: 'كلمة المرور', role: 'الصلاحية',
+      admin: 'مدير', editor: 'محرر', viewer: 'مشاهد',
+    },
+    en: {
+      dashboard: 'Dashboard', vehicles: 'Vehicles', drivers: 'Drivers',
+      maintenance: 'Maintenance', fuel: 'Fuel', incidents: 'Incidents',
+      violations: 'Violations', users: 'Users', reports: 'Reports',
+      logout: 'Logout', add: 'Add', edit: 'Edit', delete: 'Delete',
+      save: 'Save', cancel: 'Cancel', export: 'Export Excel', total: 'Total',
+      active: 'Active', inactive: 'Inactive', open: 'Open', closed: 'Closed',
+      paid: 'Paid', unpaid: 'Unpaid', status: 'Status',
+      plateNumber: 'Plate Number', vehicleType: 'Vehicle Type', model: 'Model',
+      year: 'Year', driverName: 'Driver Name', licenseNumber: 'License Number',
+      phone: 'Phone', date: 'Date', type: 'Type', cost: 'Cost',
+      notes: 'Notes', driver: 'Driver', vehicle: 'Vehicle', quantity: 'Quantity',
+      description: 'Description', location: 'Location', repairCost: 'Repair Cost',
+      violationNumber: 'Violation Number', fineAmount: 'Fine Amount',
+      email: 'Email', password: 'Password', role: 'Role',
+      admin: 'Admin', editor: 'Editor', viewer: 'Viewer',
+    }
   }
-
+  
+  useEffect(() => { checkUser() }, [])
+  
+  const checkUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push('/login'); return }
+    setUser(user)
+    const { data: userData } = await supabase.from('users').select('role').eq('email', user.email).single()
+    setUserRole(userData?.role || 'viewer')
+    fetchData()
+    setLoading(false)
+  }
+  
   const fetchData = async () => {
-    const [v, d, m, f, ur] = await Promise.all([
-      supabase.from('vehicles').select('*').order('created_at', { ascending: false }),
-      supabase.from('drivers').select('*').order('created_at', { ascending: false }),
-      supabase.from('maintenance').select('*, vehicles(plate_number)').order('created_at', { ascending: false }),
-      supabase.from('fuel_logs').select('*, vehicles(plate_number), drivers(full_name)').order('created_at', { ascending: false }),
-      supabase.from('user_roles').select('*').order('created_at', { ascending: false }),
-    ])
-    setVehicles(v.data || []); setDrivers(d.data || [])
-    setMaintenance(m.data || []); setFuelLogs(f.data || [])
-    setUserRoles(ur.data || [])
+    const { data: v } = await supabase.from('vehicles').select('*').order('created_at', { ascending: false })
+    setVehicles(v || [])
+    const { data: d } = await supabase.from('drivers').select('*').order('created_at', { ascending: false })
+    setDrivers(d || [])
+    const { data: m } = await supabase.from('maintenance').select('*, vehicles(plate_number)').order('maintenance_date', { ascending: false })
+    setMaintenance(m || [])
+    const { data: f } = await supabase.from('fuel_logs').select('*, vehicles(plate_number), drivers(name)').order('date', { ascending: false })
+    setFuelLogs(f || [])
+    const { data: i } = await supabase.from('incidents').select('*, vehicles(plate_number), drivers(name)').order('incident_date', { ascending: false })
+    setIncidents(i || [])
+    const { data: vio } = await supabase.from('violations').select('*, vehicles(plate_number), drivers(name)').order('violation_date', { ascending: false })
+    setViolations(vio || [])
+    if (userRole === 'admin') {
+      const { data: u } = await supabase.from('users').select('*').order('created_at', { ascending: false })
+      setUsers(u || [])
+    }
   }
-
-  const daysUntil = (dateStr) => {
-    if (!dateStr) return null
-    return Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24))
-  }
-
-  const getAlerts = () => {
-    const alerts = []
-    drivers.forEach(d => {
-      if (d.license_expiry) {
-        const days = daysUntil(d.license_expiry)
-        if (days !== null && days <= 60) alerts.push({ id: `lic-${d.id}`, type: days < 0 ? 'expired' : days <= 14 ? 'critical' : days <= 30 ? 'warning' : 'info', icon: '🪪', title: `رخصة: ${d.full_name}`, detail: days < 0 ? `منتهية منذ ${Math.abs(days)} يوم` : `تنتهي خلال ${days} يوم`, days })
+  
+  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login') }
+  
+  const openAddModal = () => { setFormData({}); setEditMode(false); setEditItem(null); setShowAddModal(true) }
+  
+  const openEditModal = (item) => { setFormData(item); setEditMode(true); setEditItem(item); setShowAddModal(true) }
+  
+  const closeModal = () => { setShowAddModal(false); setFormData({}); setEditMode(false); setEditItem(null) }
+  
+  const handleSubmit = async () => {
+    let table = ''
+    let data = {}
+    
+    if (activeTab === 'vehicles') {
+      if (!formData.plate_number || !formData.type) { alert(t[lang].plateNumber + ' & ' + t[lang].vehicleType + ' required'); return }
+      
+      let imageUrl = editMode ? editItem?.image : null
+      let istimaraUrl = editMode ? editItem?.istimara_pdf : null
+      let insuranceUrl = editMode ? editItem?.insurance_pdf : null
+      
+      if (formData.imageFile) imageUrl = await uploadFile(formData.imageFile, 'vehicles')
+      if (formData.istimaraPdfFile) istimaraUrl = await uploadFile(formData.istimaraPdfFile, 'documents')
+      if (formData.insurancePdfFile) insuranceUrl = await uploadFile(formData.insurancePdfFile, 'documents')
+      
+      table = 'vehicles'
+      data = { 
+        plate_number: formData.plate_number, 
+        type: formData.type, 
+        model: formData.model || '', 
+        year: formData.year ? parseInt(formData.year) : null, 
+        status: formData.status || 'active',
+        image: imageUrl,
+        istimara_pdf: istimaraUrl,
+        insurance_pdf: insuranceUrl
       }
-    })
-    maintenance.forEach(m => {
-      if (m.next_date) {
-        const days = daysUntil(m.next_date)
-        if (days !== null && days <= 30) alerts.push({ id: `maint-${m.id}`, type: days < 0 ? 'expired' : days <= 7 ? 'critical' : 'warning', icon: '🔧', title: `صيانة: ${m.vehicles?.plate_number || ''}`, detail: days < 0 ? `تأخر ${Math.abs(days)} يوم` : `خلال ${days} يوم`, days })
+    } else if (activeTab === 'drivers') {
+      if (!formData.name || !formData.license_number) { alert(t[lang].driverName + ' & ' + t[lang].licenseNumber + ' required'); return }
+      
+      let imageUrl = editMode ? editItem?.image : null
+      let licenseUrl = editMode ? editItem?.license_pdf : null
+      let iqamaUrl = editMode ? editItem?.iqama_pdf : null
+      
+      if (formData.imageFile) imageUrl = await uploadFile(formData.imageFile, 'drivers')
+      if (formData.licensePdfFile) licenseUrl = await uploadFile(formData.licensePdfFile, 'documents')
+      if (formData.iqamaPdfFile) iqamaUrl = await uploadFile(formData.iqamaPdfFile, 'documents')
+      
+      table = 'drivers'
+      data = { 
+        name: formData.name, 
+        license_number: formData.license_number, 
+        phone: formData.phone || '', 
+        status: formData.status || 'active',
+        image: imageUrl,
+        license_pdf: licenseUrl,
+        iqama_pdf: iqamaUrl
       }
-    })
-    return alerts.sort((a, b) => a.days - b.days)
+    } else if (activeTab === 'maintenance') {
+      if (!formData.vehicle_id || !formData.maintenance_type || !formData.maintenance_date) { alert('Required fields missing'); return }
+      table = 'maintenance'
+      data = { vehicle_id: formData.vehicle_id, maintenance_type: formData.maintenance_type, maintenance_date: formData.maintenance_date, cost: formData.cost ? parseFloat(formData.cost) : 0, notes: formData.notes || '' }
+    } else if (activeTab === 'fuel') {
+      if (!formData.vehicle_id || !formData.date) { alert('Required fields missing'); return }
+      table = 'fuel_logs'
+      data = { vehicle_id: formData.vehicle_id, driver_id: formData.driver_id || null, date: formData.date, quantity: formData.quantity ? parseFloat(formData.quantity) : 0, cost: formData.cost ? parseFloat(formData.cost) : 0, notes: formData.notes || '' }
+    } else if (activeTab === 'incidents') {
+      if (!formData.vehicle_id || !formData.incident_date) { alert('Required fields missing'); return }
+      table = 'incidents'
+      data = { vehicle_id: formData.vehicle_id, driver_id: formData.driver_id || null, incident_date: formData.incident_date, incident_type: formData.incident_type || 'accident', description: formData.description || '', location: formData.location || '', repair_cost: formData.repair_cost ? parseFloat(formData.repair_cost) : 0, status: formData.status || 'open', notes: formData.notes || '' }
+    } else if (activeTab === 'violations') {
+      if (!formData.vehicle_id || !formData.violation_date) { alert('Required fields missing'); return }
+      table = 'violations'
+      data = { vehicle_id: formData.vehicle_id, driver_id: formData.driver_id || null, violation_date: formData.violation_date, violation_number: formData.violation_number || '', violation_type: formData.violation_type || '', location: formData.location || '', fine_amount: formData.fine_amount ? parseFloat(formData.fine_amount) : 0, status: formData.status || 'unpaid', notes: formData.notes || '' }
+    } else if (activeTab === 'users') {
+      if (!formData.email) { alert('Email required'); return }
+      table = 'users'
+      data = { email: formData.email, role: formData.role || 'viewer' }
+    }
+    
+    const { error } = editMode 
+      ? await supabase.from(table).update(data).eq('id', editItem.id)
+      : await supabase.from(table).insert(data)
+    
+    if (error) { alert(error.message); return }
+    closeModal(); fetchData()
   }
-
-  const alerts = getAlerts()
-  const criticalAlerts = alerts.filter(a => a.type === 'expired' || a.type === 'critical')
-
-  const exportToCSV = (data, filename) => {
-    if (!data || data.length === 0) return
-    const headers = Object.keys(data[0])
-    const csvContent = [headers.join(','), ...data.map(row => headers.map(h => `"${(row[h] || '').toString().replace(/"/g, '""')}"`).join(','))].join('\n')
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = filename + '.csv'; a.click()
-    URL.revokeObjectURL(url)
+  
+  const handleDelete = async (id, table) => {
+    if (!confirm(t[lang].delete + '?')) return
+    const { error } = await supabase.from(table).delete().eq('id', id)
+    if (error) { alert(error.message); return }
+    fetchData()
   }
-
-  const exportVehicles = () => exportToCSV(vehicles.map(v => ({ 'رقم اللوحة': v.plate_number || '', 'كود المركبة': v.vehicle_code || '', 'النوع': v.type || '', 'الماركة': v.brand || '', 'الموديل': v.model || '', 'السنة': v.year || '', 'اللون': v.color || '', 'نوع الوقود': v.fuel_type || '', 'الحالة': v.status === 'active' ? 'نشط' : 'غير نشط', 'حالة التجهيز': v.preparation_status === 'ready' ? 'جاهزة' : v.preparation_status === 'in_progress' ? 'قيد التجهيز' : 'غير جاهزة' })), 'المركبات')
-  const exportDrivers = () => exportToCSV(drivers.map(d => ({ 'الاسم': d.full_name || '', 'رقم الهوية': d.national_id || '', 'رقم الجواز': d.passport_number || '', 'الجوال': d.phone || '', 'رقم الرخصة': d.license_number || '', 'انتهاء الرخصة': d.license_expiry || '', 'الحالة': d.status === 'active' ? 'نشط' : 'غير نشط' })), 'السائقون')
-  const exportMaintenance = () => exportToCSV(maintenance.map(m => ({ 'المركبة': m.vehicles?.plate_number || '', 'النوع': m.type || '', 'الوصف': m.description || '', 'التاريخ': m.date || '', 'التكلفة': m.cost || '', 'الموعد القادم': m.next_date || '', 'الحالة': m.status === 'active' ? 'مكتمل' : m.status === 'pending' ? 'معلق' : 'ملغي' })), 'الصيانة')
-  const exportFuel = () => exportToCSV(fuelLogs.map(f => ({ 'المركبة': f.vehicles?.plate_number || '', 'السائق': f.drivers?.full_name || '', 'التاريخ': f.date || '', 'اللترات': f.liters || '', 'سعر اللتر': f.cost_per_liter || '', 'الإجمالي': f.total_cost || '', 'قراءة العداد': f.odometer || '' })), 'الوقود')
-
-  const uploadFile = async (file, folder) => {
+  
+  const exportToExcelconst generatePDF = (type, itemId) => {
+  const doc = new jsPDF()
+  const w = doc.internal.pageSize.getWidth()
+  
+  doc.setFillColor(18, 130, 115)
+  doc.rect(0, 0, w, 35, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(16)
+  doc.text('أمانة المدينة - المجال المرئي', w/2, 20, {align: 'center'})
+  
+  doc.setTextColor(0, 0, 0)
+  doc.setFontSize(12)
+  doc.text('تقرير ' + type, 15, 50)
+  doc.save(type + '.pdf')
+} = (data, filename) => {
+    if (!data?.length) { alert('No data'); return }
+    const csv = [Object.keys(data[0]).join(','), ...data.map(r => Object.values(r).map(v => `"${v}"`).join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `${filename}.csv`; a.click()
+  }
+  
+  const uploadFile = async (file, folder = 'vehicles') => {
     if (!file) return null
-    const ext = file.name.split('.').pop()
-    const fileName = `${folder}/${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('fleet-files').upload(fileName, file)
-    if (error) return null
-    const { data } = supabase.storage.from('fleet-files').getPublicUrl(fileName)
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Math.random()}.${fileExt}`
+    const filePath = `${folder}/${fileName}`
+    const { error } = await supabase.storage.from('fleet-files').upload(filePath, file)
+    if (error) { console.error('Upload error:', error); return null }
+    const { data } = supabase.storage.from('fleet-files').getPublicUrl(filePath)
     return data.publicUrl
   }
-
-  const openEdit = (type, item) => {
-    setEditType(type); setEditItem(item); setEditForm({ ...item })
-    setEditVehicleImage(null); setEditIstamaraImage(null); setEditIqamaImage(null); setEditLicenseImage(null)
-  }
-
-  const saveEdit = async () => {
-    setUploading(true)
-    const table = editType === 'vehicle' ? 'vehicles' : editType === 'driver' ? 'drivers' : editType === 'maintenance' ? 'maintenance' : 'fuel_logs'
-    const updateData = { ...editForm }
-    delete updateData.id; delete updateData.created_at; delete updateData.vehicles; delete updateData.drivers
-    if (editType === 'fuel') updateData.total_cost = updateData.liters * updateData.cost_per_liter
-    if (editType === 'vehicle') {
-      if (editVehicleImage) updateData.vehicle_image = await uploadFile(editVehicleImage, 'vehicles')
-      if (editIstamaraImage) updateData.istimara_image = await uploadFile(editIstamaraImage, 'istimara')
+  
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-xl">{lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}</div></div>
+  
+  const renderTable = () => {
+    let data = [], columns = [], tableName = ''
+    
+    if (activeTab === 'vehicles') {
+      data = vehicles
+      tableName = 'vehicles'
+      columns = [
+       { key: 'plate_display', label: t[lang].plateNumber },
+        { key: 'type', label: t[lang].vehicleType },
+        { key: 'model', label: t[lang].model },
+        { key: 'year', label: t[lang].year },
+        { key: 'status', label: t[lang].status, badge: true },
+        { key: 'image', label: lang === 'ar' ? 'الصورة' : 'Image', isImage: true }
+      ]
+    } else if (activeTab === 'drivers') {
+      data = drivers
+      tableName = 'drivers'
+      columns = [
+        { key: 'name', label: t[lang].driverName },
+        { key: 'license_number', label: t[lang].licenseNumber },
+        { key: 'phone', label: t[lang].phone },
+        { key: 'status', label: t[lang].status, badge: true },
+        { key: 'image', label: lang === 'ar' ? 'الصورة' : 'Image', isImage: true }
+      ]
+    } else if (activeTab === 'maintenance') {
+      data = maintenance
+      tableName = 'maintenance'
+      columns = [
+        { key: 'vehicles.plate_number', label: t[lang].vehicle, nested: true },
+        { key: 'maintenance_type', label: t[lang].type },
+        { key: 'maintenance_date', label: t[lang].date },
+        { key: 'cost', label: t[lang].cost }
+      ]
+    } else if (activeTab === 'fuel') {
+      data = fuelLogs
+      tableName = 'fuel_logs'
+      columns = [
+        { key: 'vehicles.plate_number', label: t[lang].vehicle, nested: true },
+        { key: 'drivers.name', label: t[lang].driver, nested: true },
+        { key: 'date', label: t[lang].date },
+        { key: 'quantity', label: t[lang].quantity },
+        { key: 'cost', label: t[lang].cost }
+      ]
+    } else if (activeTab === 'incidents') {
+      data = incidents
+      tableName = 'incidents'
+      columns = [
+        { key: 'vehicles.plate_number', label: t[lang].vehicle, nested: true },
+        { key: 'drivers.name', label: t[lang].driver, nested: true },
+        { key: 'incident_date', label: t[lang].date },
+        { key: 'description', label: t[lang].description },
+        { key: 'repair_cost', label: t[lang].repairCost },
+        { key: 'status', label: t[lang].status, badge: true }
+      ]
+    } else if (activeTab === 'violations') {
+      data = violations
+      tableName = 'violations'
+      columns = [
+        { key: 'vehicles.plate_number', label: t[lang].vehicle, nested: true },
+        { key: 'drivers.name', label: t[lang].driver, nested: true },
+        { key: 'violation_date', label: t[lang].date },
+        { key: 'violation_number', label: t[lang].violationNumber },
+        { key: 'fine_amount', label: t[lang].fineAmount },
+        { key: 'status', label: t[lang].status, badge: true }
+      ]
+    } else if (activeTab === 'users') {
+      data = users
+      tableName = 'users'
+      columns = [
+        { key: 'email', label: t[lang].email },
+        { key: 'role', label: t[lang].role, badge: true }
+      ]
     }
-    if (editType === 'driver') {
-      if (editIqamaImage) updateData.iqama_image = await uploadFile(editIqamaImage, 'iqama')
-      if (editLicenseImage) updateData.license_image = await uploadFile(editLicenseImage, 'licenses')
+    const getPlateDisplay = (item) => {
+  if (item.plate_letters && item.plate_numbers) {
+    return `${item.plate_letters} ${item.plate_numbers}`
+  }
+  return item.plate_number || '-'
+}
+    const getValue = (item, key) => {
+      if (key.includes('.')) {
+        const parts = key.split('.')
+        return item[parts[0]]?.[parts[1]] || '-'
+      }if (key === 'plate_display') return getPlateDisplay(item)
+      return item[key] || '-'
     }
-    await supabase.from(table).update(updateData).eq('id', editItem.id)
-    setEditItem(null); setEditType(null); setUploading(false); fetchData()
+    
+    return (
+      <div className="overflow-x-auto border rounded-lg">
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              {columns.map(col => (
+                <th key={col.key} className="px-4 py-3 text-start text-sm font-semibold text-gray-700">{col.label}</th>
+              ))}
+              {(userRole === 'admin' || userRole === 'editor') && (
+                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700"></th>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {data.map(item => (
+              <tr key={item.id} className="hover:bg-gray-50">
+                {columns.map(col => (
+                  <td key={col.key} className="px-4 py-3 text-sm text-gray-700">
+                    {col.isImage ? (
+                      getValue(item, col.key) ? (
+                        <img src={getValue(item, col.key)} alt="" className="w-14 h-14 object-cover rounded-lg shadow-sm" />
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )
+                    ) : col.badge ? (
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                        (getValue(item, col.key) === 'active' || getValue(item, col.key) === 'paid' || getValue(item, col.key) === 'closed') ? 'bg-green-100 text-green-700' : 
+                        (getValue(item, col.key) === 'admin') ? 'bg-purple-100 text-purple-700' :
+                        (getValue(item, col.key) === 'editor') ? 'bg-blue-100 text-blue-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {t[lang][getValue(item, col.key)] || getValue(item, col.key)}
+                      </span>
+                    ) : getValue(item, col.key)}
+                  </td>
+                ))}
+                {(userRole === 'admin' || userRole === 'editor') && (
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2 justify-center">
+                      <button onClick={() => openEditModal(item)} className="text-blue-600 hover:text-blue-800 text-lg">✏️</button>
+                      {userRole === 'admin' && (
+                        <button onClick={() => handleDelete(item.id, tableName)} className="text-red-600 hover:text-red-800 text-lg">🗑️</button>
+                      )}
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
   }
-
-  const addVehicle = async () => {
-    setUploading(true)
-    const vehicle_image = await uploadFile(vehicleImage, 'vehicles')
-    const istimara_image = await uploadFile(istamaraImage, 'istimara')
-    await supabase.from('vehicles').insert([{ ...vehicleForm, vehicle_image, istimara_image }])
-    setShowVehicleForm(false)
-    setVehicleForm({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
-    setVehicleImage(null); setIstamaraImage(null); setUploading(false); fetchData()
-  }
-
-  const addDriver = async () => {
-    setUploading(true)
-    const iqama_image = await uploadFile(iqamaImage, 'iqama')
-    const license_image = await uploadFile(licenseImage, 'licenses')
-    await supabase.from('drivers').insert([{ ...driverForm, iqama_image, license_image }])
-    setShowDriverForm(false)
-    setDriverForm({ full_name: '', national_id: '', passport_number: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
-    setIqamaImage(null); setLicenseImage(null); setUploading(false); fetchData()
-  }
-
-  const addMaintenance = async () => {
-    await supabase.from('maintenance').insert([maintenanceForm])
-    setShowMaintenanceForm(false)
-    setMaintenanceForm({ vehicle_id: '', type: '', description: '', date: '', cost: '', next_date: '', status: 'pending' })
-    fetchData()
-  }
-
-  const addFuel = async () => {
-    const total_cost = fuelForm.liters * fuelForm.cost_per_liter
-    await supabase.from('fuel_logs').insert([{ ...fuelForm, total_cost }])
-    setShowFuelForm(false)
-    setFuelForm({ vehicle_id: '', driver_id: '', date: '', liters: '', cost_per_liter: '', odometer: '' })
-    fetchData()
-  }
-
-  const updatePreparation = async (id, val) => {
-    await supabase.from('vehicles').update({ preparation_status: val }).eq('id', id); fetchData()
-  }
-
-  const updateUserRole = async (userId, newRole) => {
-    await supabase.from('user_roles').update({ role: newRole }).eq('user_id', userId); fetchData()
-  }
-
-  const deleteUserRole = async (userId) => {
-    if (!confirm('هل أنت متأكد؟')) return
-    await supabase.from('user_roles').delete().eq('user_id', userId); fetchData()
-  }
-
-  const canEdit = currentRole === 'admin' || currentRole === 'editor'
-  const canDelete = currentRole === 'admin'
-
-  const deleteVehicle = async (id) => { if (!canDelete) return; await supabase.from('vehicles').delete().eq('id', id); fetchData() }
-  const deleteDriver = async (id) => { if (!canDelete) return; await supabase.from('drivers').delete().eq('id', id); fetchData() }
-  const deleteMaintenance = async (id) => { if (!canDelete) return; await supabase.from('maintenance').delete().eq('id', id); fetchData() }
-  const deleteFuel = async (id) => { if (!canDelete) return; await supabase.from('fuel_logs').delete().eq('id', id); fetchData() }
-  const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/' }
-
-  const totalFuelCost = fuelLogs.reduce((a, b) => a + (b.total_cost || 0), 0)
-  const totalFuelLiters = fuelLogs.reduce((a, b) => a + (Number(b.liters) || 0), 0)
-  const totalMaintenanceCost = maintenance.reduce((a, b) => a + (Number(b.cost) || 0), 0)
-  const activeVehicles = vehicles.filter(v => v.status === 'active').length
-  const readyVehicles = vehicles.filter(v => v.preparation_status === 'ready').length
-  const activeDrivers = drivers.filter(d => d.status === 'active').length
-
-  const statusColor = (s) => s === 'active' ? '#16a34a' : s === 'pending' ? '#d97706' : '#dc2626'
-  const statusBg = (s) => s === 'active' ? '#f0fdf4' : s === 'pending' ? '#fffbeb' : '#fef2f2'
-  const statusLabel = (s) => s === 'active' ? 'نشط' : s === 'pending' ? 'معلق' : 'غير نشط'
-  const prepColor = (s) => s === 'ready' ? '#16a34a' : s === 'in_progress' ? '#d97706' : '#dc2626'
-  const prepBg = (s) => s === 'ready' ? '#f0fdf4' : s === 'in_progress' ? '#fffbeb' : '#fef2f2'
-  const alertColor = (t) => t === 'expired' ? '#dc2626' : t === 'critical' ? '#ea580c' : t === 'warning' ? '#d97706' : '#2563eb'
-  const alertBg = (t) => t === 'expired' ? '#fef2f2' : t === 'critical' ? '#fff7ed' : t === 'warning' ? '#fffbeb' : '#eff6ff'
-  const roleLabel = (r) => r === 'admin' ? '👑 مدير' : r === 'editor' ? '✏️ محرر' : '👁️ مشاهد'
-  const roleColor = (r) => r === 'admin' ? '#7c3aed' : r === 'editor' ? '#ff6b00' : '#16a34a'
-  const roleBg = (r) => r === 'admin' ? '#f5f3ff' : r === 'editor' ? '#fff7f2' : '#f0fdf4'
-
-  const filteredVehicles = vehicles.filter(v => (v.plate_number || '').includes(vehicleSearch) || (v.vehicle_code || '').includes(vehicleSearch) || (v.brand || '').includes(vehicleSearch) || (v.model || '').includes(vehicleSearch))
-  const filteredDrivers = drivers.filter(d => (d.full_name || '').includes(driverSearch) || (d.national_id || '').includes(driverSearch) || (d.passport_number || '').includes(driverSearch) || (d.phone || '').includes(driverSearch))
-
-  const vehicleTypes = vehicles.reduce((acc, v) => { const key = v.preparation_status || 'not_ready'; acc[key] = (acc[key] || 0) + 1; return acc }, {})
-  const fuelByVehicle = fuelLogs.reduce((acc, f) => { const key = f.vehicles?.plate_number || 'غير محدد'; acc[key] = (acc[key] || 0) + (Number(f.total_cost) || 0); return acc }, {})
-  const topFuelVehicles = Object.entries(fuelByVehicle).sort((a, b) => b[1] - a[1]).slice(0, 5)
-
-  const C = { orange: '#ff6b00', orangeLight: '#fff7f2', white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8' }
-  const navItems = [['dashboard','📊','لوحة التحكم'],['vehicles','🚛','المركبات'],['drivers','👤','السائقون'],['maintenance','🔧','الصيانة'],['fuel','⛽','الوقود'],['reports','📈','التقارير'],['alerts','🔔','التنبيهات'],['users','👥','المستخدمون']]
-
-  const st = {
-    input: { width: '100%', padding: '10px 14px', background: '#fafafa', border: `1.5px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box' },
-    label: { color: '#555', fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '6px' },
-    btn: (c, outline) => ({ background: outline ? C.white : (c || C.orange), color: outline ? (c || C.orange) : C.white, border: `2px solid ${c || C.orange}`, borderRadius: '9px', padding: '9px 18px', fontSize: '13px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer' }),
-    badge: (s) => ({ background: statusBg(s), color: statusColor(s), padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', display: 'inline-block' }),
-    modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' },
-    modalBox: { background: C.white, borderRadius: '18px', padding: isMobile ? '20px' : '32px', width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto' },
-    formGrid: { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' },
-    card: { background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: isMobile ? '14px' : '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
-    th: { padding: '10px 12px', textAlign: 'right', color: C.muted, fontSize: '11px', fontWeight: '600', borderBottom: `2px solid ${C.border}`, background: '#fafafa', whiteSpace: 'nowrap' },
-    td: { padding: '10px 12px', color: C.text, fontSize: '12px', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' },
-    editBtn: { background: '#fff7f2', border: '1px solid #ffccaa', color: C.orange, borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '600' },
-    deleteBtn: { background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '15px' },
-    prepSelect: (s) => ({ background: prepBg(s), color: prepColor(s), border: `1.5px solid ${prepColor(s)}`, borderRadius: '8px', padding: '3px 6px', fontSize: '10px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer', outline: 'none' }),
-  }
-
-  const FileInput = ({ label, icon, onChange, file }) => (
-    <div>
-      <label style={st.label}>{icon} {label}</label>
-      <label style={{ width: '100%', padding: '10px', background: file ? '#fff7f2' : '#fafafa', border: `2px dashed ${file ? C.orange : C.border}`, borderRadius: '8px', color: file ? C.orange : C.muted, fontSize: '12px', cursor: 'pointer', textAlign: 'center', display: 'block', boxSizing: 'border-box', fontWeight: '600' }}>
-        {file ? `✅ ${file.name}` : `📎 ${label}`}
-        <input type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={e => onChange(e.target.files[0])} />
-      </label>
-    </div>
-  )
-
-  const InputField = ({ label, field, type = 'text' }) => (
-    <div>
-      <label style={st.label}>{label}</label>
-      <input type={type} style={st.input} value={editForm[field] || ''} onChange={e => setEditForm({ ...editForm, [field]: e.target.value })} />
-    </div>
-  )
-
-  const SelectField = ({ label, field, options }) => (
-    <div>
-      <label style={st.label}>{label}</label>
-      <select style={st.input} value={editForm[field] || ''} onChange={e => setEditForm({ ...editForm, [field]: e.target.value })}>
-        {options.map(([val, lbl]) => <option key={val} value={val}>{lbl}</option>)}
-      </select>
-    </div>
-  )
-
-  const BarChart = ({ data, maxVal, color }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {data.map(([label, val]) => (
-        <div key={label}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span style={{ fontSize: '12px', color: C.text }}>{label}</span>
-            <span style={{ fontSize: '12px', fontWeight: '700', color }}>{val.toFixed(0)}</span>
+  
+  const renderForm = () => {
+    if (activeTab === 'vehicles') {
+      return (
+        <>
+         <div className="grid grid-cols-2 gap-4">
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      {lang === 'ar' ? 'حروف اللوحة' : 'Plate Letters'}
+    </label>
+    <input
+      type="text"
+      value={vehicleForm.plate_letters || ''}
+      onChange={(e) => setVehicleForm({...vehicleForm, plate_letters: e.target.value})}
+      placeholder={lang === 'ar' ? 'مثال: أ ط م' : 'e.g: ABC'}
+      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    />
+  </div>
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      {lang === 'ar' ? 'أرقام اللوحة' : 'Plate Numbers'}
+    </label>
+    <input
+      type="text"
+      value={vehicleForm.plate_numbers || ''}
+      onChange={(e) => setVehicleForm({...vehicleForm, plate_numbers: e.target.value})}
+      placeholder={lang === 'ar' ? 'مثال: 5940' : 'e.g: 1234'}
+      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    />
+  </div>
+</div>
+          <input value={formData.type || ''} onChange={e => setFormData({...formData, type: e.target.value})} placeholder={t[lang].vehicleType} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.model || ''} onChange={e => setFormData({...formData, model: e.target.value})} placeholder={t[lang].model} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.year || ''} onChange={e => setFormData({...formData, year: e.target.value})} placeholder={t[lang].year} type="number" className="w-full px-3 py-2 border rounded-lg" />
+          <select value={formData.status || 'active'} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+            <option value="active">{t[lang].active}</option>
+            <option value="inactive">{t[lang].inactive}</option>
+          </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'صورة المركبة' : 'Vehicle Image'}</label>
+            <input type="file" accept="image/*" onChange={e => setFormData({...formData, imageFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.image && !formData.imageFile && (
+              <a href={editItem.image} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                {lang === 'ar' ? 'عرض الصورة الحالية' : 'View current image'}
+              </a>
+            )}
           </div>
-          <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${maxVal > 0 ? (val / maxVal) * 100 : 0}%`, background: color, borderRadius: '4px' }} />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'الاستمارة (PDF)' : 'Registration (PDF)'}</label>
+            <input type="file" accept=".pdf" onChange={e => setFormData({...formData, istimaraPdfFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.istimara_pdf && !formData.istimaraPdfFile && (
+              <a href={editItem.istimara_pdf} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                📄 {lang === 'ar' ? 'عرض PDF الحالي' : 'View current PDF'}
+              </a>
+            )}
           </div>
-        </div>
-      ))}
-    </div>
-  )
-
-  const thumb = { width: '34px', height: '34px', borderRadius: '6px', objectFit: 'cover', cursor: 'pointer', border: `1px solid ${C.border}` }
-  const imgLink = { color: C.orange, fontSize: '11px', cursor: 'pointer', fontWeight: '600' }
-
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'التأمين (PDF)' : 'Insurance (PDF)'}</label>
+            <input type="file" accept=".pdf" onChange={e => setFormData({...formData, insurancePdfFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.insurance_pdf && !formData.insurancePdfFile && (
+              <a href={editItem.insurance_pdf} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                📄 {lang === 'ar' ? 'عرض PDF الحالي' : 'View current PDF'}
+              </a>
+            )}
+          </div>
+        </>
+      )
+    } else if (activeTab === 'drivers') {
+      return (
+        <>
+          <input value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} placeholder={t[lang].driverName} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.license_number || ''} onChange={e => setFormData({...formData, license_number: e.target.value})} placeholder={t[lang].licenseNumber} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.phone || ''} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder={t[lang].phone} className="w-full px-3 py-2 border rounded-lg" />
+          <select value={formData.status || 'active'} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+            <option value="active">{t[lang].active}</option>
+            <option value="inactive">{t[lang].inactive}</option>
+          </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'صورة السائق' : 'Driver Image'}</label>
+            <input type="file" accept="image/*" onChange={e => setFormData({...formData, imageFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.image && !formData.imageFile && (
+              <a href={editItem.image} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                {lang === 'ar' ? 'عرض الصورة الحالية' : 'View current image'}
+              </a>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'الرخصة (PDF)' : 'License (PDF)'}</label>
+            <input type="file" accept=".pdf" onChange={e => setFormData({...formData, licensePdfFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.license_pdf && !formData.licensePdfFile && (
+              <a href={editItem.license_pdf} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                📄 {lang === 'ar' ? 'عرض PDF الحالي' : 'View current PDF'}
+              </a>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'الإقامة (PDF)' : 'Iqama (PDF)'}</label>
+            <input type="file" accept=".pdf" onChange={e => setFormData({...formData, iqamaPdfFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.iqama_pdf && !formData.iqamaPdfFile && (
+              <a href={editItem.iqama_pdf} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                📄 {lang === 'ar' ? 'عرض PDF الحالي' : 'View current PDF'}
+              </a>
+            )}
+          </div>
+        </>
+      )
+    } else if (activeTab === 'maintenance') {
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].vehicle}</label>
+            {formData.vehicle_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-blue-900 text-sm">
+                    {vehicles.find(v => v.id === formData.vehicle_id)?.plate_number}
+                  </div>
+                  <div className="text-xs text-blue-600">
+                    {vehicles.find(v => v.id === formData.vehicle_id)?.type}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowVehiclePicker(true)}
+                  className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  {lang === 'ar' ? 'تغيير' : 'Change'}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowVehiclePicker(true)}
+                className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-600"
+              >
+                {lang === 'ar' ? 'اضغط لاختيار مركبة' : 'Click to select vehicle'}
+              </button>
+            )}
+          </div>
+          <input value={formData.maintenance_type || ''} onChange={e => setFormData({...formData, maintenance_type: e.target.value})} placeholder={t[lang].type} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.maintenance_date || ''} onChange={e => setFormData({...formData, maintenance_date: e.target.value})} type="date" className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.cost || ''} onChange={e => setFormData({...formData, cost: e.target.value})} placeholder={t[lang].cost} type="number" className="w-full px-3 py-2 border rounded-lg" />
+          <textarea value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder={t[lang].notes} className="w-full px-3 py-2 border rounded-lg" rows="2"></textarea>
+        </>
+      )
+    } else if (activeTab === 'fuel') {
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].vehicle}</label>
+            {formData.vehicle_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-blue-900 text-sm">
+                    {vehicles.find(v => v.id === formData.vehicle_id)?.plate_number}
+                  </div>
+                </div>
+                <button type="button" onClick={() => setShowVehiclePicker(true)} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">
+                  {lang === 'ar' ? 'تغيير' : 'Change'}
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowVehiclePicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-600">
+                {lang === 'ar' ? 'اضغط لاختيار مركبة' : 'Click to select vehicle'}
+              </button>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].driver} ({lang === 'ar' ? 'اختياري' : 'Optional'})</label>
+            {formData.driver_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-green-900 text-sm">
+                    {drivers.find(d => d.id === formData.driver_id)?.name}
+                  </div>
+                </div>
+                <button type="button" onClick={() => setFormData({...formData, driver_id: ''})} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
+                  {lang === 'ar' ? 'إزالة' : 'Remove'}
+                </button>
+                <button type="button" onClick={() => setShowDriverPicker(true)} className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">
+                  {lang === 'ar' ? 'تغيير' : 'Change'}
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowDriverPicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition text-sm text-gray-600">
+                {lang === 'ar' ? 'اضغط لاختيار سائق (اختياري)' : 'Click to select driver (optional)'}
+              </button>
+            )}
+          </div>
+          <input value={formData.date || ''} onChange={e => setFormData({...formData, date: e.target.value})} type="date" className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.quantity || ''} onChange={e => setFormData({...formData, quantity: e.target.value})} placeholder={t[lang].quantity} type="number" className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.cost || ''} onChange={e => setFormData({...formData, cost: e.target.value})} placeholder={t[lang].cost} type="number" className="w-full px-3 py-2 border rounded-lg" />
+          <textarea value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder={t[lang].notes} className="w-full px-3 py-2 border rounded-lg" rows="2"></textarea>
+        </>
+      )
+    } else if (activeTab === 'incidents') {
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].vehicle}</label>
+            {formData.vehicle_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex-1"><div className="font-medium text-blue-900 text-sm">{vehicles.find(v => v.id === formData.vehicle_id)?.plate_number}</div></div>
+                <button type="button" onClick={() => setShowVehiclePicker(true)} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">{lang === 'ar' ? 'تغيير' : 'Change'}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowVehiclePicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-600">{lang === 'ar' ? 'اضغط لاختيار مركبة' : 'Click to select vehicle'}</button>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].driver} ({lang === 'ar' ? 'اختياري' : 'Optional'})</label>
+            {formData.driver_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex-1"><div className="font-medium text-green-900 text-sm">{drivers.find(d => d.id === formData.driver_id)?.name}</div></div>
+                <button type="button" onClick={() => setFormData({...formData, driver_id: ''})} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">{lang === 'ar' ? 'إزالة' : 'Remove'}</button>
+                <button type="button" onClick={() => setShowDriverPicker(true)} className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">{lang === 'ar' ? 'تغيير' : 'Change'}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowDriverPicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition text-sm text-gray-600">{lang === 'ar' ? 'اضغط لاختيار سائق (اختياري)' : 'Click to select driver (optional)'}</button>
+            )}
+          </div>
+          <input value={formData.incident_date || ''} onChange={e => setFormData({...formData, incident_date: e.target.value})} type="date" className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} placeholder={t[lang].description} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.location || ''} onChange={e => setFormData({...formData, location: e.target.value})} placeholder={t[lang].location} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.repair_cost || ''} onChange={e => setFormData({...formData, repair_cost: e.target.value})} placeholder={t[lang].repairCost} type="number" className="w-full px-3 py-2 border rounded-lg" />
+          <select value={formData.status || 'open'} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+            <option value="open">{t[lang].open}</option>
+            <option value="closed">{t[lang].closed}</option>
+          </select>
+          <textarea value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder={t[lang].notes} className="w-full px-3 py-2 border rounded-lg" rows="2"></textarea>
+        </>
+      )
+    } else if (activeTab === 'violations') {
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].vehicle}</label>
+            {formData.vehicle_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex-1"><div className="font-medium text-blue-900 text-sm">{vehicles.find(v => v.id === formData.vehicle_id)?.plate_number}</div></div>
+                <button type="button" onClick={() => setShowVehiclePicker(true)} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">{lang === 'ar' ? 'تغيير' : 'Change'}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowVehiclePicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-600">{lang === 'ar' ? 'اضغط لاختيار مركبة' : 'Click to select vehicle'}</button>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].driver} ({lang === 'ar' ? 'اختياري' : 'Optional'})</label>
+            {formData.driver_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex-1"><div className="font-medium text-green-900 text-sm">{drivers.find(d => d.id === formData.driver_id)?.name}</div></div>
+                <button type="button" onClick={() => setFormData({...formData, driver_id: ''})} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">{lang === 'ar' ? 'إزالة' : 'Remove'}</button>
+                <button type="button" onClick={() => setShowDriverPicker(true)} className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">{lang === 'ar' ? 'تغيير' : 'Change'}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowDriverPicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition text-sm text-gray-600">{lang === 'ar' ? 'اضغط لاختيار سائق (اختياري)' : 'Click to select driver (optional)'}</button>
+            )}
+          </div>
+          <input value={formData.violation_date || ''} onChange={e => setFormData({...formData, violation_date: e.target.value})} type="date" className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.violation_number || ''} onChange={e => setFormData({...formData, violation_number: e.target.value})} placeholder={t[lang].violationNumber} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.violation_type || ''} onChange={e => setFormData({...formData, violation_type: e.target.value})} placeholder={t[lang].type} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.location || ''} onChange={e => setFormData({...formData, location: e.target.value})} placeholder={t[lang].location} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.fine_amount || ''} onChange={e => setFormData({...formData, fine_amount: e.target.value})} placeholder={t[lang].fineAmount} type="number" className="w-full px-3 py-2 border rounded-lg" />
+          <select value={formData.status || 'unpaid'} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+            <option value="unpaid">{t[lang].unpaid}</option>
+            <option value="paid">{t[lang].paid}</option>
+          </select>
+          <textarea value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder={t[lang].notes} className="w-full px-3 py-2 border rounded-lg" rows="2"></textarea>
+        </>
+      )
+    } else if (activeTab === 'users') {
+      return (
+        <>
+          <input value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} placeholder={t[lang].email} type="email" className="w-full px-3 py-2 border rounded-lg" disabled={editMode} />
+          <select value={formData.role || 'viewer'} onChange={e => setFormData({...formData, role: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+            <option value="viewer">{t[lang].viewer}</option>
+            <option value="editor">{t[lang].editor}</option>
+            <option value="admin">{t[lang].admin}</option>
+          </select>
+        </>
+      )
+    }
+  }
+  
+  const getStats = () => {
+    if (activeTab === 'vehicles') {
+      return [
+        { label: t[lang].total, value: vehicles.length, color: 'blue' },
+        { label: t[lang].active, value: vehicles.filter(v => v.status === 'active').length, color: 'green' },
+        { label: t[lang].inactive, value: vehicles.filter(v => v.status === 'inactive').length, color: 'red' }
+      ]
+    } else if (activeTab === 'drivers') {
+      return [
+        { label: t[lang].total, value: drivers.length, color: 'blue' },
+        { label: t[lang].active, value: drivers.filter(d => d.status === 'active').length, color: 'green' },
+        { label: t[lang].inactive, value: drivers.filter(d => d.status === 'inactive').length, color: 'red' }
+      ]
+    } else if (activeTab === 'incidents') {
+      return [
+        { label: t[lang].total, value: incidents.length, color: 'blue' },
+        { label: t[lang].open, value: incidents.filter(i => i.status === 'open').length, color: 'yellow' },
+        { label: t[lang].closed, value: incidents.filter(i => i.status === 'closed').length, color: 'green' }
+      ]
+    } else if (activeTab === 'violations') {
+      return [
+        { label: t[lang].total, value: violations.length, color: 'blue' },
+        { label: t[lang].unpaid, value: violations.filter(v => v.status === 'unpaid').length, color: 'red' },
+        { label: t[lang].paid, value: violations.filter(v => v.status === 'paid').length, color: 'green' }
+      ]
+    }
+    return []
+  }
+  
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: 'Cairo, sans-serif', direction: 'rtl' }}>
-      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
-
-      {previewImage && (
-        <div style={{ ...st.modal, zIndex: 200 }} onClick={() => setPreviewImage(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: '14px', padding: '16px', maxWidth: '90vw' }}>
-            <img src={previewImage} style={{ maxWidth: '80vw', maxHeight: '80vh', borderRadius: '8px' }} alt="preview" />
-            <div style={{ textAlign: 'center', marginTop: '12px' }}><button style={st.btn('#888', true)} onClick={() => setPreviewImage(null)}>إغلاق</button></div>
-          </div>
-        </div>
-      )}
-
-      {isMobile && sidebarOpen && <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 30 }} onClick={() => setSidebarOpen(false)} />}
-
-      {/* Top Bar */}
-      <div style={{ background: C.white, borderBottom: `3px solid ${C.orange}`, padding: isMobile ? '8px 16px' : '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20, boxShadow: '0 2px 12px rgba(255,107,0,0.08)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {isMobile && <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: C.orange }}>☰</button>}
-          <img src="/logo-madinah.jpeg" alt="" style={{ height: isMobile ? '36px' : '50px', objectFit: 'contain' }} />
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: isMobile ? '11px' : '15px', fontWeight: '900', color: C.orange }}>{isMobile ? 'أسطول نظافة المدينة' : 'أسطول مشاريع نظافة المدينة المنورة'}</div>
-          {!isMobile && <div style={{ fontSize: '11px', color: C.muted }}>صلاحيتك: <span style={{ color: roleColor(currentRole), fontWeight: '700' }}>{roleLabel(currentRole)}</span></div>}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {criticalAlerts.length > 0 && (
-            <div onClick={() => setActiveTab('alerts')} style={{ position: 'relative', cursor: 'pointer' }}>
-              <span style={{ fontSize: '22px' }}>🔔</span>
-              <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>
+    <div className={`min-h-screen bg-gray-50 ${lang === 'ar' ? 'rtl' : 'ltr'}`} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="bg-white shadow-sm border-b sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">F</div>
+              <h1 className="text-xl font-bold text-gray-900">{t[lang].dashboard}</h1>
             </div>
-          )}
-          {!isMobile && <img src="/logo-mag.jpeg" alt="" style={{ height: '40px', objectFit: 'contain' }} />}
-          <button onClick={handleLogout} style={{ ...st.btn('#dc2626', true), padding: isMobile ? '6px 10px' : '9px 18px', fontSize: isMobile ? '11px' : '13px' }}>خروج</button>
+            <div className="flex items-center gap-4">
+              <button onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} className="px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 transition font-medium">
+                {lang === 'ar' ? 'English' : 'العربية'}
+              </button>
+              <div className="text-sm text-gray-600">{user?.email}</div>
+              <button onClick={handleLogout} className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-medium">
+                {t[lang].logout}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div style={{ display: 'flex' }}>
-        {/* Sidebar */}
-        <div style={{ width: '220px', background: C.white, borderLeft: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', padding: '16px 0', position: isMobile ? 'fixed' : 'sticky', right: isMobile ? (sidebarOpen ? 0 : '-220px') : 0, top: isMobile ? 0 : '63px', height: isMobile ? '100vh' : 'calc(100vh - 63px)', overflowY: 'auto', zIndex: isMobile ? 40 : 10, transition: 'right 0.3s ease' }}>
-          {isMobile && (
-            <div style={{ padding: '16px 20px 8px', borderBottom: `1px solid ${C.border}`, marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: C.orange }}>القائمة</div>
-              <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex gap-6">
+          <div className="w-64 flex-shrink-0">
+            <div className="bg-white rounded-xl shadow-sm p-4 space-y-1 sticky top-24">
+              {['vehicles', 'drivers', 'maintenance', 'fuel', 'incidents', 'violations', ...(userRole === 'admin' ? ['users'] : []), 'reports'].map(tab => {
+                const icons = { vehicles: '🚗', drivers: '👤', maintenance: '🔧', fuel: '⛽', incidents: '🚨', violations: '🚦', users: '👥', reports: '📊' }
+                return (
+                  <button key={tab} onClick={() => setActiveTab(tab)} className={`w-full text-${lang === 'ar' ? 'right' : 'left'} px-4 py-3 rounded-lg transition font-medium ${activeTab === tab ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-700'}`}>
+                    <span className="mr-2">{icons[tab]}</span>{t[lang][tab]}
+                  </button>
+                )
+              })}
             </div>
-          )}
-          {navItems.map(([id, icon, label]) => (
-            (!['users'].includes(id) || currentRole === 'admin') && (
-              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === id ? '700' : '400', color: activeTab === id ? C.orange : C.muted, background: activeTab === id ? C.orangeLight : 'transparent', borderRight: activeTab === id ? `3px solid ${C.orange}` : '3px solid transparent', position: 'relative' }}
-                onClick={() => { setActiveTab(id); if (isMobile) setSidebarOpen(false) }}>
-                <span style={{ fontSize: '17px' }}>{icon}</span>
-                <span>{label}</span>
-                {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ marginRight: 'auto', background: '#dc2626', color: '#fff', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: '700' }}>{criticalAlerts.length}</span>}
-              </div>
-            )
-          ))}
-          <div style={{ flex: 1 }} />
-          <div style={{ padding: '16px 20px', borderTop: `1px solid ${C.border}` }}>
-            <button onClick={handleLogout} style={{ ...st.btn('#dc2626', true), width: '100%' }}>تسجيل الخروج</button>
           </div>
-        </div>
-
-        {/* Main */}
-        <div style={{ flex: 1, padding: isMobile ? '16px' : '24px', overflowX: 'auto', marginRight: isMobile ? 0 : '220px' }}>
-
-          {/* Dashboard */}
-          {activeTab === 'dashboard' && (
-            <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>📊 لوحة التحكم</div>
-              {criticalAlerts.length > 0 && (
-                <div onClick={() => setActiveTab('alerts')} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '24px' }}>🚨</span>
-                  <div><div style={{ fontWeight: '700', color: '#dc2626', fontSize: '14px' }}>يوجد {criticalAlerts.length} تنبيه حرج!</div><div style={{ color: '#888', fontSize: '12px' }}>اضغط لعرض التفاصيل</div></div>
-                  <div style={{ marginRight: 'auto', color: '#dc2626', fontSize: '20px' }}>←</div>
-                </div>
-              )}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[['🚛','المركبات',vehicles.length,'#ff6b00'],['👤','السائقون',drivers.length,'#16a34a'],['🔧','الصيانة',maintenance.length,'#d97706'],['🔔','تنبيهات',alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
-                  <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: isMobile ? '14px' : '20px', borderTop: `4px solid ${color}` }}>
-                    <div style={{ color: C.muted, fontSize: '11px', marginBottom: '6px', fontWeight: '600' }}>{icon} {label}</div>
-                    <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: '900', color }}>{val}</div>
+          
+          <div className="flex-1">
+            {activeTab !== 'reports' ? (
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">{t[lang][activeTab]}</h2>
+                  <div className="flex gap-2">
+                    {(userRole === 'admin' || userRole === 'editor') && (
+                      <button onClick={openAddModal} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                        + {t[lang].add}
+                      </button>
+                    )}
+                    <button onClick={() => exportToExcel(activeTab === 'vehicles' ? vehicles : activeTab === 'drivers' ? drivers : activeTab === 'maintenance' ? maintenance : activeTab === 'fuel' ? fuelLogs : activeTab === 'incidents' ? incidents : activeTab === 'violations' ? violations : users, activeTab)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">
+                      {t[lang].export}
+                    </button>
                   </div>
-                ))}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
-                <div style={st.card}>
-                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>🚛 آخر المركبات</div>
-                  {vehicles.slice(0,5).map(v => (
-                    <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
-                      <div style={{ fontSize: '13px', fontWeight: '600' }}>{v.plate_number}</div>
-                      <span style={st.badge(v.status)}>{statusLabel(v.status)}</span>
-                    </div>
-                  ))}
                 </div>
-                <div style={st.card}>
-                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>🔔 آخر التنبيهات</div>
-                  {alerts.slice(0,5).map(a => (
-                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
-                      <span>{a.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '12px', fontWeight: '600', color: alertColor(a.type) }}>{a.title}</div>
-                        <div style={{ fontSize: '11px', color: C.muted }}>{a.detail}</div>
+                
+                {getStats().length > 0 && (
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    {getStats().map((stat, i) => (
+                      <div key={i} className={`bg-gradient-to-br from-${stat.color}-50 to-${stat.color}-100 rounded-lg p-4 border border-${stat.color}-200`}>
+                        <div className={`text-sm text-${stat.color}-600 mb-1 font-medium`}>{stat.label}</div>
+                        <div className={`text-3xl font-bold text-${stat.color}-900`}>{stat.value}</div>
                       </div>
-                    </div>
-                  ))}
-                  {alerts.length === 0 && <div style={{ color: '#16a34a', textAlign: 'center', padding: '20px', fontSize: '13px' }}>✅ لا توجد تنبيهات</div>}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Users Management */}
-          {activeTab === 'users' && currentRole === 'admin' && (
-            <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>👥 إدارة المستخدمين</div>
-
-              {/* Role cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[['admin','👑 مدير','صلاحيات كاملة','#7c3aed'],['editor','✏️ محرر','إضافة وتعديل فقط','#ff6b00'],['viewer','👁️ مشاهد','مشاهدة فقط','#16a34a']].map(([role,label,desc,color]) => (
-                  <div key={role} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', borderTop: `3px solid ${color}` }}>
-                    <div style={{ fontWeight: '700', color, marginBottom: '4px' }}>{label}</div>
-                    <div style={{ fontSize: '12px', color: C.muted }}>{desc}</div>
-                    <div style={{ fontSize: '20px', fontWeight: '900', color, marginTop: '8px' }}>{userRoles.filter(u => u.role === role).length}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* How to add user */}
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
-                <div style={{ fontWeight: '700', color: '#1d4ed8', marginBottom: '8px' }}>💡 كيف تضيف مستخدم جديد؟</div>
-                <div style={{ fontSize: '13px', color: '#1e40af' }}>
-                  1. روح Supabase ← Authentication ← Users ← Add User<br/>
-                  2. أدخل البريد الإلكتروني وكلمة المرور<br/>
-                  3. بعد إنشاء الحساب، غيّر صلاحيته من الجدول أدناه
-                </div>
-              </div>
-
-              {/* Users table */}
-              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr>
-                    <th style={st.th}>المستخدم</th>
-                    <th style={st.th}>الصلاحية الحالية</th>
-                    <th style={st.th}>تغيير الصلاحية</th>
-                    <th style={st.th}>حذف</th>
-                  </tr></thead>
-                  <tbody>
-                    {userRoles.map(u => (
-                      <tr key={u.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                        <td style={st.td}>
-                          <div style={{ fontWeight: '700' }}>{u.full_name || 'مستخدم'}</div>
-                          <div style={{ fontSize: '11px', color: C.muted }}>{u.user_id?.substring(0, 16)}...</div>
-                        </td>
-                        <td style={st.td}>
-                          <span style={{ background: roleBg(u.role), color: roleColor(u.role), padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' }}>{roleLabel(u.role)}</span>
-                        </td>
-                        <td style={st.td}>
-                          {u.user_id !== currentUser?.id ? (
-                            <select value={u.role} onChange={e => updateUserRole(u.user_id, e.target.value)} style={{ ...st.input, width: 'auto', padding: '6px 10px', fontSize: '12px' }}>
-                              <option value="admin">👑 مدير</option>
-                              <option value="editor">✏️ محرر</option>
-                              <option value="viewer">👁️ مشاهد</option>
-                            </select>
-                          ) : <span style={{ color: C.muted, fontSize: '12px' }}>أنت</span>}
-                        </td>
-                        <td style={st.td}>
-                          {u.user_id !== currentUser?.id ? (
-                            <button onClick={() => deleteUserRole(u.user_id)} style={st.deleteBtn}>🗑️</button>
-                          ) : '—'}
-                        </td>
-                      </tr>
                     ))}
-                  </tbody>
-                </table>
-                {userRoles.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا يوجد مستخدمون</div>}
-              </div>
-            </div>
-          )}
-
-          {/* Reports */}
-          {activeTab === 'reports' && (
-            <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>📈 التقارير والإحصائيات</div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[['🚛','إجمالي المركبات',vehicles.length,'#ff6b00'],['✅','مركبات نشطة',activeVehicles,'#16a34a'],['🟢','مركبات جاهزة',readyVehicles,'#16a34a'],['👤','إجمالي السائقين',drivers.length,'#2563eb'],['👍','سائقون نشطون',activeDrivers,'#16a34a'],['🔔','تنبيهات نشطة',alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
-                  <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', borderTop: `3px solid ${color}` }}>
-                    <div style={{ color: C.muted, fontSize: '11px', marginBottom: '6px' }}>{icon} {label}</div>
-                    <div style={{ fontSize: '26px', fontWeight: '900', color }}>{val}</div>
                   </div>
-                ))}
+                )}
+                
+                {renderTable()}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div style={st.card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ fontWeight: '800' }}>⛽ تقرير الوقود</div>
-                    <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>📥 تصدير</button>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                    <div style={{ background: '#fff7f2', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: C.orange }}>{totalFuelCost.toFixed(0)}</div>
-                      <div style={{ fontSize: '11px', color: C.muted }}>إجمالي التكلفة (ر.س)</div>
-                    </div>
-                    <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#16a34a' }}>{totalFuelLiters.toFixed(0)}</div>
-                      <div style={{ fontSize: '11px', color: C.muted }}>إجمالي اللترات</div>
-                    </div>
-                  </div>
-                  <div style={{ fontWeight: '700', fontSize: '12px', marginBottom: '10px', color: C.muted }}>أعلى 5 مركبات استهلاكاً</div>
-                  <BarChart data={topFuelVehicles} maxVal={topFuelVehicles[0]?.[1] || 1} color={C.orange} />
-                </div>
-                <div style={st.card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ fontWeight: '800' }}>🔧 تقرير الصيانة</div>
-                    <button onClick={exportMaintenance} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>📥 تصدير</button>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                    <div style={{ background: '#fffbeb', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#d97706' }}>{totalMaintenanceCost.toFixed(0)}</div>
-                      <div style={{ fontSize: '11px', color: C.muted }}>إجمالي التكلفة (ر.س)</div>
-                    </div>
-                    <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#16a34a' }}>{maintenance.filter(m => m.status === 'active').length}</div>
-                      <div style={{ fontSize: '11px', color: C.muted }}>صيانة مكتملة</div>
-                    </div>
-                  </div>
-                  <BarChart data={[['مكتملة',maintenance.filter(m=>m.status==='active').length],['معلقة',maintenance.filter(m=>m.status==='pending').length],['ملغاة',maintenance.filter(m=>m.status==='inactive').length]]} maxVal={maintenance.length||1} color="#d97706" />
-                </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">{t[lang].reports}</h2>
+                <p className="text-gray-600">{lang === 'ar' ? 'صفحة التقارير - سنضيفها في المرحلة التالية' : 'Reports page - will be added in next phase'}</p>
               </div>
-              <div style={st.card}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div style={{ fontWeight: '800' }}>🚛 تقرير المركبات</div>
-                  <button onClick={exportVehicles} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>📥 تصدير</button>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-                  {[['جاهزة ✅',readyVehicles,'#16a34a'],['قيد التجهيز 🔄',vehicleTypes['in_progress']||0,'#d97706'],['غير جاهزة ❌',vehicleTypes['not_ready']||0,'#dc2626']].map(([label,val,color]) => (
-                    <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '26px', fontWeight: '900', color }}>{val}</div>
-                      <div style={{ fontSize: '12px', color: C.muted }}>{label}</div>
-                      <div style={{ fontSize: '11px', color, fontWeight: '700' }}>{vehicles.length > 0 ? ((val/vehicles.length)*100).toFixed(0) : 0}%</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div style={{ ...st.card, marginTop: '16px' }}>
-                <div style={{ fontWeight: '800', marginBottom: '16px' }}>📥 تصدير البيانات</div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '10px' }}>
-                  <button onClick={exportVehicles} style={{ ...st.btn('#ff6b00'), padding: '12px' }}>🚛 المركبات</button>
-                  <button onClick={exportDrivers} style={{ ...st.btn('#2563eb'), padding: '12px' }}>👤 السائقون</button>
-                  <button onClick={exportMaintenance} style={{ ...st.btn('#d97706'), padding: '12px' }}>🔧 الصيانة</button>
-                  <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '12px' }}>⛽ الوقود</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Alerts */}
-          {activeTab === 'alerts' && (
-            <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>🔔 التنبيهات ({alerts.length})</div>
-              {alerts.length === 0 ? (
-                <div style={{ ...st.card, textAlign: 'center', padding: '60px' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
-                  <div style={{ fontSize: '16px', fontWeight: '700', color: '#16a34a' }}>لا توجد تنبيهات</div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {alerts.map(a => (
-                    <div key={a.id} style={{ background: alertBg(a.type), border: `1px solid ${alertColor(a.type)}33`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderRight: `4px solid ${alertColor(a.type)}` }}>
-                      <span style={{ fontSize: '28px' }}>{a.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: '700', color: alertColor(a.type), fontSize: '14px' }}>{a.title}</div>
-                        <div style={{ color: C.muted, fontSize: '12px', marginTop: '4px' }}>{a.detail}</div>
-                      </div>
-                      <div style={{ background: alertColor(a.type), color: '#fff', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '700' }}>
-                        {a.type === 'expired' ? 'منتهي' : a.type === 'critical' ? 'حرج' : a.type === 'warning' ? 'تحذير' : 'تنبيه'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Vehicles */}
-          {activeTab === 'vehicles' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🚛 المركبات ({filteredVehicles.length})</div>
-                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowVehicleForm(true)}>+ إضافة</button>}
-              </div>
-              <input style={{ ...st.input, marginBottom: '16px' }} placeholder="🔍 بحث برقم اللوحة، الكود، الماركة..." value={vehicleSearch} onChange={e => setVehicleSearch(e.target.value)} />
-              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
-                  <thead><tr>
-                    <th style={st.th}>صورة</th><th style={st.th}>اللوحة</th><th style={st.th}>الكود</th>
-                    {!isMobile && <><th style={st.th}>الماركة</th><th style={st.th}>الموديل</th><th style={st.th}>السنة</th></>}
-                    <th style={st.th}>الحالة</th><th style={st.th}>التجهيز</th>
-                    <th style={st.th}>استمارة</th>
-                    {canEdit && <th style={st.th}>✏️</th>}
-                    {canDelete && <th style={st.th}>🗑️</th>}
-                  </tr></thead>
-                  <tbody>
-                    {filteredVehicles.map(v => (
-                      <tr key={v.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                        <td style={st.td}>{v.vehicle_image ? <img src={v.vehicle_image} style={thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" /> : '—'}</td>
-                        <td style={{ ...st.td, fontWeight: '700' }}>{v.plate_number}</td>
-                        <td style={st.td}>{v.vehicle_code || '—'}</td>
-                        {!isMobile && <><td style={st.td}>{v.brand}</td><td style={st.td}>{v.model}</td><td style={st.td}>{v.year}</td></>}
-                        <td style={st.td}><span style={st.badge(v.status)}>{statusLabel(v.status)}</span></td>
-                        <td style={st.td}>
-                          {canEdit ? (
-                            <select value={v.preparation_status || 'not_ready'} onChange={e => updatePreparation(v.id, e.target.value)} style={st.prepSelect(v.preparation_status || 'not_ready')}>
-                              <option value="not_ready">❌</option><option value="in_progress">🔄</option><option value="ready">✅</option>
-                            </select>
-                          ) : <span style={{ fontSize: '16px' }}>{v.preparation_status === 'ready' ? '✅' : v.preparation_status === 'in_progress' ? '🔄' : '❌'}</span>}
-                        </td>
-                        <td style={st.td}>{v.istimara_image ? <span style={imgLink} onClick={() => setPreviewImage(v.istimara_image)}>عرض</span> : '—'}</td>
-                        {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('vehicle', v)}>✏️</button></td>}
-                        {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteVehicle(v.id)}>🗑️</button></td>}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {filteredVehicles.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد نتائج</div>}
-              </div>
-            </div>
-          )}
-
-          {/* Drivers */}
-          {activeTab === 'drivers' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>👤 السائقون ({filteredDrivers.length})</div>
-                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowDriverForm(true)}>+ إضافة</button>}
-              </div>
-              <input style={{ ...st.input, marginBottom: '16px' }} placeholder="🔍 بحث بالاسم، الهوية، الجواز، الجوال..." value={driverSearch} onChange={e => setDriverSearch(e.target.value)} />
-              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
-                  <thead><tr>
-                    <th style={st.th}>الاسم</th><th style={st.th}>الهوية</th>
-                    {!isMobile && <><th style={st.th}>الجواز</th><th style={st.th}>الجوال</th><th style={st.th}>الرخصة</th><th style={st.th}>الانتهاء</th></>}
-                    <th style={st.th}>إقامة</th><th style={st.th}>رخصة</th>
-                    <th style={st.th}>الحالة</th>
-                    {canEdit && <th style={st.th}>✏️</th>}
-                    {canDelete && <th style={st.th}>🗑️</th>}
-                  </tr></thead>
-                  <tbody>
-                    {filteredDrivers.map(d => {
-                      const days = daysUntil(d.license_expiry)
-                      const expiring = days !== null && days <= 30
-                      return (
-                        <tr key={d.id} style={{ background: expiring ? '#fffbeb' : 'transparent' }} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background = expiring ? '#fffbeb' : 'transparent'}>
-                          <td style={{ ...st.td, fontWeight: '700' }}>{d.full_name}</td>
-                          <td style={st.td}>{d.national_id || '—'}</td>
-                          {!isMobile && <><td style={st.td}>{d.passport_number || '—'}</td><td style={st.td}>{d.phone || '—'}</td><td style={st.td}>{d.license_number || '—'}</td>
-                          <td style={st.td}><span style={{ color: days !== null && days < 0 ? '#dc2626' : days !== null && days <= 14 ? '#ea580c' : days !== null && days <= 30 ? '#d97706' : C.text, fontWeight: expiring ? '700' : '400' }}>{d.license_expiry || '—'}{days !== null && days < 0 && ' ⚠️'}</span></td></>}
-                          <td style={st.td}>{d.iqama_image ? <span style={imgLink} onClick={() => setPreviewImage(d.iqama_image)}>عرض</span> : '—'}</td>
-                          <td style={st.td}>{d.license_image ? <span style={imgLink} onClick={() => setPreviewImage(d.license_image)}>عرض</span> : '—'}</td>
-                          <td style={st.td}><span style={st.badge(d.status)}>{statusLabel(d.status)}</span></td>
-                          {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('driver', d)}>✏️</button></td>}
-                          {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteDriver(d.id)}>🗑️</button></td>}
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-                {filteredDrivers.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد نتائج</div>}
-              </div>
-            </div>
-          )}
-
-          {/* Maintenance */}
-          {activeTab === 'maintenance' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🔧 الصيانة</div>
-                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowMaintenanceForm(true)}>+ إضافة</button>}
-              </div>
-              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
-                  <thead><tr>
-                    <th style={st.th}>المركبة</th><th style={st.th}>النوع</th>
-                    {!isMobile && <><th style={st.th}>الوصف</th><th style={st.th}>التاريخ</th></>}
-                    <th style={st.th}>التكلفة</th><th style={st.th}>الموعد القادم</th>
-                    <th style={st.th}>الحالة</th>
-                    {canEdit && <th style={st.th}>✏️</th>}
-                    {canDelete && <th style={st.th}>🗑️</th>}
-                  </tr></thead>
-                  <tbody>
-                    {maintenance.map(m => {
-                      const days = daysUntil(m.next_date)
-                      const expiring = days !== null && days <= 7
-                      return (
-                        <tr key={m.id} style={{ background: expiring ? '#fff7ed' : 'transparent' }} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background = expiring ? '#fff7ed' : 'transparent'}>
-                          <td style={{ ...st.td, fontWeight: '700' }}>{m.vehicles?.plate_number}</td>
-                          <td style={st.td}>{m.type}</td>
-                          {!isMobile && <><td style={st.td}>{m.description}</td><td style={st.td}>{m.date}</td></>}
-                          <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{m.cost} ر.س</span></td>
-                          <td style={st.td}><span style={{ color: expiring ? '#dc2626' : C.text, fontWeight: expiring ? '700' : '400' }}>{m.next_date || '—'}{expiring && ' ⚠️'}</span></td>
-                          <td style={st.td}><span style={st.badge(m.status)}>{statusLabel(m.status)}</span></td>
-                          {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('maintenance', m)}>✏️</button></td>}
-                          {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteMaintenance(m.id)}>🗑️</button></td>}
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-                {maintenance.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد سجلات</div>}
-              </div>
-            </div>
-          )}
-
-          {/* Fuel */}
-          {activeTab === 'fuel' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>⛽ الوقود</div>
-                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowFuelForm(true)}>+ إضافة</button>}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px', borderTop: '4px solid #ff6b00' }}>
-                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>⛽ إجمالي التكلفة</div>
-                  <div style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: '900', color: '#ff6b00' }}>{totalFuelCost.toFixed(0)} ر.س</div>
-                </div>
-                <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px', borderTop: '4px solid #7c3aed' }}>
-                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>📋 عدد السجلات</div>
-                  <div style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: '900', color: '#7c3aed' }}>{fuelLogs.length}</div>
-                </div>
-              </div>
-              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
-                  <thead><tr>
-                    <th style={st.th}>المركبة</th><th style={st.th}>السائق</th>
-                    {!isMobile && <><th style={st.th}>التاريخ</th><th style={st.th}>اللترات</th></>}
-                    <th style={st.th}>الإجمالي</th>
-                    {canEdit && <th style={st.th}>✏️</th>}
-                    {canDelete && <th style={st.th}>🗑️</th>}
-                  </tr></thead>
-                  <tbody>
-                    {fuelLogs.map(f => (
-                      <tr key={f.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                        <td style={{ ...st.td, fontWeight: '700' }}>{f.vehicles?.plate_number}</td>
-                        <td style={st.td}>{f.drivers?.full_name}</td>
-                        {!isMobile && <><td style={st.td}>{f.date}</td><td style={st.td}>{f.liters}</td></>}
-                        <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{f.total_cost} ر.س</span></td>
-                        {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('fuel', f)}>✏️</button></td>}
-                        {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteFuel(f.id)}>🗑️</button></td>}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {fuelLogs.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>لا توجد سجلات</div>}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Edit Modal */}
-      {editItem && (
-        <div style={st.modal}>
-          <div style={st.modalBox}>
-            <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '20px' }}>✏️ تعديل {editType === 'vehicle' ? 'مركبة' : editType === 'driver' ? 'سائق' : editType === 'maintenance' ? 'صيانة' : 'وقود'}</div>
-            {editType === 'vehicle' && (<div style={st.formGrid}>
-              <InputField label="رقم اللوحة" field="plate_number" /><InputField label="كود المركبة" field="vehicle_code" />
-              <InputField label="النوع" field="type" /><InputField label="الماركة" field="brand" />
-              <InputField label="الموديل" field="model" /><InputField label="السنة" field="year" />
-              <InputField label="اللون" field="color" /><InputField label="نوع الوقود" field="fuel_type" />
-              <SelectField label="الحالة" field="status" options={[['active','نشط'],['inactive','غير نشط'],['pending','معلق']]} />
-              <SelectField label="حالة التجهيز" field="preparation_status" options={[['not_ready','غير جاهزة ❌'],['in_progress','قيد التجهيز 🔄'],['ready','جاهزة ✅']]} />
-              <FileInput label="تغيير صورة المركبة" icon="🚛" onChange={setEditVehicleImage} file={editVehicleImage} />
-              <FileInput label="تغيير صورة الاستمارة" icon="📄" onChange={setEditIstamaraImage} file={editIstamaraImage} />
-            </div>)}
-            {editType === 'driver' && (<div style={st.formGrid}>
-              <InputField label="الاسم الكامل" field="full_name" /><InputField label="رقم الهوية" field="national_id" />
-              <InputField label="رقم الجواز" field="passport_number" /><InputField label="الجوال" field="phone" />
-              <InputField label="رقم الرخصة" field="license_number" /><InputField label="انتهاء الرخصة" field="license_expiry" type="date" />
-              <SelectField label="الحالة" field="status" options={[['active','نشط'],['inactive','غير نشط']]} />
-              <FileInput label="تغيير صورة الإقامة" icon="🪪" onChange={setEditIqamaImage} file={editIqamaImage} />
-              <FileInput label="تغيير صورة الرخصة" icon="🚗" onChange={setEditLicenseImage} file={editLicenseImage} />
-            </div>)}
-            {editType === 'maintenance' && (<div style={st.formGrid}>
-              <div><label style={st.label}>المركبة</label><select style={st.input} value={editForm.vehicle_id||''} onChange={e=>setEditForm({...editForm,vehicle_id:e.target.value})}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-              <InputField label="النوع" field="type" /><InputField label="الوصف" field="description" />
-              <InputField label="التكلفة" field="cost" /><InputField label="التاريخ" field="date" type="date" />
-              <InputField label="الموعد القادم" field="next_date" type="date" />
-              <SelectField label="الحالة" field="status" options={[['pending','معلق'],['active','مكتمل'],['inactive','ملغي']]} />
-            </div>)}
-            {editType === 'fuel' && (<div style={st.formGrid}>
-              <div><label style={st.label}>المركبة</label><select style={st.input} value={editForm.vehicle_id||''} onChange={e=>setEditForm({...editForm,vehicle_id:e.target.value})}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-              <div><label style={st.label}>السائق</label><select style={st.input} value={editForm.driver_id||''} onChange={e=>setEditForm({...editForm,driver_id:e.target.value})}>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
-              <InputField label="التاريخ" field="date" type="date" /><InputField label="اللترات" field="liters" type="number" />
-              <InputField label="سعر اللتر" field="cost_per_liter" type="number" /><InputField label="العداد" field="odometer" type="number" />
-            </div>)}
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button style={st.btn()} onClick={saveEdit} disabled={uploading}>{uploading ? '⏳ جاري...' : '💾 حفظ'}</button>
-              <button style={st.btn('#888', true)} onClick={() => setEditItem(null)}>إلغاء</button>
+      
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-4">{editMode ? t[lang].edit : t[lang].add} {t[lang][activeTab]}</h3>
+            <div className="space-y-3">
+              {renderForm()}
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={handleSubmit} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                {t[lang].save}
+              </button>
+              <button onClick={closeModal} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">
+                {t[lang].cancel}
+              </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Add Modals */}
-      {showVehicleForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>🚛 إضافة مركبة</div>
-        <div style={st.formGrid}>
-          {[['plate_number','رقم اللوحة'],['vehicle_code','كود المركبة'],['type','النوع'],['brand','الماركة'],['model','الموديل'],['year','السنة'],['color','اللون'],['fuel_type','نوع الوقود']].map(([key,label]) => (
-            <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={vehicleForm[key]} onChange={e => setVehicleForm({...vehicleForm,[key]:e.target.value})} /></div>
-          ))}
-          <div><label style={st.label}>الحالة</label><select style={st.input} value={vehicleForm.status} onChange={e => setVehicleForm({...vehicleForm,status:e.target.value})}><option value="active">نشط</option><option value="inactive">غير نشط</option><option value="pending">معلق</option></select></div>
-          <div><label style={st.label}>حالة التجهيز</label><select style={st.input} value={vehicleForm.preparation_status} onChange={e => setVehicleForm({...vehicleForm,preparation_status:e.target.value})}><option value="not_ready">غير جاهزة ❌</option><option value="in_progress">قيد التجهيز 🔄</option><option value="ready">جاهزة ✅</option></select></div>
-          <FileInput label="صورة المركبة" icon="🚛" onChange={setVehicleImage} file={vehicleImage} />
-          <FileInput label="صورة الاستمارة" icon="📄" onChange={setIstamaraImage} file={istamaraImage} />
-        </div>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button style={st.btn()} onClick={addVehicle} disabled={uploading}>{uploading ? '⏳ جاري الرفع...' : 'حفظ'}</button>
-          <button style={st.btn('#888', true)} onClick={() => setShowVehicleForm(false)}>إلغاء</button>
-        </div>
-      </div></div>)}
-
-      {showDriverForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>👤 إضافة سائق</div>
-        <div style={st.formGrid}>
-          {[['full_name','الاسم الكامل'],['national_id','رقم الهوية'],['passport_number','رقم الجواز'],['phone','الجوال'],['license_number','رقم الرخصة']].map(([key,label]) => (
-            <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={driverForm[key]} onChange={e => setDriverForm({...driverForm,[key]:e.target.value})} /></div>
-          ))}
-          <div><label style={st.label}>انتهاء الرخصة</label><input type="date" style={st.input} value={driverForm.license_expiry} onChange={e => setDriverForm({...driverForm,license_expiry:e.target.value})} /></div>
-          <div><label style={st.label}>الحالة</label><select style={st.input} value={driverForm.status} onChange={e => setDriverForm({...driverForm,status:e.target.value})}><option value="active">نشط</option><option value="inactive">غير نشط</option></select></div>
-          <FileInput label="صورة الإقامة" icon="🪪" onChange={setIqamaImage} file={iqamaImage} />
-          <FileInput label="صورة الرخصة" icon="🚗" onChange={setLicenseImage} file={licenseImage} />
-        </div>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button style={st.btn()} onClick={addDriver} disabled={uploading}>{uploading ? '⏳ جاري الرفع...' : 'حفظ'}</button>
-          <button style={st.btn('#888', true)} onClick={() => setShowDriverForm(false)}>إلغاء</button>
-        </div>
-      </div></div>)}
-
-      {showMaintenanceForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>🔧 إضافة صيانة</div>
-        <div style={st.formGrid}>
-          <div><label style={st.label}>المركبة</label><select style={st.input} value={maintenanceForm.vehicle_id} onChange={e => setMaintenanceForm({...maintenanceForm,vehicle_id:e.target.value})}><option value="">اختر مركبة</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-          {[['type','نوع الصيانة'],['description','الوصف'],['cost','التكلفة']].map(([key,label]) => (
-            <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={maintenanceForm[key]} onChange={e => setMaintenanceForm({...maintenanceForm,[key]:e.target.value})} /></div>
-          ))}
-          <div><label style={st.label}>التاريخ</label><input type="date" style={st.input} value={maintenanceForm.date} onChange={e => setMaintenanceForm({...maintenanceForm,date:e.target.value})} /></div>
-          <div><label style={st.label}>الموعد القادم</label><input type="date" style={st.input} value={maintenanceForm.next_date} onChange={e => setMaintenanceForm({...maintenanceForm,next_date:e.target.value})} /></div>
-          <div><label style={st.label}>الحالة</label><select style={st.input} value={maintenanceForm.status} onChange={e => setMaintenanceForm({...maintenanceForm,status:e.target.value})}><option value="pending">معلق</option><option value="active">مكتمل</option><option value="inactive">ملغي</option></select></div>
-        </div>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button style={st.btn()} onClick={addMaintenance}>حفظ</button>
-          <button style={st.btn('#888', true)} onClick={() => setShowMaintenanceForm(false)}>إلغاء</button>
-        </div>
-      </div></div>)}
-
-      {showFuelForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>⛽ إضافة تزود وقود</div>
-        <div style={st.formGrid}>
-          <div><label style={st.label}>المركبة</label><select style={st.input} value={fuelForm.vehicle_id} onChange={e => setFuelForm({...fuelForm,vehicle_id:e.target.value})}><option value="">اختر مركبة</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-          <div><label style={st.label}>السائق</label><select style={st.input} value={fuelForm.driver_id} onChange={e => setFuelForm({...fuelForm,driver_id:e.target.value})}><option value="">اختر سائق</option>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
-          <div><label style={st.label}>التاريخ</label><input type="date" style={st.input} value={fuelForm.date} onChange={e => setFuelForm({...fuelForm,date:e.target.value})} /></div>
-          {[['liters','اللترات'],['cost_per_liter','سعر اللتر'],['odometer','العداد']].map(([key,label]) => (
-            <div key={key}><label style={st.label}>{label}</label><input type="number" style={st.input} value={fuelForm[key]} onChange={e => setFuelForm({...fuelForm,[key]:e.target.value})} /></div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button style={st.btn()} onClick={addFuel}>حفظ</button>
-          <button style={st.btn('#888', true)} onClick={() => setShowFuelForm(false)}>إلغاء</button>
-        </div>
-      </div></div>)}
-
-      {/* Mobile bottom nav */}
-      {isMobile && (
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: C.white, borderTop: `2px solid ${C.border}`, display: 'flex', justifyContent: 'space-around', padding: '6px 0', zIndex: 15 }}>
-          {navItems.filter(([id]) => id !== 'users' || currentRole === 'admin').map(([id, icon, label]) => (
-            <div key={id} onClick={() => setActiveTab(id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', cursor: 'pointer', color: activeTab === id ? C.orange : C.muted, fontSize: '9px', fontWeight: activeTab === id ? '700' : '400', minWidth: '36px', position: 'relative' }}>
-              <span style={{ fontSize: '16px' }}>{icon}</span>
-              <span>{label.split(' ')[0]}</span>
-              {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ position: 'absolute', top: '-2px', right: '2px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '13px', height: '13px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>}
+      
+      {/* نافذة البحث عن مركبة */}
+      {showVehiclePicker && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-4">{lang === 'ar' ? 'اختيار مركبة' : 'Select Vehicle'}</h3>
+            <input
+              type="text"
+              value={pickerSearch}
+              onChange={e => setPickerSearch(e.target.value)}
+              placeholder={lang === 'ar' ? 'ابحث برقم اللوحة أو النوع...' : 'Search by plate or type...'}
+              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg mb-4 focus:border-blue-500 focus:outline-none"
+              autoFocus
+            />
+            <div className="max-h-96 overflow-y-auto space-y-2">
+              {vehicles.filter(v => 
+                (v.plate_letters?.toLowerCase().includes(pickerSearch.toLowerCase()) || v.plate_numbers?.toLowerCase().includes(pickerSearch.toLowerCase())) ||
+                v.type?.toLowerCase().includes(pickerSearch.toLowerCase())
+              ).map(vehicle => (
+                <button
+                  key={vehicle.id}
+                  onClick={() => {
+                    setFormData({...formData, vehicle_id: vehicle.id})
+                    setShowVehiclePicker(false)
+                    setPickerSearch('')
+                  }}
+                  className="w-full text-start px-4 py-3 bg-gray-50 hover:bg-blue-50 rounded-lg transition border border-gray-200 hover:border-blue-300"
+                >
+                  <div className="font-medium text-gray-900">{vehicle.plate_number}</div>
+                  <div className="text-sm text-gray-600">{vehicle.type} • {vehicle.model || '-'}</div>
+                </button>
+              ))}
+              {vehicles.filter(v => 
+                (v.plate_letters?.toLowerCase().includes(pickerSearch.toLowerCase()) || v.plate_numbers?.toLowerCase().includes(pickerSearch.toLowerCase())) ||
+                v.type?.toLowerCase().includes(pickerSearch.toLowerCase())
+              ).length === 0 && (
+                <div className="text-center py-8 text-gray-500">{lang === 'ar' ? 'لا توجد نتائج' : 'No results'}</div>
+              )}
             </div>
-          ))}
+            <button
+              onClick={() => { setShowVehiclePicker(false); setPickerSearch('') }}
+              className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+            >
+              {t[lang].cancel}
+            </button>
+          </div>
         </div>
       )}
-      {isMobile && <div style={{ height: '70px' }} />}
+      
+      {/* نافذة البحث عن سائق */}
+      {showDriverPicker && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-4">{lang === 'ar' ? 'اختيار سائق' : 'Select Driver'}</h3>
+            <input
+              type="text"
+              value={pickerSearch}
+              onChange={e => setPickerSearch(e.target.value)}
+              placeholder={lang === 'ar' ? 'ابحث بالاسم أو رقم الرخصة...' : 'Search by name or license...'}
+              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg mb-4 focus:border-blue-500 focus:outline-none"
+              autoFocus
+            />
+            <div className="max-h-96 overflow-y-auto space-y-2">
+              {drivers.filter(d => 
+                d.name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                d.license_number?.toLowerCase().includes(pickerSearch.toLowerCase())
+              ).map(driver => (
+                <button
+                  key={driver.id}
+                  onClick={() => {
+                    setFormData({...formData, driver_id: driver.id})
+                    setShowDriverPicker(false)
+                    setPickerSearch('')
+                  }}
+                  className="w-full text-start px-4 py-3 bg-gray-50 hover:bg-green-50 rounded-lg transition border border-gray-200 hover:border-green-300"
+                >
+                  <div className="font-medium text-gray-900">{driver.name}</div>
+                  <div className="text-sm text-gray-600">{driver.license_number} • {driver.phone || '-'}</div>
+                </button>
+              ))}
+              {drivers.filter(d => 
+                d.name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                d.license_number?.toLowerCase().includes(pickerSearch.toLowerCase())
+              ).length === 0 && (
+                <div className="text-center py-8 text-gray-500">{lang === 'ar' ? 'لا توجد نتائج' : 'No results'}</div>
+              )}
+            </div>
+            <button
+              onClick={() => { setShowDriverPicker(false); setPickerSearch('') }}
+              className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+            >
+              {t[lang].cancel}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
