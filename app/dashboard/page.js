@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import { translations } from './translations'
@@ -100,7 +100,7 @@ export default function Dashboard() {
           const detail = days < 0
             ? t.expiredDays.replace('{n}', Math.abs(days))
             : t.expiresIn.replace('{n}', days)
-          alerts.push({ id: `lic-${d.id}`, type: days < 0 ? 'expired' : days <= 14 ? 'critical' : days <= 30 ? 'warning' : 'info', icon: 'ðŸªª', title: `${t.licenseAlert}: ${d.full_name}`, detail, days })
+          alerts.push({ id: `lic-${d.id}`, type: days < 0 ? 'expired' : days <= 14 ? 'critical' : days <= 30 ? 'warning' : 'info', icon: '🪪', title: `${t.licenseAlert}: ${d.full_name}`, detail, days })
         }
       }
     })
@@ -111,7 +111,7 @@ export default function Dashboard() {
           const detail = days < 0
             ? t.maintenanceLate.replace('{n}', Math.abs(days))
             : t.maintenanceIn.replace('{n}', days)
-          alerts.push({ id: `maint-${m.id}`, type: days < 0 ? 'expired' : days <= 7 ? 'critical' : 'warning', icon: 'ðŸ”§', title: `${t.maintenanceAlert}: ${m.vehicles?.plate_number || ''}`, detail, days })
+          alerts.push({ id: `maint-${m.id}`, type: days < 0 ? 'expired' : days <= 7 ? 'critical' : 'warning', icon: '🔧', title: `${t.maintenanceAlert}: ${m.vehicles?.plate_number || ''}`, detail, days })
         }
       }
     })
@@ -213,7 +213,7 @@ export default function Dashboard() {
   }
 
   const deleteUserRole = async (userId) => {
-    if (!confirm(lang === 'ar' ? 'Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ØŸ' : 'Are you sure?')) return
+    if (!confirm(lang === 'ar' ? 'هل أنت متأكد؟' : 'Are you sure?')) return
     await supabase.from('user_roles').delete().eq('user_id', userId); fetchData()
   }
 
@@ -245,12 +245,7 @@ export default function Dashboard() {
   const roleColor = (r) => r === 'admin' ? '#7c3aed' : r === 'editor' ? '#ff6b00' : '#16a34a'
   const roleBg = (r) => r === 'admin' ? '#f5f3ff' : r === 'editor' ? '#fff7f2' : '#f0fdf4'
 
-  const getRegion = (v) => {
-    const code = v.vehicle_code || v.plate_number || ''
-    const firstChar = code.trim()[0]
-    const map = { 'N': 'شمال', 'S': 'جنوب', 'E': 'شرق', 'W': 'غرب' }
-    return map[firstChar] || 'غير محدد'
-  }
+  const getRegion = (v) => { const code = v.vehicle_code || v.plate_number || ''; const firstChar = code.trim().toUpperCase()[0]; const map = { 'N': '0634064506270644', 'S': '062c064606480628', 'E': '063406310642', 'W': '063a06310628' }; return map[firstChar] || '063a064a0631 0645062d062f062f' }
   const filteredVehicles = vehicles.filter(v => regionFilter === 'all' || getRegion(v) === regionFilter).filter(v => (v.plate_number || '').includes(vehicleSearch) || (v.vehicle_code || '').includes(vehicleSearch) || (v.brand || '').includes(vehicleSearch) || (v.model || '').includes(vehicleSearch))
   const filteredDrivers = drivers.filter(d => (d.full_name || '').includes(driverSearch) || (d.national_id || '').includes(driverSearch) || (d.passport_number || '').includes(driverSearch) || (d.phone || '').includes(driverSearch))
 
@@ -259,7 +254,7 @@ export default function Dashboard() {
   const topFuelVehicles = Object.entries(fuelByVehicle).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   const C = { orange: '#ff6b00', orangeLight: '#fff7f2', white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8' }
-  const navItems = [['dashboard','ðŸ“Š',t.dashboard],['vehicles','ðŸš›',t.vehicles],['drivers','ðŸ‘¤',t.drivers],['maintenance','ðŸ”§',t.maintenance],['fuel','â›½',t.fuel],['reports','ðŸ“ˆ',t.reports],['alerts','ðŸ””',t.alerts],['users','ðŸ‘¥',t.users]]
+  const navItems = [['dashboard','📊',t.dashboard],['vehicles','🚛',t.vehicles],['drivers','👤',t.drivers],['maintenance','🔧',t.maintenance],['fuel','⛽',t.fuel],['reports','📈',t.reports],['alerts','🔔',t.alerts],['users','👥',t.users]]
 
   const st = {
     input: { width: '100%', padding: '10px 14px', background: '#fafafa', border: `1.5px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box' },
@@ -340,23 +335,23 @@ export default function Dashboard() {
       {/* Top Bar */}
       <div style={{ background: C.white, borderBottom: `3px solid ${C.orange}`, padding: isMobile ? '8px 16px' : '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20, boxShadow: '0 2px 12px rgba(255,107,0,0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {isMobile && <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: C.orange }}>â˜°</button>}
+          {isMobile && <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: C.orange }}>☰</button>}
           <img src="/logo-madinah.jpeg" alt="" style={{ height: isMobile ? '36px' : '50px', objectFit: 'contain' }} />
         </div>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: isMobile ? '11px' : '15px', fontWeight: '900', color: C.orange }}>
-            {isMobile ? (isRTL ? 'Ø£Ø³Ø·ÙˆÙ„ Ù†Ø¸Ø§ÙØ© Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©' : 'Cleaning Fleet') : (isRTL ? 'Ø£Ø³Ø·ÙˆÙ„ Ù…Ø´Ø§Ø±ÙŠØ¹ Ù†Ø¸Ø§ÙØ© Ø§Ù„Ù…Ø¯ÙŠÙ†Ø© Ø§Ù„Ù…Ù†ÙˆØ±Ø©' : 'Madinah Cleaning Fleet Management')}
+            {isMobile ? (isRTL ? 'أسطول نظافة المدينة' : 'Cleaning Fleet') : (isRTL ? 'أسطول مشاريع نظافة المدينة المنورة' : 'Madinah Cleaning Fleet Management')}
           </div>
           {!isMobile && <div style={{ fontSize: '11px', color: C.muted }}>{t.yourPermission}: <span style={{ color: roleColor(currentRole), fontWeight: '700' }}>{roleLabel(currentRole)}</span></div>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* Language Switch */}
           <button onClick={switchLang} style={{ background: C.orangeLight, border: `1.5px solid ${C.orange}`, borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: C.orange, fontFamily: 'Cairo, sans-serif' }}>
-            {lang === 'ar' ? 'ðŸ‡¬ðŸ‡§ EN' : 'ðŸ‡¸ðŸ‡¦ AR'}
+            {lang === 'ar' ? '🇬🇧 EN' : '🇸🇦 AR'}
           </button>
           {criticalAlerts.length > 0 && (
             <div onClick={() => setActiveTab('alerts')} style={{ position: 'relative', cursor: 'pointer' }}>
-              <span style={{ fontSize: '22px' }}>ðŸ””</span>
+              <span style={{ fontSize: '22px' }}>🔔</span>
               <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>
             </div>
           )}
@@ -371,7 +366,7 @@ export default function Dashboard() {
           {isMobile && (
             <div style={{ padding: '16px 20px 8px', borderBottom: `1px solid ${C.border}`, marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: '14px', fontWeight: '700', color: C.orange }}>{t.menu}</div>
-              <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>âœ•</button>
+              <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
           )}
           {navItems.map(([id, icon, label]) => (
@@ -396,16 +391,16 @@ export default function Dashboard() {
           {/* Dashboard */}
           {activeTab === 'dashboard' && (
             <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>ðŸ“Š {t.dashboardTitle}</div>
+              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>📊 {t.dashboardTitle}</div>
               {criticalAlerts.length > 0 && (
                 <div onClick={() => setActiveTab('alerts')} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '24px' }}>ðŸš¨</span>
+                  <span style={{ fontSize: '24px' }}>🚨</span>
                   <div><div style={{ fontWeight: '700', color: '#dc2626', fontSize: '14px' }}>{t.criticalAlert.replace('{n}', criticalAlerts.length)}</div><div style={{ color: '#888', fontSize: '12px' }}>{t.clickToView}</div></div>
-                  <div style={{ marginRight: isRTL ? 'auto' : 0, marginLeft: isRTL ? 0 : 'auto', color: '#dc2626', fontSize: '20px' }}>{isRTL ? 'â†' : 'â†’'}</div>
+                  <div style={{ marginRight: isRTL ? 'auto' : 0, marginLeft: isRTL ? 0 : 'auto', color: '#dc2626', fontSize: '20px' }}>{isRTL ? '←' : '→'}</div>
                 </div>
               )}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[['ðŸš›',t.vehicles,vehicles.length,'#ff6b00'],['ðŸ‘¤',t.drivers,drivers.length,'#16a34a'],['ðŸ”§',t.maintenance,maintenance.length,'#d97706'],['ðŸ””',t.alerts,alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
+                {[['🚛',t.vehicles,vehicles.length,'#ff6b00'],['👤',t.drivers,drivers.length,'#16a34a'],['🔧',t.maintenance,maintenance.length,'#d97706'],['🔔',t.alerts,alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
                   <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: isMobile ? '14px' : '20px', borderTop: `4px solid ${color}` }}>
                     <div style={{ color: C.muted, fontSize: '11px', marginBottom: '6px', fontWeight: '600' }}>{icon} {label}</div>
                     <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: '900', color }}>{val}</div>
@@ -414,7 +409,7 @@ export default function Dashboard() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
                 <div style={st.card}>
-                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>ðŸš› {t.latestVehicles}</div>
+                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>🚛 {t.latestVehicles}</div>
                   {vehicles.slice(0,5).map(v => (
                     <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: '13px', fontWeight: '600' }}>{v.plate_number}</div>
@@ -423,7 +418,7 @@ export default function Dashboard() {
                   ))}
                 </div>
                 <div style={st.card}>
-                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>ðŸ”” {t.latestAlerts}</div>
+                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>🔔 {t.latestAlerts}</div>
                   {alerts.slice(0,5).map(a => (
                     <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
                       <span>{a.icon}</span>
@@ -443,12 +438,12 @@ export default function Dashboard() {
           {activeTab === 'vehicles' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>ðŸš› {t.vehiclesTitle} ({filteredVehicles.length})</div>
+                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🚛 {t.vehiclesTitle} ({filteredVehicles.length})</div>
                 {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowVehicleForm(true)}>{t.addVehicle}</button>}
               </div>
               <input style={{ ...st.input, marginBottom: '16px' }} placeholder={t.searchVehicles} value={vehicleSearch} onChange={e => setVehicleSearch(e.target.value)} />
               <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
-                {[["all","ðŸ—ºï¸ Ø§Ù„ÙƒÙ„"],["Ø´Ù…Ø§Ù„","â¬†ï¸ Ø´Ù…Ø§Ù„"],["Ø¬Ù†ÙˆØ¨","â¬‡ï¸ Ø¬Ù†ÙˆØ¨"],["Ø´Ø±Ù‚","âž¡ï¸ Ø´Ø±Ù‚"],["ØºØ±Ø¨","â¬…ï¸ ØºØ±Ø¨"]].map(([r, label]) => (
+                {[["all","🗺️ الكل"],["شمال","⬆️ شمال"],["جنوب","⬇️ جنوب"],["شرق","➡️ شرق"],["غرب","⬅️ غرب"]].map(([r, label]) => (
                   <button key={r} onClick={() => setRegionFilter(r)} style={{ padding: "7px 16px", borderRadius: "20px", border: `2px solid ${regionFilter === r ? "#ff6b00" : "#e8e8e8"}`, background: regionFilter === r ? "#ff6b00" : "#fff", color: regionFilter === r ? "#fff" : "#888", fontWeight: "700", fontSize: "12px", cursor: "pointer", fontFamily: "Cairo, sans-serif" }}>
                     {label} {r !== "all" && `(${vehicles.filter(v => getRegion(v) === r).length})`}
                   </button>
@@ -462,26 +457,26 @@ export default function Dashboard() {
                     <th style={st.th}>{t.status}</th><th style={st.th}>{t.preparationStatus}</th>
                     <th style={st.th}>{t.istimara}</th>
                     {canEdit && <th style={st.th}>{t.edit}</th>}
-                    {canDelete && <th style={st.th}>ðŸ—‘ï¸</th>}
+                    {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
                     {filteredVehicles.map(v => (
                       <tr key={v.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                        <td style={st.td}>{v.vehicle_image ? <img src={v.vehicle_image} style={thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" /> : 'â€”'}</td>
+                        <td style={st.td}>{v.vehicle_image ? <img src={v.vehicle_image} style={thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" /> : '—'}</td>
                         <td style={{ ...st.td, fontWeight: '700' }}>{v.plate_number}</td>
-                        <td style={st.td}>{v.vehicle_code || 'â€”'}</td>
+                        <td style={st.td}>{v.vehicle_code || '—'}</td>
                         {!isMobile && <><td style={st.td}>{v.brand}</td><td style={st.td}>{v.model}</td><td style={st.td}>{v.year}</td></>}
                         <td style={st.td}><span style={st.badge(v.status)}>{statusLabel(v.status)}</span></td>
                         <td style={st.td}>
                           {canEdit ? (
                             <select value={v.preparation_status || 'not_ready'} onChange={e => updatePreparation(v.id, e.target.value)} style={st.prepSelect(v.preparation_status || 'not_ready')}>
-                              <option value="not_ready">âŒ</option><option value="in_progress">ðŸ”„</option><option value="ready">âœ…</option>
+                              <option value="not_ready">❌</option><option value="in_progress">🔄</option><option value="ready">✅</option>
                             </select>
-                          ) : <span>{v.preparation_status === 'ready' ? 'âœ…' : v.preparation_status === 'in_progress' ? 'ðŸ”„' : 'âŒ'}</span>}
+                          ) : <span>{v.preparation_status === 'ready' ? '✅' : v.preparation_status === 'in_progress' ? '🔄' : '❌'}</span>}
                         </td>
-                        <td style={st.td}>{v.istimara_image ? <span style={imgLink} onClick={() => setPreviewImage(v.istimara_image)}>{t.view}</span> : 'â€”'}</td>
-                        {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('vehicle', v)}>âœï¸</button></td>}
-                        {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteVehicle(v.id)}>ðŸ—‘ï¸</button></td>}
+                        <td style={st.td}>{v.istimara_image ? <span style={imgLink} onClick={() => setPreviewImage(v.istimara_image)}>{t.view}</span> : '—'}</td>
+                        {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('vehicle', v)}>✏️</button></td>}
+                        {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteVehicle(v.id)}>🗑️</button></td>}
                       </tr>
                     ))}
                   </tbody>
@@ -495,7 +490,7 @@ export default function Dashboard() {
           {activeTab === 'drivers' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>ðŸ‘¤ {t.driversTitle} ({filteredDrivers.length})</div>
+                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>👤 {t.driversTitle} ({filteredDrivers.length})</div>
                 {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowDriverForm(true)}>{t.addDriver}</button>}
               </div>
               <input style={{ ...st.input, marginBottom: '16px' }} placeholder={t.searchDrivers} value={driverSearch} onChange={e => setDriverSearch(e.target.value)} />
@@ -507,7 +502,7 @@ export default function Dashboard() {
                     <th style={st.th}>{t.iqama}</th><th style={st.th}>{t.license}</th>
                     <th style={st.th}>{t.status}</th>
                     {canEdit && <th style={st.th}>{t.edit}</th>}
-                    {canDelete && <th style={st.th}>ðŸ—‘ï¸</th>}
+                    {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
                     {filteredDrivers.map(d => {
@@ -516,14 +511,14 @@ export default function Dashboard() {
                       return (
                         <tr key={d.id} style={{ background: expiring ? '#fffbeb' : 'transparent' }} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background = expiring ? '#fffbeb' : 'transparent'}>
                           <td style={{ ...st.td, fontWeight: '700' }}>{d.full_name}</td>
-                          <td style={st.td}>{d.national_id || 'â€”'}</td>
-                          {!isMobile && <><td style={st.td}>{d.passport_number || 'â€”'}</td><td style={st.td}>{d.phone || 'â€”'}</td><td style={st.td}>{d.license_number || 'â€”'}</td>
-                          <td style={st.td}><span style={{ color: days !== null && days < 0 ? '#dc2626' : days !== null && days <= 14 ? '#ea580c' : days !== null && days <= 30 ? '#d97706' : C.text, fontWeight: expiring ? '700' : '400' }}>{d.license_expiry || 'â€”'}{days !== null && days < 0 && ' âš ï¸'}</span></td></>}
-                          <td style={st.td}>{d.iqama_image ? <span style={imgLink} onClick={() => setPreviewImage(d.iqama_image)}>{t.view}</span> : 'â€”'}</td>
-                          <td style={st.td}>{d.license_image ? <span style={imgLink} onClick={() => setPreviewImage(d.license_image)}>{t.view}</span> : 'â€”'}</td>
+                          <td style={st.td}>{d.national_id || '—'}</td>
+                          {!isMobile && <><td style={st.td}>{d.passport_number || '—'}</td><td style={st.td}>{d.phone || '—'}</td><td style={st.td}>{d.license_number || '—'}</td>
+                          <td style={st.td}><span style={{ color: days !== null && days < 0 ? '#dc2626' : days !== null && days <= 14 ? '#ea580c' : days !== null && days <= 30 ? '#d97706' : C.text, fontWeight: expiring ? '700' : '400' }}>{d.license_expiry || '—'}{days !== null && days < 0 && ' ⚠️'}</span></td></>}
+                          <td style={st.td}>{d.iqama_image ? <span style={imgLink} onClick={() => setPreviewImage(d.iqama_image)}>{t.view}</span> : '—'}</td>
+                          <td style={st.td}>{d.license_image ? <span style={imgLink} onClick={() => setPreviewImage(d.license_image)}>{t.view}</span> : '—'}</td>
                           <td style={st.td}><span style={st.badge(d.status)}>{statusLabel(d.status)}</span></td>
-                          {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('driver', d)}>âœï¸</button></td>}
-                          {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteDriver(d.id)}>ðŸ—‘ï¸</button></td>}
+                          {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('driver', d)}>✏️</button></td>}
+                          {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteDriver(d.id)}>🗑️</button></td>}
                         </tr>
                       )
                     })}
@@ -538,7 +533,7 @@ export default function Dashboard() {
           {activeTab === 'maintenance' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>ðŸ”§ {t.maintenanceTitle}</div>
+                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🔧 {t.maintenanceTitle}</div>
                 {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowMaintenanceForm(true)}>{t.addMaintenance}</button>}
               </div>
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
@@ -549,7 +544,7 @@ export default function Dashboard() {
                     <th style={st.th}>{t.cost}</th><th style={st.th}>{t.nextDate}</th>
                     <th style={st.th}>{t.status}</th>
                     {canEdit && <th style={st.th}>{t.edit}</th>}
-                    {canDelete && <th style={st.th}>ðŸ—‘ï¸</th>}
+                    {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
                     {maintenance.map(m => {
@@ -561,10 +556,10 @@ export default function Dashboard() {
                           <td style={st.td}>{m.type}</td>
                           {!isMobile && <><td style={st.td}>{m.description}</td><td style={st.td}>{m.date}</td></>}
                           <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{m.cost} {t.sar}</span></td>
-                          <td style={st.td}><span style={{ color: expiring ? '#dc2626' : C.text, fontWeight: expiring ? '700' : '400' }}>{m.next_date || 'â€”'}{expiring && ' âš ï¸'}</span></td>
+                          <td style={st.td}><span style={{ color: expiring ? '#dc2626' : C.text, fontWeight: expiring ? '700' : '400' }}>{m.next_date || '—'}{expiring && ' ⚠️'}</span></td>
                           <td style={st.td}><span style={st.badge(m.status)}>{statusLabel(m.status)}</span></td>
-                          {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('maintenance', m)}>âœï¸</button></td>}
-                          {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteMaintenance(m.id)}>ðŸ—‘ï¸</button></td>}
+                          {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('maintenance', m)}>✏️</button></td>}
+                          {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteMaintenance(m.id)}>🗑️</button></td>}
                         </tr>
                       )
                     })}
@@ -579,16 +574,16 @@ export default function Dashboard() {
           {activeTab === 'fuel' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>â›½ {t.fuelTitle}</div>
+                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>⛽ {t.fuelTitle}</div>
                 {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowFuelForm(true)}>{t.addFuel}</button>}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px', borderTop: '4px solid #ff6b00' }}>
-                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>â›½ {t.totalCost}</div>
+                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>⛽ {t.totalCost}</div>
                   <div style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: '900', color: '#ff6b00' }}>{totalFuelCost.toFixed(0)} {t.sar}</div>
                 </div>
                 <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px', borderTop: '4px solid #7c3aed' }}>
-                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>ðŸ“‹ {t.totalRecords}</div>
+                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>📋 {t.totalRecords}</div>
                   <div style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: '900', color: '#7c3aed' }}>{fuelLogs.length}</div>
                 </div>
               </div>
@@ -599,7 +594,7 @@ export default function Dashboard() {
                     {!isMobile && <><th style={st.th}>{t.date}</th><th style={st.th}>{t.liters}</th></>}
                     <th style={st.th}>{t.total}</th>
                     {canEdit && <th style={st.th}>{t.edit}</th>}
-                    {canDelete && <th style={st.th}>ðŸ—‘ï¸</th>}
+                    {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
                     {fuelLogs.map(f => (
@@ -608,8 +603,8 @@ export default function Dashboard() {
                         <td style={st.td}>{f.drivers?.full_name}</td>
                         {!isMobile && <><td style={st.td}>{f.date}</td><td style={st.td}>{f.liters}</td></>}
                         <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{f.total_cost} {t.sar}</span></td>
-                        {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('fuel', f)}>âœï¸</button></td>}
-                        {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteFuel(f.id)}>ðŸ—‘ï¸</button></td>}
+                        {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('fuel', f)}>✏️</button></td>}
+                        {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteFuel(f.id)}>🗑️</button></td>}
                       </tr>
                     ))}
                   </tbody>
@@ -622,9 +617,9 @@ export default function Dashboard() {
           {/* Reports */}
           {activeTab === 'reports' && (
             <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>ðŸ“ˆ {t.reportsTitle}</div>
+              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>📈 {t.reportsTitle}</div>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[[`ðŸš›`,t.totalVehicles,vehicles.length,'#ff6b00'],[`âœ…`,t.activeVehicles,activeVehicles,'#16a34a'],[`ðŸŸ¢`,t.readyVehicles,readyVehicles,'#16a34a'],[`ðŸ‘¤`,t.totalDrivers,drivers.length,'#2563eb'],[`ðŸ‘`,t.activeDrivers,activeDrivers,'#16a34a'],[`ðŸ””`,t.activeAlerts,alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
+                {[[`🚛`,t.totalVehicles,vehicles.length,'#ff6b00'],[`✅`,t.activeVehicles,activeVehicles,'#16a34a'],[`🟢`,t.readyVehicles,readyVehicles,'#16a34a'],[`👤`,t.totalDrivers,drivers.length,'#2563eb'],[`👍`,t.activeDrivers,activeDrivers,'#16a34a'],[`🔔`,t.activeAlerts,alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
                   <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', borderTop: `3px solid ${color}` }}>
                     <div style={{ color: C.muted, fontSize: '11px', marginBottom: '6px' }}>{icon} {label}</div>
                     <div style={{ fontSize: '26px', fontWeight: '900', color }}>{val}</div>
@@ -634,7 +629,7 @@ export default function Dashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div style={st.card}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ fontWeight: '800' }}>â›½ {t.fuelReport}</div>
+                    <div style={{ fontWeight: '800' }}>⛽ {t.fuelReport}</div>
                     <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>{t.export}</button>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
@@ -652,7 +647,7 @@ export default function Dashboard() {
                 </div>
                 <div style={st.card}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ fontWeight: '800' }}>ðŸ”§ {t.maintenanceReport}</div>
+                    <div style={{ fontWeight: '800' }}>🔧 {t.maintenanceReport}</div>
                     <button onClick={exportMaintenance} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>{t.export}</button>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
@@ -670,7 +665,7 @@ export default function Dashboard() {
               </div>
               <div style={st.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div style={{ fontWeight: '800' }}>ðŸš› {t.vehiclesReport}</div>
+                  <div style={{ fontWeight: '800' }}>🚛 {t.vehiclesReport}</div>
                   <button onClick={exportVehicles} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>{t.export}</button>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
@@ -684,12 +679,12 @@ export default function Dashboard() {
                 </div>
               </div>
               <div style={{ ...st.card, marginTop: '16px' }}>
-                <div style={{ fontWeight: '800', marginBottom: '16px' }}>ðŸ“¥ {t.exportData}</div>
+                <div style={{ fontWeight: '800', marginBottom: '16px' }}>📥 {t.exportData}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '10px' }}>
-                  <button onClick={exportVehicles} style={{ ...st.btn('#ff6b00'), padding: '12px' }}>ðŸš› {t.vehicles}</button>
-                  <button onClick={exportDrivers} style={{ ...st.btn('#2563eb'), padding: '12px' }}>ðŸ‘¤ {t.drivers}</button>
-                  <button onClick={exportMaintenance} style={{ ...st.btn('#d97706'), padding: '12px' }}>ðŸ”§ {t.maintenance}</button>
-                  <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '12px' }}>â›½ {t.fuel}</button>
+                  <button onClick={exportVehicles} style={{ ...st.btn('#ff6b00'), padding: '12px' }}>🚛 {t.vehicles}</button>
+                  <button onClick={exportDrivers} style={{ ...st.btn('#2563eb'), padding: '12px' }}>👤 {t.drivers}</button>
+                  <button onClick={exportMaintenance} style={{ ...st.btn('#d97706'), padding: '12px' }}>🔧 {t.maintenance}</button>
+                  <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '12px' }}>⛽ {t.fuel}</button>
                 </div>
               </div>
             </div>
@@ -698,10 +693,10 @@ export default function Dashboard() {
           {/* Alerts */}
           {activeTab === 'alerts' && (
             <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>ðŸ”” {t.alertsTitle} ({alerts.length})</div>
+              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>🔔 {t.alertsTitle} ({alerts.length})</div>
               {alerts.length === 0 ? (
                 <div style={{ ...st.card, textAlign: 'center', padding: '60px' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>âœ…</div>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
                   <div style={{ fontSize: '16px', fontWeight: '700', color: '#16a34a' }}>{t.noAlertsTitle}</div>
                   <div style={{ color: C.muted, fontSize: '13px', marginTop: '8px' }}>{t.noAlertsDesc}</div>
                 </div>
@@ -725,7 +720,7 @@ export default function Dashboard() {
           {/* Users */}
           {activeTab === 'users' && currentRole === 'admin' && (
             <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>ðŸ‘¥ {t.usersTitle}</div>
+              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>👥 {t.usersTitle}</div>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
                 {[['admin',t.adminRole,t.adminDesc,'#7c3aed'],['editor',t.editorRole,t.editorDesc,'#ff6b00'],['viewer',t.viewerRole,t.viewerDesc,'#16a34a']].map(([role,label,desc,color]) => (
                   <div key={role} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', borderTop: `3px solid ${color}` }}>
@@ -765,7 +760,7 @@ export default function Dashboard() {
                           ) : <span style={{ color: C.muted, fontSize: '12px' }}>{t.you}</span>}
                         </td>
                         <td style={st.td}>
-                          {u.user_id !== currentUser?.id ? <button onClick={() => deleteUserRole(u.user_id)} style={st.deleteBtn}>ðŸ—‘ï¸</button> : 'â€”'}
+                          {u.user_id !== currentUser?.id ? <button onClick={() => deleteUserRole(u.user_id)} style={st.deleteBtn}>🗑️</button> : '—'}
                         </td>
                       </tr>
                     ))}
@@ -782,7 +777,7 @@ export default function Dashboard() {
       {editItem && (
         <div style={st.modal}>
           <div style={st.modalBox}>
-            <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '20px' }}>âœï¸ {t.edit} {editType === 'vehicle' ? t.vehicles : editType === 'driver' ? t.drivers : editType === 'maintenance' ? t.maintenance : t.fuel}</div>
+            <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '20px' }}>✏️ {t.edit} {editType === 'vehicle' ? t.vehicles : editType === 'driver' ? t.drivers : editType === 'maintenance' ? t.maintenance : t.fuel}</div>
             {editType === 'vehicle' && (<div style={st.formGrid}>
               <div><label style={st.label}>{t.plateNumber}</label><input style={st.input} value={editForm.plate_number||''} onChange={e=>setEditForm({...editForm,plate_number:e.target.value})} /></div>
               <div><label style={st.label}>{t.vehicleCode}</label><input style={st.input} value={editForm.vehicle_code||''} onChange={e=>setEditForm({...editForm,vehicle_code:e.target.value})} /></div>
@@ -794,8 +789,8 @@ export default function Dashboard() {
               <div><label style={st.label}>{t.fuelType}</label><input style={st.input} value={editForm.fuel_type||''} onChange={e=>setEditForm({...editForm,fuel_type:e.target.value})} /></div>
               <div><label style={st.label}>{t.status}</label><select style={st.input} value={editForm.status||''} onChange={e=>setEditForm({...editForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option><option value="pending">{t.pending}</option></select></div>
               <div><label style={st.label}>{t.preparationStatus}</label><select style={st.input} value={editForm.preparation_status||''} onChange={e=>setEditForm({...editForm,preparation_status:e.target.value})}><option value="not_ready">{t.notReady}</option><option value="in_progress">{t.inProgress}</option><option value="ready">{t.ready}</option></select></div>
-              <FileInput label={t.vehicleImage} icon="ðŸš›" onChange={setEditVehicleImage} file={editVehicleImage} />
-              <FileInput label={t.istamaraImage} icon="ðŸ“„" onChange={setEditIstamaraImage} file={editIstamaraImage} />
+              <FileInput label={t.vehicleImage} icon="🚛" onChange={setEditVehicleImage} file={editVehicleImage} />
+              <FileInput label={t.istamaraImage} icon="📄" onChange={setEditIstamaraImage} file={editIstamaraImage} />
             </div>)}
             {editType === 'driver' && (<div style={st.formGrid}>
               <div><label style={st.label}>{t.fullName}</label><input style={st.input} value={editForm.full_name||''} onChange={e=>setEditForm({...editForm,full_name:e.target.value})} /></div>
@@ -805,8 +800,8 @@ export default function Dashboard() {
               <div><label style={st.label}>{t.licenseNumber}</label><input style={st.input} value={editForm.license_number||''} onChange={e=>setEditForm({...editForm,license_number:e.target.value})} /></div>
               <div><label style={st.label}>{t.licenseExpiry}</label><input type="date" style={st.input} value={editForm.license_expiry||''} onChange={e=>setEditForm({...editForm,license_expiry:e.target.value})} /></div>
               <div><label style={st.label}>{t.status}</label><select style={st.input} value={editForm.status||''} onChange={e=>setEditForm({...editForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option></select></div>
-              <FileInput label={t.iqamaImage} icon="ðŸªª" onChange={setEditIqamaImage} file={editIqamaImage} />
-              <FileInput label={t.licenseImage} icon="ðŸš—" onChange={setEditLicenseImage} file={editLicenseImage} />
+              <FileInput label={t.iqamaImage} icon="🪪" onChange={setEditIqamaImage} file={editIqamaImage} />
+              <FileInput label={t.licenseImage} icon="🚗" onChange={setEditLicenseImage} file={editLicenseImage} />
             </div>)}
             {editType === 'maintenance' && (<div style={st.formGrid}>
               <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={editForm.vehicle_id||''} onChange={e=>setEditForm({...editForm,vehicle_id:e.target.value})}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
@@ -826,7 +821,7 @@ export default function Dashboard() {
               <div><label style={st.label}>{t.odometer}</label><input type="number" style={st.input} value={editForm.odometer||''} onChange={e=>setEditForm({...editForm,odometer:e.target.value})} /></div>
             </div>)}
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button style={st.btn()} onClick={saveEdit} disabled={uploading}>{uploading ? t.saving : `ðŸ’¾ ${t.save}`}</button>
+              <button style={st.btn()} onClick={saveEdit} disabled={uploading}>{uploading ? t.saving : `💾 ${t.save}`}</button>
               <button style={st.btn('#888', true)} onClick={() => setEditItem(null)}>{t.cancel}</button>
             </div>
           </div>
@@ -835,15 +830,15 @@ export default function Dashboard() {
 
       {/* Add Vehicle Modal */}
       {showVehicleForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>ðŸš› {t.addVehicleTitle}</div>
+        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>🚛 {t.addVehicleTitle}</div>
         <div style={st.formGrid}>
           {[[`plate_number`,t.plateNumber],[`vehicle_code`,t.vehicleCode],[`type`,t.type],[`brand`,t.brand],[`model`,t.model],[`year`,t.year],[`color`,t.color],[`fuel_type`,t.fuelType]].map(([key,label]) => (
             <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={vehicleForm[key]} onChange={e => setVehicleForm({...vehicleForm,[key]:e.target.value})} /></div>
           ))}
           <div><label style={st.label}>{t.status}</label><select style={st.input} value={vehicleForm.status} onChange={e => setVehicleForm({...vehicleForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option><option value="pending">{t.pending}</option></select></div>
           <div><label style={st.label}>{t.preparationStatus}</label><select style={st.input} value={vehicleForm.preparation_status} onChange={e => setVehicleForm({...vehicleForm,preparation_status:e.target.value})}><option value="not_ready">{t.notReady}</option><option value="in_progress">{t.inProgress}</option><option value="ready">{t.ready}</option></select></div>
-          <FileInput label={t.vehicleImage} icon="ðŸš›" onChange={setVehicleImage} file={vehicleImage} />
-          <FileInput label={t.istamaraImage} icon="ðŸ“„" onChange={setIstamaraImage} file={istamaraImage} />
+          <FileInput label={t.vehicleImage} icon="🚛" onChange={setVehicleImage} file={vehicleImage} />
+          <FileInput label={t.istamaraImage} icon="📄" onChange={setIstamaraImage} file={istamaraImage} />
         </div>
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
           <button style={st.btn()} onClick={addVehicle} disabled={uploading}>{uploading ? t.uploading : t.save}</button>
@@ -853,15 +848,15 @@ export default function Dashboard() {
 
       {/* Add Driver Modal */}
       {showDriverForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>ðŸ‘¤ {t.addDriverTitle}</div>
+        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>👤 {t.addDriverTitle}</div>
         <div style={st.formGrid}>
           {[[`full_name`,t.fullName],[`national_id`,t.nationalId],[`passport_number`,t.passportNumber],[`phone`,t.phone],[`license_number`,t.licenseNumber]].map(([key,label]) => (
             <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={driverForm[key]} onChange={e => setDriverForm({...driverForm,[key]:e.target.value})} /></div>
           ))}
           <div><label style={st.label}>{t.licenseExpiry}</label><input type="date" style={st.input} value={driverForm.license_expiry} onChange={e => setDriverForm({...driverForm,license_expiry:e.target.value})} /></div>
           <div><label style={st.label}>{t.status}</label><select style={st.input} value={driverForm.status} onChange={e => setDriverForm({...driverForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option></select></div>
-          <FileInput label={t.iqamaImage} icon="ðŸªª" onChange={setIqamaImage} file={iqamaImage} />
-          <FileInput label={t.licenseImage} icon="ðŸš—" onChange={setLicenseImage} file={licenseImage} />
+          <FileInput label={t.iqamaImage} icon="🪪" onChange={setIqamaImage} file={iqamaImage} />
+          <FileInput label={t.licenseImage} icon="🚗" onChange={setLicenseImage} file={licenseImage} />
         </div>
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
           <button style={st.btn()} onClick={addDriver} disabled={uploading}>{uploading ? t.uploading : t.save}</button>
@@ -871,7 +866,7 @@ export default function Dashboard() {
 
       {/* Add Maintenance Modal */}
       {showMaintenanceForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>ðŸ”§ {t.addMaintenanceTitle}</div>
+        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>🔧 {t.addMaintenanceTitle}</div>
         <div style={st.formGrid}>
           <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={maintenanceForm.vehicle_id} onChange={e => setMaintenanceForm({...maintenanceForm,vehicle_id:e.target.value})}><option value="">{t.selectVehicle}</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
           <div><label style={st.label}>{t.type}</label><input style={st.input} value={maintenanceForm.type} onChange={e => setMaintenanceForm({...maintenanceForm,type:e.target.value})} /></div>
@@ -889,7 +884,7 @@ export default function Dashboard() {
 
       {/* Add Fuel Modal */}
       {showFuelForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>â›½ {t.addFuelTitle}</div>
+        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>⛽ {t.addFuelTitle}</div>
         <div style={st.formGrid}>
           <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={fuelForm.vehicle_id} onChange={e => setFuelForm({...fuelForm,vehicle_id:e.target.value})}><option value="">{t.selectVehicle}</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
           <div><label style={st.label}>{t.driver}</label><select style={st.input} value={fuelForm.driver_id} onChange={e => setFuelForm({...fuelForm,driver_id:e.target.value})}><option value="">{t.selectDriver}</option>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
@@ -920,4 +915,3 @@ export default function Dashboard() {
     </div>
   )
 }
-
