@@ -1,10 +1,9 @@
-'use client'
-import { createClient } from '@/utils/supabase/client'
+﻿'use client'
+import { supabase } from '../supabase'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 export default function Dashboard() {
-  const supabase = createClient()
   const router = useRouter()
   
   const [loading, setLoading] = useState(true)
