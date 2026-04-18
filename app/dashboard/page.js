@@ -245,7 +245,12 @@ export default function Dashboard() {
   const roleColor = (r) => r === 'admin' ? '#7c3aed' : r === 'editor' ? '#ff6b00' : '#16a34a'
   const roleBg = (r) => r === 'admin' ? '#f5f3ff' : r === 'editor' ? '#fff7f2' : '#f0fdf4'
 
-  const getRegion = (v) => { const code = v.vehicle_code || v.plate_number || ''; const firstChar = code.trim()[0]; const map = { 'N': 'شمال', 'S': 'جنوب', 'E': 'شرق', 'W': 'غرب' }; return map[firstChar] || 'غير محدد' }; return map[firstChar] || '063a064a0631 0645062d062f062f' }
+  const getRegion = (v) => {
+    const code = v.vehicle_code || v.plate_number || ''
+    const firstChar = code.trim()[0]
+    const map = { 'N': 'شمال', 'S': 'جنوب', 'E': 'شرق', 'W': 'غرب' }
+    return map[firstChar] || 'غير محدد'
+  }
   const filteredVehicles = vehicles.filter(v => regionFilter === 'all' || getRegion(v) === regionFilter).filter(v => (v.plate_number || '').includes(vehicleSearch) || (v.vehicle_code || '').includes(vehicleSearch) || (v.brand || '').includes(vehicleSearch) || (v.model || '').includes(vehicleSearch))
   const filteredDrivers = drivers.filter(d => (d.full_name || '').includes(driverSearch) || (d.national_id || '').includes(driverSearch) || (d.passport_number || '').includes(driverSearch) || (d.phone || '').includes(driverSearch))
 
