@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 
 export default function Home() {
@@ -7,10 +7,42 @@ export default function Home() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [isInvite, setIsInvite] = useState(false)
+  const [inviteMsg, setInviteMsg] = useState('')
+
+  useEffect(() => {
+    // تحقق من وجود invite token في الـ URL hash
+    const hash = window.location.hash
+    const params = new URLSearchParams(hash.replace('#', '?'))
+    const type = params.get('type')
+    const accessToken = params.get('access_token')
+
+    if ((type === 'invite' || type === 'recovery') && accessToken) {
+      setIsInvite(true)
+      setInviteMsg('تم التحقق من الدعوة — اختر كلمة مرور جديدة لإكمال التسجيل')
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: params.get('refresh_token') || ''
+      })
+    }
+  }, [])
 
   const handleLogin = async () => {
     setLoading(true)
     setError('')
+
+    if (isInvite) {
+      // تحديث كلمة المرور للمستخدم المدعو
+      const { error } = await supabase.auth.updateUser({ password })
+      if (error) {
+        setError('حدث خطأ أثناء تعيين كلمة المرور')
+      } else {
+        window.location.href = '/dashboard'
+      }
+      setLoading(false)
+      return
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       setError('البريد أو كلمة المرور غلط')
@@ -84,15 +116,21 @@ export default function Home() {
           <h1 style={{ color: '#1a1a1a', fontSize: '20px', fontWeight: '900', margin: '0 0 4px' }}>
             أسطول مشاريع نظافة المدينة المنورة
           </h1>
-          <p style={{ color: '#999', fontSize: '12px', margin: 0 }}>قم بتسجيل الدخول للمتابعة</p>
+          <p style={{ color: '#999', fontSize: '12px', margin: 0 }}>{isInvite ? 'أكمل تسجيل حسابك' : 'قم بتسجيل الدخول للمتابعة'}</p>
         </div>
 
         {/* Divider */}
         <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, #ff6b00, transparent)', marginBottom: '28px', borderRadius: '2px' }} />
 
+        {isInvite && (
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', color: '#16a34a', fontSize: '13px', marginBottom: '18px', fontWeight: '600' }}>
+            ✅ {inviteMsg}
+          </div>
+        )}
+
         {/* Form */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          <div>
+          {!isInvite && <div>
             <label style={{ color: '#555', fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>البريد الإلكتروني</label>
             <input
               type="email"
@@ -109,7 +147,7 @@ export default function Home() {
               onFocus={e => e.target.style.borderColor = '#ff6b00'}
               onBlur={e => e.target.style.borderColor = '#e8e8e8'}
             />
-          </div>
+          </div>}
 
           <div>
             <label style={{ color: '#555', fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>كلمة المرور</label>
@@ -151,7 +189,7 @@ export default function Home() {
               transition: 'all 0.2s'
             }}
           >
-            {loading ? '⏳ جاري الدخول...' : 'تسجيل الدخول →'}
+            {loading ? '⏳ جاري الحفظ...' : isInvite ? 'تعيين كلمة المرور والدخول →' : 'تسجيل الدخول →'}
           </button>
         </div>
       </div>
