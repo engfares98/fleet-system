@@ -778,21 +778,23 @@ export default function Dashboard() {
                     {userRoles.map(u => (
                       <tr key={u.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                         <td style={st.td}>
-                          <div style={{ fontWeight: '700' }}>{u.full_name || t.user}</div>
+                          <div style={{ fontWeight: '700' }}>{u.email || u.user_id?.substring(0, 16) + '...'}</div>
                           <div style={{ fontSize: '11px', color: C.muted }}>{u.user_id?.substring(0, 16)}...</div>
                         </td>
                         <td style={st.td}><span style={{ background: roleBg(u.role), color: roleColor(u.role), padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' }}>{roleLabel(u.role)}</span></td>
                         <td style={st.td}>
-                          {u.user_id !== currentUser?.id ? (
+                          {u.user_id === currentUser?.id ? (
+                            <span style={{ color: C.muted, fontSize: '12px' }}>{t.you}</span>
+                          ) : currentUser?.email === 'eng.fares98@gmail.com' ? (
                             <select value={u.role} onChange={e => updateUserRole(u.user_id, e.target.value)} style={{ ...st.input, width: 'auto', padding: '6px 10px', fontSize: '12px' }}>
                               <option value="admin">{t.adminRole}</option>
                               <option value="editor">{t.editorRole}</option>
                               <option value="viewer">{t.viewerRole}</option>
                             </select>
-                          ) : <span style={{ color: C.muted, fontSize: '12px' }}>{t.you}</span>}
+                          ) : <span style={{ color: C.muted, fontSize: '12px' }}>—</span>}
                         </td>
                         <td style={st.td}>
-                          {u.user_id !== currentUser?.id ? <button onClick={() => deleteUserRole(u.user_id)} style={st.deleteBtn}>🗑️</button> : '—'}
+                          {u.user_id !== currentUser?.id && currentUser?.email === 'eng.fares98@gmail.com' ? <button onClick={() => deleteUserRole(u.user_id)} style={st.deleteBtn}>🗑️</button> : '—'}
                         </td>
                       </tr>
                     ))}
