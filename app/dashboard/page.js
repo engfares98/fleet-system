@@ -245,7 +245,7 @@ export default function Dashboard() {
   const roleColor = (r) => r === 'admin' ? '#7c3aed' : r === 'editor' ? '#ff6b00' : '#16a34a'
   const roleBg = (r) => r === 'admin' ? '#f5f3ff' : r === 'editor' ? '#fff7f2' : '#f0fdf4'
 
-  const getRegion = (v) => { const code = v.vehicle_code || v.plate_number || ''; const firstChar = code.trim().toUpperCase()[0]; const map = { 'N': '0634064506270644', 'S': '062c064606480628', 'E': '063406310642', 'W': '063a06310628' }; return map[firstChar] || '063a064a0631 0645062d062f062f' }
+  const getRegion = (v) => { const code = v.vehicle_code || v.plate_number || ''; const firstChar = code.trim().toUpperCase()[0]; const map = { 'N': 'north', 'S': 'south', 'E': 'east', 'W': 'west' }; return map[firstChar] || 'unknown' }
   const filteredVehicles = vehicles.filter(v => regionFilter === 'all' || getRegion(v) === regionFilter).filter(v => (v.plate_number || '').includes(vehicleSearch) || (v.vehicle_code || '').includes(vehicleSearch) || (v.brand || '').includes(vehicleSearch) || (v.model || '').includes(vehicleSearch))
   const filteredDrivers = drivers.filter(d => (d.full_name || '').includes(driverSearch) || (d.national_id || '').includes(driverSearch) || (d.passport_number || '').includes(driverSearch) || (d.phone || '').includes(driverSearch))
 
@@ -443,7 +443,7 @@ export default function Dashboard() {
               </div>
               <input style={{ ...st.input, marginBottom: '16px' }} placeholder={t.searchVehicles} value={vehicleSearch} onChange={e => setVehicleSearch(e.target.value)} />
               <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
-                {[["all","🗺️ الكل"],["شمال","⬆️ شمال"],["جنوب","⬇️ جنوب"],["شرق","➡️ شرق"],["غرب","⬅️ غرب"]].map(([r, label]) => (
+                {[["all","🗺️ الكل"],["north","⬆️ شمال"],["south","⬇️ جنوب"],["east","➡️ شرق"],["west","⬅️ غرب"]].map(([r, label]) => (
                   <button key={r} onClick={() => setRegionFilter(r)} style={{ padding: "7px 16px", borderRadius: "20px", border: `2px solid ${regionFilter === r ? "#ff6b00" : "#e8e8e8"}`, background: regionFilter === r ? "#ff6b00" : "#fff", color: regionFilter === r ? "#fff" : "#888", fontWeight: "700", fontSize: "12px", cursor: "pointer", fontFamily: "Cairo, sans-serif" }}>
                     {label} {r !== "all" && `(${vehicles.filter(v => getRegion(v) === r).length})`}
                   </button>
