@@ -1,923 +1,1566 @@
-﻿'use client'
-import { useState, useEffect } from 'react'
-import { supabase } from '../supabase'
-import { translations } from './translations'
+'use client'
+import { createClient } from '@/utils/supabase/client'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import jsPDF from 'jspdf'
 
 export default function Dashboard() {
+  const supabase = createClient()
+  const router = useRouter()
+  
+  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(null)
+  const [userRole, setUserRole] = useState(null)
   const [lang, setLang] = useState('ar')
-  const t = translations[lang]
-  const isRTL = lang === 'ar'
-
+  
   const [vehicles, setVehicles] = useState([])
   const [drivers, setDrivers] = useState([])
   const [maintenance, setMaintenance] = useState([])
   const [fuelLogs, setFuelLogs] = useState([])
-  const [activeTab, setActiveTab] = useState('dashboard')
-  const [uploading, setUploading] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-  const [currentRole, setCurrentRole] = useState('viewer')
-  const [currentUser, setCurrentUser] = useState(null)
-  const [userRoles, setUserRoles] = useState([])
-
-  const [vehicleSearch, setVehicleSearch] = useState('')
-  const [driverSearch, setDriverSearch] = useState('')
-  const [regionFilter, setRegionFilter] = useState('all')
-
-  const [showVehicleForm, setShowVehicleForm] = useState(false)
-  const [vehicleForm, setVehicleForm] = useState({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
-  const [vehicleImage, setVehicleImage] = useState(null)
-  const [istamaraImage, setIstamaraImage] = useState(null)
-
-  const [showDriverForm, setShowDriverForm] = useState(false)
-  const [driverForm, setDriverForm] = useState({ full_name: '', national_id: '', passport_number: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
-  const [iqamaImage, setIqamaImage] = useState(null)
-  const [licenseImage, setLicenseImage] = useState(null)
-
-  const [showMaintenanceForm, setShowMaintenanceForm] = useState(false)
-  const [maintenanceForm, setMaintenanceForm] = useState({ vehicle_id: '', type: '', description: '', date: '', cost: '', next_date: '', status: 'pending' })
-
-  const [showFuelForm, setShowFuelForm] = useState(false)
-  const [fuelForm, setFuelForm] = useState({ vehicle_id: '', driver_id: '', date: '', liters: '', cost_per_liter: '', odometer: '' })
-
+  const [incidents, setIncidents] = useState([])
+  const [violations, setViolations] = useState([])
+  const [users, setUsers] = useState([])
+  
+  const [activeTab, setActiveTab] = useState('vehicles')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [editMode, setEditMode] = useState(false)
   const [editItem, setEditItem] = useState(null)
-  const [editType, setEditType] = useState(null)
-  const [editForm, setEditForm] = useState({})
-  const [editVehicleImage, setEditVehicleImage] = useState(null)
-  const [editIstamaraImage, setEditIstamaraImage] = useState(null)
-  const [editIqamaImage, setEditIqamaImage] = useState(null)
-  const [editLicenseImage, setEditLicenseImage] = useState(null)
-  const [previewImage, setPreviewImage] = useState(null)
-
-  useEffect(() => {
-    const savedLang = localStorage.getItem('lang') || 'ar'
-    setLang(savedLang)
-    checkAuth(); fetchData()
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
-
-  const switchLang = () => {
-    const newLang = lang === 'ar' ? 'en' : 'ar'
-    setLang(newLang)
-    localStorage.setItem('lang', newLang)
+  
+  // البحث الذكي
+  const [showDriverPicker, setShowDriverPicker] = useState(false)
+  const [showVehiclePicker, setShowVehiclePicker] = useState(false)
+  const [pickerSearch, setPickerSearch] = useState('')
+  
+  // حقول النماذج
+  const [formData, setFormData] = useState({})
+  
+  const t = {
+    ar: {
+      dashboard: 'لوحة التحكم', vehicles: 'المركبات', drivers: 'السائقين',
+      maintenance: 'الصيانة', fuel: 'الوقود', incidents: 'الحوادث',
+      violations: 'المخالفات', users: 'المستخدمين', reports: 'التقارير',
+      logout: 'تسجيل الخروج', add: 'إضافة', edit: 'تعديل', delete: 'حذف',
+      save: 'حفظ', cancel: 'إلغاء', export: 'تصدير Excel', total: 'الإجمالي',
+      active: 'نشط', inactive: 'غير نشط', open: 'مفتوح', closed: 'مغلق',
+      paid: 'مدفوع', unpaid: 'غير مدفوع', status: 'الحالة',
+      plateNumber: 'رقم اللوحة', vehicleType: 'نوع المركبة', model: 'الموديل',
+      year: 'السنة', driverName: 'اسم السائق', licenseNumber: 'رقم الرخصة',
+      phone: 'الجوال', date: 'التاريخ', type: 'النوع', cost: 'التكلفة',
+      notes: 'ملاحظات', driver: 'السائق', vehicle: 'المركبة', quantity: 'الكمية',
+      description: 'الوصف', location: 'الموقع', repairCost: 'تكلفة الإصلاح',
+      violationNumber: 'رقم المخالفة', fineAmount: 'مبلغ الغرامة',
+      email: 'البريد الإلكتروني', password: 'كلمة المرور', role: 'الصلاحية',
+      admin: 'مدير', editor: 'محرر', viewer: 'مشاهد',
+    },
+    en: {
+      dashboard: 'Dashboard', vehicles: 'Vehicles', drivers: 'Drivers',
+      maintenance: 'Maintenance', fuel: 'Fuel', incidents: 'Incidents',
+      violations: 'Violations', users: 'Users', reports: 'Reports',
+      logout: 'Logout', add: 'Add', edit: 'Edit', delete: 'Delete',
+      save: 'Save', cancel: 'Cancel', export: 'Export Excel', total: 'Total',
+      active: 'Active', inactive: 'Inactive', open: 'Open', closed: 'Closed',
+      paid: 'Paid', unpaid: 'Unpaid', status: 'Status',
+      plateNumber: 'Plate Number', vehicleType: 'Vehicle Type', model: 'Model',
+      year: 'Year', driverName: 'Driver Name', licenseNumber: 'License Number',
+      phone: 'Phone', date: 'Date', type: 'Type', cost: 'Cost',
+      notes: 'Notes', driver: 'Driver', vehicle: 'Vehicle', quantity: 'Quantity',
+      description: 'Description', location: 'Location', repairCost: 'Repair Cost',
+      violationNumber: 'Violation Number', fineAmount: 'Fine Amount',
+      email: 'Email', password: 'Password', role: 'Role',
+      admin: 'Admin', editor: 'Editor', viewer: 'Viewer',
+    }
   }
-
-  const checkAuth = async () => {
-    const { data } = await supabase.auth.getSession()
-    if (!data.session) { window.location.href = '/'; return }
-    setCurrentUser(data.session.user)
-    const { data: roleData } = await supabase.from('user_roles').select('*').eq('user_id', data.session.user.id).single()
-    setCurrentRole(roleData?.role || 'admin')
+  
+  useEffect(() => { checkUser() }, [])
+  
+  const checkUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push('/login'); return }
+    setUser(user)
+    const { data: userData } = await supabase.from('users').select('role').eq('email', user.email).single()
+    setUserRole(userData?.role || 'viewer')
+    fetchData()
+    setLoading(false)
   }
-
+  
   const fetchData = async () => {
-    const [v, d, m, f, ur] = await Promise.all([
-      supabase.from('vehicles').select('*').order('created_at', { ascending: false }),
-      supabase.from('drivers').select('*').order('created_at', { ascending: false }),
-      supabase.from('maintenance').select('*, vehicles(plate_number)').order('created_at', { ascending: false }),
-      supabase.from('fuel_logs').select('*, vehicles(plate_number), drivers(full_name)').order('created_at', { ascending: false }),
-      supabase.from('user_roles').select('*').order('created_at', { ascending: false }),
-    ])
-    setVehicles(v.data || []); setDrivers(d.data || [])
-    setMaintenance(m.data || []); setFuelLogs(f.data || [])
-    setUserRoles(ur.data || [])
+    const { data: v } = await supabase.from('vehicles').select('*').order('created_at', { ascending: false })
+    setVehicles(v || [])
+    const { data: d } = await supabase.from('drivers').select('*').order('created_at', { ascending: false })
+    setDrivers(d || [])
+    const { data: m } = await supabase.from('maintenance').select('*, vehicles(plate_number)').order('maintenance_date', { ascending: false })
+    setMaintenance(m || [])
+    const { data: f } = await supabase.from('fuel_logs').select('*, vehicles(plate_number), drivers(name)').order('date', { ascending: false })
+    setFuelLogs(f || [])
+    const { data: i } = await supabase.from('incidents').select('*, vehicles(plate_number), drivers(name)').order('incident_date', { ascending: false })
+    setIncidents(i || [])
+    const { data: vio } = await supabase.from('violations').select('*, vehicles(plate_number), drivers(name)').order('violation_date', { ascending: false })
+    setViolations(vio || [])
+    if (userRole === 'admin') {
+      const { data: u } = await supabase.from('users').select('*').order('created_at', { ascending: false })
+      setUsers(u || [])
+    }
   }
-
-  const daysUntil = (dateStr) => {
-    if (!dateStr) return null
-    return Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24))
-  }
-
-  const getAlerts = () => {
-    const alerts = []
-    drivers.forEach(d => {
-      if (d.license_expiry) {
-        const days = daysUntil(d.license_expiry)
-        if (days !== null && days <= 60) {
-          const detail = days < 0
-            ? t.expiredDays.replace('{n}', Math.abs(days))
-            : t.expiresIn.replace('{n}', days)
-          alerts.push({ id: `lic-${d.id}`, type: days < 0 ? 'expired' : days <= 14 ? 'critical' : days <= 30 ? 'warning' : 'info', icon: 'ðŸªª', title: `${t.licenseAlert}: ${d.full_name}`, detail, days })
-        }
+  
+  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login') }
+  
+  const openAddModal = () => { setFormData({}); setEditMode(false); setEditItem(null); setShowAddModal(true) }
+  
+  const openEditModal = (item) => { setFormData(item); setEditMode(true); setEditItem(item); setShowAddModal(true) }
+  
+  const closeModal = () => { setShowAddModal(false); setFormData({}); setEditMode(false); setEditItem(null) }
+  
+  const handleSubmit = async () => {
+    let table = ''
+    let data = {}
+    
+    if (activeTab === 'vehicles') {
+      if (!formData.plate_number || !formData.type) { alert(t[lang].plateNumber + ' & ' + t[lang].vehicleType + ' required'); return }
+      
+      let imageUrl = editMode ? editItem?.image : null
+      let istimaraUrl = editMode ? editItem?.istimara_pdf : null
+      let insuranceUrl = editMode ? editItem?.insurance_pdf : null
+      
+      if (formData.imageFile) imageUrl = await uploadFile(formData.imageFile, 'vehicles')
+      if (formData.istimaraPdfFile) istimaraUrl = await uploadFile(formData.istimaraPdfFile, 'documents')
+      if (formData.insurancePdfFile) insuranceUrl = await uploadFile(formData.insurancePdfFile, 'documents')
+      
+      table = 'vehicles'
+      data = { 
+        plate_number: formData.plate_number, 
+        type: formData.type, 
+        model: formData.model || '', 
+        year: formData.year ? parseInt(formData.year) : null, 
+        status: formData.status || 'active',
+        image: imageUrl,
+        istimara_pdf: istimaraUrl,
+        insurance_pdf: insuranceUrl
       }
-    })
-    maintenance.forEach(m => {
-      if (m.next_date) {
-        const days = daysUntil(m.next_date)
-        if (days !== null && days <= 30) {
-          const detail = days < 0
-            ? t.maintenanceLate.replace('{n}', Math.abs(days))
-            : t.maintenanceIn.replace('{n}', days)
-          alerts.push({ id: `maint-${m.id}`, type: days < 0 ? 'expired' : days <= 7 ? 'critical' : 'warning', icon: 'ðŸ”§', title: `${t.maintenanceAlert}: ${m.vehicles?.plate_number || ''}`, detail, days })
-        }
+    } else if (activeTab === 'drivers') {
+      if (!formData.name || !formData.license_number) { alert(t[lang].driverName + ' & ' + t[lang].licenseNumber + ' required'); return }
+      
+      let imageUrl = editMode ? editItem?.image : null
+      let licenseUrl = editMode ? editItem?.license_pdf : null
+      let iqamaUrl = editMode ? editItem?.iqama_pdf : null
+      
+      if (formData.imageFile) imageUrl = await uploadFile(formData.imageFile, 'drivers')
+      if (formData.licensePdfFile) licenseUrl = await uploadFile(formData.licensePdfFile, 'documents')
+      if (formData.iqamaPdfFile) iqamaUrl = await uploadFile(formData.iqamaPdfFile, 'documents')
+      
+      table = 'drivers'
+      data = { 
+        name: formData.name, 
+        license_number: formData.license_number, 
+        phone: formData.phone || '', 
+        status: formData.status || 'active',
+        image: imageUrl,
+        license_pdf: licenseUrl,
+        iqama_pdf: iqamaUrl
       }
-    })
-    return alerts.sort((a, b) => a.days - b.days)
+    } else if (activeTab === 'maintenance') {
+      if (!formData.vehicle_id || !formData.maintenance_type || !formData.maintenance_date) { alert('Required fields missing'); return }
+      table = 'maintenance'
+      data = { vehicle_id: formData.vehicle_id, maintenance_type: formData.maintenance_type, maintenance_date: formData.maintenance_date, cost: formData.cost ? parseFloat(formData.cost) : 0, notes: formData.notes || '' }
+    } else if (activeTab === 'fuel') {
+      if (!formData.vehicle_id || !formData.date) { alert('Required fields missing'); return }
+      table = 'fuel_logs'
+      data = { vehicle_id: formData.vehicle_id, driver_id: formData.driver_id || null, date: formData.date, quantity: formData.quantity ? parseFloat(formData.quantity) : 0, cost: formData.cost ? parseFloat(formData.cost) : 0, notes: formData.notes || '' }
+    } else if (activeTab === 'incidents') {
+      if (!formData.vehicle_id || !formData.incident_date) { alert('Required fields missing'); return }
+      table = 'incidents'
+      data = { vehicle_id: formData.vehicle_id, driver_id: formData.driver_id || null, incident_date: formData.incident_date, incident_type: formData.incident_type || 'accident', description: formData.description || '', location: formData.location || '', repair_cost: formData.repair_cost ? parseFloat(formData.repair_cost) : 0, status: formData.status || 'open', notes: formData.notes || '' }
+    } else if (activeTab === 'violations') {
+      if (!formData.vehicle_id || !formData.violation_date) { alert('Required fields missing'); return }
+      table = 'violations'
+      data = { vehicle_id: formData.vehicle_id, driver_id: formData.driver_id || null, violation_date: formData.violation_date, violation_number: formData.violation_number || '', violation_type: formData.violation_type || '', location: formData.location || '', fine_amount: formData.fine_amount ? parseFloat(formData.fine_amount) : 0, status: formData.status || 'unpaid', notes: formData.notes || '' }
+    } else if (activeTab === 'users') {
+      if (!formData.email) { alert('Email required'); return }
+      table = 'users'
+      data = { email: formData.email, role: formData.role || 'viewer' }
+    }
+    
+    const { error } = editMode 
+      ? await supabase.from(table).update(data).eq('id', editItem.id)
+      : await supabase.from(table).insert(data)
+    
+    if (error) { alert(error.message); return }
+    closeModal(); fetchData()
   }
-
-  const alerts = getAlerts()
-  const criticalAlerts = alerts.filter(a => a.type === 'expired' || a.type === 'critical')
-
-  const exportToCSV = (data, filename) => {
-    if (!data || data.length === 0) return
-    const headers = Object.keys(data[0])
-    const csvContent = [headers.join(','), ...data.map(row => headers.map(h => `"${(row[h] || '').toString().replace(/"/g, '""')}"`).join(','))].join('\n')
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = filename + '.csv'; a.click()
-    URL.revokeObjectURL(url)
+  
+  const handleDelete = async (id, table) => {
+    if (!confirm(t[lang].delete + '?')) return
+    const { error } = await supabase.from(table).delete().eq('id', id)
+    if (error) { alert(error.message); return }
+    fetchData()
   }
-
-  const exportVehicles = () => exportToCSV(vehicles.map(v => ({ [t.plateNumber]: v.plate_number || '', [t.vehicleCode]: v.vehicle_code || '', [t.type]: v.type || '', [t.brand]: v.brand || '', [t.model]: v.model || '', [t.year]: v.year || '', [t.color]: v.color || '', [t.fuelType]: v.fuel_type || '', [t.status]: v.status === 'active' ? t.active : t.inactive })), t.vehicles)
-  const exportDrivers = () => exportToCSV(drivers.map(d => ({ [t.fullName]: d.full_name || '', [t.nationalId]: d.national_id || '', [t.passportNumber]: d.passport_number || '', [t.phone]: d.phone || '', [t.licenseNumber]: d.license_number || '', [t.licenseExpiry]: d.license_expiry || '', [t.status]: d.status === 'active' ? t.active : t.inactive })), t.drivers)
-  const exportMaintenance = () => exportToCSV(maintenance.map(m => ({ [t.vehicle]: m.vehicles?.plate_number || '', [t.type]: m.type || '', [t.description]: m.description || '', [t.date]: m.date || '', [t.cost]: m.cost || '', [t.nextDate]: m.next_date || '' })), t.maintenance)
-  const exportFuel = () => exportToCSV(fuelLogs.map(f => ({ [t.vehicle]: f.vehicles?.plate_number || '', [t.driver]: f.drivers?.full_name || '', [t.date]: f.date || '', [t.liters]: f.liters || '', [t.pricePerLiter]: f.cost_per_liter || '', [t.total]: f.total_cost || '' })), t.fuel)
-
-  const uploadFile = async (file, folder) => {
+  
+  const exportToExcel = (data, filename) => {
+    if (!data?.length) { alert('No data'); return }
+    const csv = [Object.keys(data[0]).join(','), ...data.map(r => Object.values(r).map(v => `"${v}"`).join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `${filename}.csv`; a.click()
+  }
+  
+  const uploadFile = async (file, folder = 'vehicles') => {
     if (!file) return null
-    const ext = file.name.split('.').pop()
-    const fileName = `${folder}/${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('fleet-files').upload(fileName, file)
-    if (error) return null
-    const { data } = supabase.storage.from('fleet-files').getPublicUrl(fileName)
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Math.random()}.${fileExt}`
+    const filePath = `${folder}/${fileName}`
+    const { error } = await supabase.storage.from('fleet-files').upload(filePath, file)
+    if (error) { console.error('Upload error:', error); return null }
+    const { data } = supabase.storage.from('fleet-files').getPublicUrl(filePath)
     return data.publicUrl
   }
-
-  const openEdit = (type, item) => {
-    setEditType(type); setEditItem(item); setEditForm({ ...item })
-    setEditVehicleImage(null); setEditIstamaraImage(null); setEditIqamaImage(null); setEditLicenseImage(null)
+  const generatePDF = (type, itemId) => {
+  const doc = new jsPDF()
+  const w = doc.internal.pageSize.getWidth()
+  
+  doc.setFillColor(18, 130, 115)
+  doc.rect(0, 0, w, 35, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(16)
+  doc.text('أمانة المدينة - المجال المرئي', w/2, 20, {align: 'center'})
+  
+  doc.setTextColor(0, 0, 0)
+  doc.setFontSize(12)
+  
+  if (type === 'vehicle') {
+    const item = vehicles.find(v => v.id === itemId)
+    if (!item) return
+    doc.text('تقرير مركبة: ' + item.plate_number, 15, 50)
+  } else if (type === 'driver') {
+    const item = drivers.find(d => d.id === itemId)
+    if (!item) return
+    doc.text('تقرير سائق: ' + item.name, 15, 50)
+  } else if (type === 'incident') {
+    doc.text('تقرير حادث', 15, 50)
+  } else if (type === 'violation') {
+    doc.text('تقرير مخالفة', 15, 50)
   }
-
-  const saveEdit = async () => {
-    setUploading(true)
-    const table = editType === 'vehicle' ? 'vehicles' : editType === 'driver' ? 'drivers' : editType === 'maintenance' ? 'maintenance' : 'fuel_logs'
-    const updateData = { ...editForm }
-    delete updateData.id; delete updateData.created_at; delete updateData.vehicles; delete updateData.drivers
-    if (editType === 'fuel') updateData.total_cost = updateData.liters * updateData.cost_per_liter
-    if (editType === 'vehicle') {
-      if (editVehicleImage) updateData.vehicle_image = await uploadFile(editVehicleImage, 'vehicles')
-      if (editIstamaraImage) updateData.istimara_image = await uploadFile(editIstamaraImage, 'istimara')
+  
+  doc.save(type + '_' + itemId + '.pdf')
+}
+  const generatePDF = async (type, itemId) => {
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    
+    // روابط الشعارات
+    const amanahLogo = 'https://dgjkhewkluzdnmvsbfxf.supabase.co/storage/v1/object/public/fleet-files/logos/WhatsApp%20Image%202026-04-11%20at%208.43.39%20PM.jpeg'
+    const magLogo = 'https://dgjkhewkluzdnmvsbfxf.supabase.co/storage/v1/object/public/fleet-files/logos/WhatsApp%20Image%202026-04-11%20at%208.43.00%20PM.jpeg'
+    
+    // خلفية خضراء في الأعلى (لون الأمانة)
+    doc.setFillColor(18, 130, 115)
+    doc.rect(0, 0, pageWidth, 50, 'F')
+    
+    // إضافة الشعارات
+    try {
+      // شعار الأمانة (يسار)
+      doc.addImage(amanahLogo, 'JPEG', 15, 8, 25, 25)
+      // شعار المجال المرئي (يمين)
+      doc.addImage(magLogo, 'JPEG', pageWidth - 40, 8, 25, 25)
+    } catch (e) {
+      console.log('Logo loading skipped')
     }
-    if (editType === 'driver') {
-      if (editIqamaImage) updateData.iqama_image = await uploadFile(editIqamaImage, 'iqama')
-      if (editLicenseImage) updateData.license_image = await uploadFile(editLicenseImage, 'licenses')
+    
+    // النصوص في الترويسة
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(16)
+    doc.setFont(undefined, 'bold')
+    const title1 = lang === 'ar' ? 'أمانة منطقة المدينة المنورة' : 'Madinah Regional Municipality'
+    doc.text(title1, pageWidth / 2, 16, { align: 'center' })
+    
+    doc.setFontSize(13)
+    const title2 = lang === 'ar' ? 'المجال المرئي' : 'Visual Field'
+    doc.text(title2, pageWidth / 2, 24, { align: 'center' })
+    
+    doc.setFontSize(11)
+    doc.setFont(undefined, 'normal')
+    const title3 = lang === 'ar' ? 'نظام إدارة الأسطول' : 'Fleet Management System'
+    doc.text(title3, pageWidth / 2, 32, { align: 'center' })
+    
+    // خط فاصل
+    doc.setDrawColor(255, 255, 255)
+    doc.setLineWidth(0.5)
+    doc.line(10, 50, pageWidth - 10, 50)
+    
+    // التاريخ والرقم المرجعي
+    doc.setFontSize(8)
+    doc.setTextColor(255, 255, 255)
+    const today = new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
+    doc.text((lang === 'ar' ? 'التاريخ: ' : 'Date: ') + today, 15, 45)
+    const refNum = `REF-${Date.now().toString().slice(-6)}`
+    doc.text((lang === 'ar' ? 'المرجع: ' : 'Ref: ') + refNum, pageWidth - 15, 45, { align: 'right' })
+    
+    doc.setTextColor(0, 0, 0)
+    let yPos = 60
+    
+    if (type === 'vehicle') {
+      const vehicle = vehicles.find(v => v.id === itemId)
+      if (!vehicle) return
+      
+      // عنوان التقرير
+      doc.setFillColor(240, 245, 243)
+      doc.rect(10, yPos - 5, pageWidth - 20, 12, 'F')
+      doc.setFontSize(16)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(18, 130, 115)
+      doc.text(lang === 'ar' ? 'تقرير مركبة' : 'Vehicle Report', pageWidth / 2, yPos + 2, { align: 'center' })
+      yPos += 15
+      
+      // معلومات المركبة
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(0, 0, 0)
+      doc.text(lang === 'ar' ? 'بيانات المركبة:' : 'Vehicle Information:', 15, yPos)
+      yPos += 8
+      
+      doc.setFont(undefined, 'normal')
+      doc.setFontSize(10)
+      const vehicleInfo = [
+        { label: lang === 'ar' ? 'رقم اللوحة' : 'Plate Number', value: vehicle.plate_number },
+        { label: lang === 'ar' ? 'نوع المركبة' : 'Type', value: vehicle.type },
+        { label: lang === 'ar' ? 'الموديل' : 'Model', value: vehicle.model || '-' },
+        { label: lang === 'ar' ? 'سنة الصنع' : 'Year', value: vehicle.year || '-' },
+        { label: lang === 'ar' ? 'الحالة' : 'Status', value: lang === 'ar' ? (vehicle.status === 'active' ? 'نشط' : 'غير نشط') : vehicle.status }
+      ]
+      
+      vehicleInfo.forEach(info => {
+        doc.setFont(undefined, 'bold')
+        doc.text(info.label + ':', 20, yPos)
+        doc.setFont(undefined, 'normal')
+        doc.text(info.value, 60, yPos)
+        yPos += 6
+      })
+      yPos += 5
+      
+      // الصيانة
+      const vehicleMaintenance = maintenance.filter(m => m.vehicle_id === itemId)
+      if (vehicleMaintenance.length > 0) {
+        doc.setFillColor(245, 250, 248)
+        doc.rect(10, yPos - 3, pageWidth - 20, 8, 'F')
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.setTextColor(18, 130, 115)
+        doc.text(lang === 'ar' ? '🔧 سجل الصيانة' : '🔧 Maintenance History', 15, yPos + 2)
+        yPos += 10
+        
+        doc.setFontSize(9)
+        doc.setFont(undefined, 'normal')
+        doc.setTextColor(0, 0, 0)
+        const totalMaintenance = vehicleMaintenance.reduce((sum, m) => sum + (m.cost || 0), 0)
+        doc.text(`${lang === 'ar' ? 'إجمالي التكلفة' : 'Total Cost'}: ${totalMaintenance.toFixed(2)} ${lang === 'ar' ? 'ريال' : 'SAR'}`, 20, yPos)
+        yPos += 6
+        
+        vehicleMaintenance.slice(0, 8).forEach(m => {
+          doc.text(`• ${m.maintenance_date} - ${m.maintenance_type} (${(m.cost || 0).toFixed(2)} ${lang === 'ar' ? 'ريال' : 'SAR'})`, 20, yPos)
+          yPos += 5
+        })
+        yPos += 5
+      }
+      
+      // الوقود
+      const vehicleFuel = fuelLogs.filter(f => f.vehicle_id === itemId)
+      if (vehicleFuel.length > 0 && yPos < 240) {
+        doc.setFillColor(245, 250, 248)
+        doc.rect(10, yPos - 3, pageWidth - 20, 8, 'F')
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.setTextColor(18, 130, 115)
+        doc.text(lang === 'ar' ? '⛽ سجل الوقود' : '⛽ Fuel History', 15, yPos + 2)
+        yPos += 10
+        
+        doc.setFontSize(9)
+        doc.setFont(undefined, 'normal')
+        doc.setTextColor(0, 0, 0)
+        const totalFuel = vehicleFuel.reduce((sum, f) => sum + (f.cost || 0), 0)
+        const totalQty = vehicleFuel.reduce((sum, f) => sum + (f.quantity || 0), 0)
+        doc.text(`${lang === 'ar' ? 'عدد التعبئات' : 'Fill-ups'}: ${vehicleFuel.length} | ${lang === 'ar' ? 'الكمية' : 'Quantity'}: ${totalQty.toFixed(1)} ${lang === 'ar' ? 'لتر' : 'L'} | ${lang === 'ar' ? 'التكلفة' : 'Cost'}: ${totalFuel.toFixed(2)} ${lang === 'ar' ? 'ريال' : 'SAR'}`, 20, yPos)
+        yPos += 8
+      }
+      
+      // الحوادث
+      const vehicleIncidents = incidents.filter(i => i.vehicle_id === itemId)
+      if (vehicleIncidents.length > 0 && yPos < 240) {
+        doc.setFillColor(254, 242, 242)
+        doc.rect(10, yPos - 3, pageWidth - 20, 8, 'F')
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.setTextColor(220, 38, 38)
+        doc.text(lang === 'ar' ? '🚨 الحوادث' : '🚨 Incidents', 15, yPos + 2)
+        yPos += 10
+        
+        doc.setFontSize(9)
+        doc.setFont(undefined, 'normal')
+        doc.setTextColor(0, 0, 0)
+        vehicleIncidents.slice(0, 5).forEach(i => {
+          doc.text(`• ${i.incident_date} - ${i.description || '-'} (${(i.repair_cost || 0).toFixed(2)} ${lang === 'ar' ? 'ريال' : 'SAR'})`, 20, yPos)
+          yPos += 5
+        })
+      }
+      
+    } else if (type === 'driver') {
+      const driver = drivers.find(d => d.id === itemId)
+      if (!driver) return
+      
+      doc.setFillColor(240, 245, 243)
+      doc.rect(10, yPos - 5, pageWidth - 20, 12, 'F')
+      doc.setFontSize(16)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(18, 130, 115)
+      doc.text(lang === 'ar' ? 'تقرير سائق' : 'Driver Report', pageWidth / 2, yPos + 2, { align: 'center' })
+      yPos += 15
+      
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(0, 0, 0)
+      doc.text(lang === 'ar' ? 'بيانات السائق:' : 'Driver Information:', 15, yPos)
+      yPos += 8
+      
+      doc.setFont(undefined, 'normal')
+      doc.setFontSize(10)
+      const driverInfo = [
+        { label: lang === 'ar' ? 'الاسم' : 'Name', value: driver.name },
+        { label: lang === 'ar' ? 'رقم الرخصة' : 'License', value: driver.license_number },
+        { label: lang === 'ar' ? 'الجوال' : 'Phone', value: driver.phone || '-' },
+        { label: lang === 'ar' ? 'الحالة' : 'Status', value: lang === 'ar' ? (driver.status === 'active' ? 'نشط' : 'غير نشط') : driver.status }
+      ]
+      
+      driverInfo.forEach(info => {
+        doc.setFont(undefined, 'bold')
+        doc.text(info.label + ':', 20, yPos)
+        doc.setFont(undefined, 'normal')
+        doc.text(info.value, 60, yPos)
+        yPos += 6
+      })
+      yPos += 5
+      
+      const driverFuel = fuelLogs.filter(f => f.driver_id === itemId)
+      if (driverFuel.length > 0) {
+        doc.setFillColor(245, 250, 248)
+        doc.rect(10, yPos - 3, pageWidth - 20, 8, 'F')
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.setTextColor(18, 130, 115)
+        doc.text(lang === 'ar' ? '⛽ رحلات الوقود' : '⛽ Fuel Trips', 15, yPos + 2)
+        yPos += 10
+        
+        doc.setFontSize(9)
+        doc.setFont(undefined, 'normal')
+        doc.setTextColor(0, 0, 0)
+        doc.text(`${lang === 'ar' ? 'عدد الرحلات' : 'Total Trips'}: ${driverFuel.length}`, 20, yPos)
+        yPos += 8
+      }
+      
+      const driverIncidents = incidents.filter(i => i.driver_id === itemId)
+      if (driverIncidents.length > 0) {
+        doc.setFillColor(254, 242, 242)
+        doc.rect(10, yPos - 3, pageWidth - 20, 8, 'F')
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.setTextColor(220, 38, 38)
+        doc.text(lang === 'ar' ? '🚨 الحوادث' : '🚨 Incidents', 15, yPos + 2)
+        yPos += 10
+        
+        doc.setFontSize(9)
+        doc.setFont(undefined, 'normal')
+        doc.setTextColor(0, 0, 0)
+        driverIncidents.slice(0, 8).forEach(i => {
+          doc.text(`• ${i.incident_date} - ${i.description || '-'}`, 20, yPos)
+          yPos += 5
+        })
+      }
+      
+    } else if (type === 'incident') {
+      const incident = incidents.find(i => i.id === itemId)
+      if (!incident) return
+      
+      doc.setFillColor(254, 242, 242)
+      doc.rect(10, yPos - 5, pageWidth - 20, 12, 'F')
+      doc.setFontSize(16)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(220, 38, 38)
+      doc.text(lang === 'ar' ? 'تقرير حادث' : 'Incident Report', pageWidth / 2, yPos + 2, { align: 'center' })
+      yPos += 15
+      
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(0, 0, 0)
+      doc.text(lang === 'ar' ? 'تفاصيل الحادث:' : 'Incident Details:', 15, yPos)
+      yPos += 8
+      
+      doc.setFont(undefined, 'normal')
+      doc.setFontSize(10)
+      const incidentInfo = [
+        { label: lang === 'ar' ? 'التاريخ' : 'Date', value: incident.incident_date },
+        { label: lang === 'ar' ? 'المركبة' : 'Vehicle', value: incident.vehicles?.plate_number || '-' },
+        { label: lang === 'ar' ? 'السائق' : 'Driver', value: incident.drivers?.name || '-' },
+        { label: lang === 'ar' ? 'الموقع' : 'Location', value: incident.location || '-' },
+        { label: lang === 'ar' ? 'التكلفة' : 'Cost', value: `${(incident.repair_cost || 0).toFixed(2)} ${lang === 'ar' ? 'ريال' : 'SAR'}` },
+        { label: lang === 'ar' ? 'الحالة' : 'Status', value: lang === 'ar' ? (incident.status === 'open' ? 'مفتوح' : 'مغلق') : incident.status }
+      ]
+      
+      incidentInfo.forEach(info => {
+        doc.setFont(undefined, 'bold')
+        doc.text(info.label + ':', 20, yPos)
+        doc.setFont(undefined, 'normal')
+        doc.text(info.value, 60, yPos)
+        yPos += 6
+      })
+      
+      if (incident.description) {
+        yPos += 3
+        doc.setFont(undefined, 'bold')
+        doc.text(lang === 'ar' ? 'الوصف:' : 'Description:', 20, yPos)
+        yPos += 5
+        doc.setFont(undefined, 'normal')
+        const descLines = doc.splitTextToSize(incident.description, pageWidth - 50)
+        doc.text(descLines, 25, yPos)
+        yPos += (descLines.length * 5)
+      }
+      
+    } else if (type === 'violation') {
+      const violation = violations.find(v => v.id === itemId)
+      if (!violation) return
+      
+      doc.setFillColor(254, 242, 242)
+      doc.rect(10, yPos - 5, pageWidth - 20, 12, 'F')
+      doc.setFontSize(16)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(220, 38, 38)
+      doc.text(lang === 'ar' ? 'تقرير مخالفة مرورية' : 'Traffic Violation Report', pageWidth / 2, yPos + 2, { align: 'center' })
+      yPos += 15
+      
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(0, 0, 0)
+      doc.text(lang === 'ar' ? 'تفاصيل المخالفة:' : 'Violation Details:', 15, yPos)
+      yPos += 8
+      
+      doc.setFont(undefined, 'normal')
+      doc.setFontSize(10)
+      const violationInfo = [
+        { label: lang === 'ar' ? 'التاريخ' : 'Date', value: violation.violation_date },
+        { label: lang === 'ar' ? 'رقم المخالفة' : 'Number', value: violation.violation_number || '-' },
+        { label: lang === 'ar' ? 'المركبة' : 'Vehicle', value: violation.vehicles?.plate_number || '-' },
+        { label: lang === 'ar' ? 'السائق' : 'Driver', value: violation.drivers?.name || '-' },
+        { label: lang === 'ar' ? 'النوع' : 'Type', value: violation.violation_type || '-' },
+        { label: lang === 'ar' ? 'الموقع' : 'Location', value: violation.location || '-' },
+        { label: lang === 'ar' ? 'الغرامة' : 'Fine', value: `${(violation.fine_amount || 0).toFixed(2)} ${lang === 'ar' ? 'ريال' : 'SAR'}` },
+        { label: lang === 'ar' ? 'الحالة' : 'Status', value: lang === 'ar' ? (violation.status === 'paid' ? 'مدفوع' : 'غير مدفوع') : violation.status }
+      ]
+      
+      violationInfo.forEach(info => {
+        doc.setFont(undefined, 'bold')
+        doc.text(info.label + ':', 20, yPos)
+        doc.setFont(undefined, 'normal')
+        doc.text(info.value, 60, yPos)
+        yPos += 6
+      })
     }
-    await supabase.from(table).update(updateData).eq('id', editItem.id)
-    setEditItem(null); setEditType(null); setUploading(false); fetchData()
+    
+    // تذييل رسمي مع الشعارات
+    doc.setDrawColor(18, 130, 115)
+    doc.setLineWidth(0.8)
+    doc.line(10, pageHeight - 25, pageWidth - 10, pageHeight - 25)
+    
+    // شعارات صغيرة في التذييل
+    try {
+      doc.addImage(amanahLogo, 'JPEG', 15, pageHeight - 22, 12, 12)
+      doc.addImage(magLogo, 'JPEG', pageWidth - 27, pageHeight - 22, 12, 12)
+    } catch (e) {
+      console.log('Footer logos skipped')
+    }
+    
+    doc.setFontSize(8)
+    doc.setTextColor(18, 130, 115)
+    doc.setFont(undefined, 'bold')
+    doc.text(lang === 'ar' ? 'أمانة منطقة المدينة المنورة - المجال المرئي' : 'Madinah Regional Municipality - Visual Field', pageWidth / 2, pageHeight - 18, { align: 'center' })
+    doc.setFont(undefined, 'normal')
+    doc.setFontSize(7)
+    doc.setTextColor(100, 100, 100)
+    doc.text(lang === 'ar' ? 'نظام إدارة الأسطول | وثيقة رسمية' : 'Fleet Management System | Official Document', pageWidth / 2, pageHeight - 13, { align: 'center' })
+    
+    doc.save(`${type}_${refNum}_${Date.now()}.pdf`)
   }
-
-  const addVehicle = async () => {
-    setUploading(true)
-    const vehicle_image = await uploadFile(vehicleImage, 'vehicles')
-    const istimara_image = await uploadFile(istamaraImage, 'istimara')
-    await supabase.from('vehicles').insert([{ ...vehicleForm, vehicle_image, istimara_image }])
-    setShowVehicleForm(false)
-    setVehicleForm({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
-    setVehicleImage(null); setIstamaraImage(null); setUploading(false); fetchData()
+    
+    if (type === 'vehicle') {
+      const vehicle = vehicles.find(v => v.id === itemId)
+      if (!vehicle) return
+      
+      // عنوان التقرير مع خط سفلي
+      doc.setFillColor(240, 240, 240)
+      doc.rect(10, yPos - 5, pageWidth - 20, 12, 'F')
+      doc.setFontSize(16)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(18, 130, 115)
+      doc.text(lang === 'ar' ? 'تقرير مركبة' : 'Vehicle Report', pageWidth / 2, yPos + 2, { align: 'center' })
+      yPos += 15
+      
+      // معلومات المركبة
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(0, 0, 0)
+      doc.text(lang === 'ar' ? 'بيانات المركبة:' : 'Vehicle Information:', 15, yPos)
+      yPos += 8
+      
+      doc.setFont(undefined, 'normal')
+      doc.setFontSize(10)
+      const vehicleInfo = [
+        { label: lang === 'ar' ? 'رقم اللوحة' : 'Plate Number', value: vehicle.plate_number },
+        { label: lang === 'ar' ? 'نوع المركبة' : 'Type', value: vehicle.type },
+        { label: lang === 'ar' ? 'الموديل' : 'Model', value: vehicle.model || '-' },
+        { label: lang === 'ar' ? 'سنة الصنع' : 'Year', value: vehicle.year || '-' },
+        { label: lang === 'ar' ? 'الحالة' : 'Status', value: lang === 'ar' ? (vehicle.status === 'active' ? 'نشط' : 'غير نشط') : vehicle.status }
+      ]
+      
+      vehicleInfo.forEach(info => {
+        doc.setFont(undefined, 'bold')
+        doc.text(info.label + ':', 20, yPos)
+        doc.setFont(undefined, 'normal')
+        doc.text(info.value, 60, yPos)
+        yPos += 6
+      })
+      yPos += 5
+      
+      // الصيانة
+      const vehicleMaintenance = maintenance.filter(m => m.vehicle_id === itemId)
+      if (vehicleMaintenance.length > 0) {
+        doc.setFillColor(245, 245, 245)
+        doc.rect(10, yPos - 3, pageWidth - 20, 8, 'F')
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.setTextColor(18, 130, 115)
+        doc.text(lang === 'ar' ? '📋 سجل الصيانة' : '📋 Maintenance History', 15, yPos + 2)
+        yPos += 10
+        
+        doc.setFontSize(9)
+        doc.setFont(undefined, 'normal')
+        doc.setTextColor(0, 0, 0)
+        const totalMaintenance = vehicleMaintenance.reduce((sum, m) => sum + (m.cost || 0), 0)
+        doc.text(`${lang === 'ar' ? 'إجمالي التكلفة' : 'Total Cost'}: ${totalMaintenance.toFixed(2)} ${lang === 'ar' ? 'ريال' : 'SAR'}`, 20, yPos)
+        yPos += 6
+        
+        vehicleMaintenance.slice(0, 8).forEach(m => {
+          doc.text(`• ${m.maintenance_date} - ${m.maintenance_type} (${(m.cost || 0).toFixed(2)} ${lang === 'ar' ? 'ريال' : 'SAR'})`, 20, yPos)
+          yPos += 5
+        })
+        yPos += 5
+      }
+      
+      // الوقود
+      const vehicleFuel = fuelLogs.filter(f => f.vehicle_id === itemId)
+      if (vehicleFuel.length > 0 && yPos < 240) {
+        doc.setFillColor(245, 245, 245)
+        doc.rect(10, yPos - 3, pageWidth - 20, 8, 'F')
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.setTextColor(18, 130, 115)
+        doc.text(lang === 'ar' ? '⛽ سجل الوقود' : '⛽ Fuel History', 15, yPos + 2)
+        yPos += 10
+        
+        doc.setFontSize(9)
+        doc.setFont(undefined, 'normal')
+        doc.setTextColor(0, 0, 0)
+        const totalFuel = vehicleFuel.reduce((sum, f) => sum + (f.cost || 0), 0)
+        const totalQty = vehicleFuel.reduce((sum, f) => sum + (f.quantity || 0), 0)
+        doc.text(`${lang === 'ar' ? 'عدد التعبئات' : 'Fill-ups'}: ${vehicleFuel.length} | ${lang === 'ar' ? 'الكمية' : 'Quantity'}: ${totalQty.toFixed(1)} ${lang === 'ar' ? 'لتر' : 'L'} | ${lang === 'ar' ? 'التكلفة' : 'Cost'}: ${totalFuel.toFixed(2)} ${lang === 'ar' ? 'ريال' : 'SAR'}`, 20, yPos)
+        yPos += 8
+      }
+      
+      // الحوادث
+      const vehicleIncidents = incidents.filter(i => i.vehicle_id === itemId)
+      if (vehicleIncidents.length > 0 && yPos < 240) {
+        doc.setFillColor(245, 245, 245)
+        doc.rect(10, yPos - 3, pageWidth - 20, 8, 'F')
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.setTextColor(220, 38, 38)
+        doc.text(lang === 'ar' ? '🚨 الحوادث' : '🚨 Incidents', 15, yPos + 2)
+        yPos += 10
+        
+        doc.setFontSize(9)
+        doc.setFont(undefined, 'normal')
+        doc.setTextColor(0, 0, 0)
+        vehicleIncidents.slice(0, 5).forEach(i => {
+          doc.text(`• ${i.incident_date} - ${i.description || '-'} (${(i.repair_cost || 0).toFixed(2)} ${lang === 'ar' ? 'ريال' : 'SAR'})`, 20, yPos)
+          yPos += 5
+        })
+      }
+      
+    } else if (type === 'driver') {
+      const driver = drivers.find(d => d.id === itemId)
+      if (!driver) return
+      
+      doc.setFillColor(240, 240, 240)
+      doc.rect(10, yPos - 5, pageWidth - 20, 12, 'F')
+      doc.setFontSize(16)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(18, 130, 115)
+      doc.text(lang === 'ar' ? 'تقرير سائق' : 'Driver Report', pageWidth / 2, yPos + 2, { align: 'center' })
+      yPos += 15
+      
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(0, 0, 0)
+      doc.text(lang === 'ar' ? 'بيانات السائق:' : 'Driver Information:', 15, yPos)
+      yPos += 8
+      
+      doc.setFont(undefined, 'normal')
+      doc.setFontSize(10)
+      const driverInfo = [
+        { label: lang === 'ar' ? 'الاسم' : 'Name', value: driver.name },
+        { label: lang === 'ar' ? 'رقم الرخصة' : 'License', value: driver.license_number },
+        { label: lang === 'ar' ? 'الجوال' : 'Phone', value: driver.phone || '-' },
+        { label: lang === 'ar' ? 'الحالة' : 'Status', value: lang === 'ar' ? (driver.status === 'active' ? 'نشط' : 'غير نشط') : driver.status }
+      ]
+      
+      driverInfo.forEach(info => {
+        doc.setFont(undefined, 'bold')
+        doc.text(info.label + ':', 20, yPos)
+        doc.setFont(undefined, 'normal')
+        doc.text(info.value, 60, yPos)
+        yPos += 6
+      })
+      yPos += 5
+      
+      const driverFuel = fuelLogs.filter(f => f.driver_id === itemId)
+      if (driverFuel.length > 0) {
+        doc.setFillColor(245, 245, 245)
+        doc.rect(10, yPos - 3, pageWidth - 20, 8, 'F')
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.setTextColor(18, 130, 115)
+        doc.text(lang === 'ar' ? '⛽ رحلات الوقود' : '⛽ Fuel Trips', 15, yPos + 2)
+        yPos += 10
+        
+        doc.setFontSize(9)
+        doc.setFont(undefined, 'normal')
+        doc.setTextColor(0, 0, 0)
+        doc.text(`${lang === 'ar' ? 'عدد الرحلات' : 'Total Trips'}: ${driverFuel.length}`, 20, yPos)
+        yPos += 8
+      }
+      
+      const driverIncidents = incidents.filter(i => i.driver_id === itemId)
+      if (driverIncidents.length > 0) {
+        doc.setFillColor(245, 245, 245)
+        doc.rect(10, yPos - 3, pageWidth - 20, 8, 'F')
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.setTextColor(220, 38, 38)
+        doc.text(lang === 'ar' ? '🚨 الحوادث' : '🚨 Incidents', 15, yPos + 2)
+        yPos += 10
+        
+        doc.setFontSize(9)
+        doc.setFont(undefined, 'normal')
+        doc.setTextColor(0, 0, 0)
+        driverIncidents.slice(0, 8).forEach(i => {
+          doc.text(`• ${i.incident_date} - ${i.description || '-'}`, 20, yPos)
+          yPos += 5
+        })
+      }
+      
+    } else if (type === 'incident') {
+      const incident = incidents.find(i => i.id === itemId)
+      if (!incident) return
+      
+      doc.setFillColor(240, 240, 240)
+      doc.rect(10, yPos - 5, pageWidth - 20, 12, 'F')
+      doc.setFontSize(16)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(220, 38, 38)
+      doc.text(lang === 'ar' ? 'تقرير حادث' : 'Incident Report', pageWidth / 2, yPos + 2, { align: 'center' })
+      yPos += 15
+      
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(0, 0, 0)
+      doc.text(lang === 'ar' ? 'تفاصيل الحادث:' : 'Incident Details:', 15, yPos)
+      yPos += 8
+      
+      doc.setFont(undefined, 'normal')
+      doc.setFontSize(10)
+      const incidentInfo = [
+        { label: lang === 'ar' ? 'التاريخ' : 'Date', value: incident.incident_date },
+        { label: lang === 'ar' ? 'المركبة' : 'Vehicle', value: incident.vehicles?.plate_number || '-' },
+        { label: lang === 'ar' ? 'السائق' : 'Driver', value: incident.drivers?.name || '-' },
+        { label: lang === 'ar' ? 'الموقع' : 'Location', value: incident.location || '-' },
+        { label: lang === 'ar' ? 'التكلفة' : 'Cost', value: `${(incident.repair_cost || 0).toFixed(2)} ${lang === 'ar' ? 'ريال' : 'SAR'}` },
+        { label: lang === 'ar' ? 'الحالة' : 'Status', value: lang === 'ar' ? (incident.status === 'open' ? 'مفتوح' : 'مغلق') : incident.status }
+      ]
+      
+      incidentInfo.forEach(info => {
+        doc.setFont(undefined, 'bold')
+        doc.text(info.label + ':', 20, yPos)
+        doc.setFont(undefined, 'normal')
+        doc.text(info.value, 60, yPos)
+        yPos += 6
+      })
+      
+      if (incident.description) {
+        yPos += 3
+        doc.setFont(undefined, 'bold')
+        doc.text(lang === 'ar' ? 'الوصف:' : 'Description:', 20, yPos)
+        yPos += 5
+        doc.setFont(undefined, 'normal')
+        const descLines = doc.splitTextToSize(incident.description, pageWidth - 50)
+        doc.text(descLines, 25, yPos)
+        yPos += (descLines.length * 5)
+      }
+      
+    } else if (type === 'violation') {
+      const violation = violations.find(v => v.id === itemId)
+      if (!violation) return
+      
+      doc.setFillColor(240, 240, 240)
+      doc.rect(10, yPos - 5, pageWidth - 20, 12, 'F')
+      doc.setFontSize(16)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(220, 38, 38)
+      doc.text(lang === 'ar' ? 'تقرير مخالفة مرورية' : 'Traffic Violation Report', pageWidth / 2, yPos + 2, { align: 'center' })
+      yPos += 15
+      
+      doc.setFontSize(11)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(0, 0, 0)
+      doc.text(lang === 'ar' ? 'تفاصيل المخالفة:' : 'Violation Details:', 15, yPos)
+      yPos += 8
+      
+      doc.setFont(undefined, 'normal')
+      doc.setFontSize(10)
+      const violationInfo = [
+        { label: lang === 'ar' ? 'التاريخ' : 'Date', value: violation.violation_date },
+        { label: lang === 'ar' ? 'رقم المخالفة' : 'Number', value: violation.violation_number || '-' },
+        { label: lang === 'ar' ? 'المركبة' : 'Vehicle', value: violation.vehicles?.plate_number || '-' },
+        { label: lang === 'ar' ? 'السائق' : 'Driver', value: violation.drivers?.name || '-' },
+        { label: lang === 'ar' ? 'النوع' : 'Type', value: violation.violation_type || '-' },
+        { label: lang === 'ar' ? 'الموقع' : 'Location', value: violation.location || '-' },
+        { label: lang === 'ar' ? 'الغرامة' : 'Fine', value: `${(violation.fine_amount || 0).toFixed(2)} ${lang === 'ar' ? 'ريال' : 'SAR'}` },
+        { label: lang === 'ar' ? 'الحالة' : 'Status', value: lang === 'ar' ? (violation.status === 'paid' ? 'مدفوع' : 'غير مدفوع') : violation.status }
+      ]
+      
+      violationInfo.forEach(info => {
+        doc.setFont(undefined, 'bold')
+        doc.text(info.label + ':', 20, yPos)
+        doc.setFont(undefined, 'normal')
+        doc.text(info.value, 60, yPos)
+        yPos += 6
+      })
+    }
+    
+    // تذييل رسمي
+    doc.setDrawColor(18, 130, 115)
+    doc.setLineWidth(0.5)
+    doc.line(10, pageHeight - 20, pageWidth - 10, pageHeight - 20)
+    
+    doc.setFontSize(8)
+    doc.setTextColor(100, 100, 100)
+    doc.setFont(undefined, 'normal')
+    doc.text(lang === 'ar' ? 'أمانة منطقة المدينة المنورة - المجال المرئي' : 'Madinah Regional Municipality - Visual Field', pageWidth / 2, pageHeight - 15, { align: 'center' })
+    doc.text(lang === 'ar' ? 'نظام إدارة الأسطول' : 'Fleet Management System', pageWidth / 2, pageHeight - 10, { align: 'center' })
+    
+    doc.save(`${type}_${itemId}_${Date.now()}.pdf`)
   }
-
-  const addDriver = async () => {
-    setUploading(true)
-    const iqama_image = await uploadFile(iqamaImage, 'iqama')
-    const license_image = await uploadFile(licenseImage, 'licenses')
-    await supabase.from('drivers').insert([{ ...driverForm, iqama_image, license_image }])
-    setShowDriverForm(false)
-    setDriverForm({ full_name: '', national_id: '', passport_number: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
-    setIqamaImage(null); setLicenseImage(null); setUploading(false); fetchData()
+  
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-xl">{lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}</div></div>
+  
+  const renderTable = () => {
+    let data = [], columns = [], tableName = ''
+    
+    if (activeTab === 'vehicles') {
+      data = vehicles
+      tableName = 'vehicles'
+      columns = [
+        { key: 'plate_number', label: t[lang].plateNumber },
+        { key: 'type', label: t[lang].vehicleType },
+        { key: 'model', label: t[lang].model },
+        { key: 'year', label: t[lang].year },
+        { key: 'status', label: t[lang].status, badge: true },
+        { key: 'image', label: lang === 'ar' ? 'الصورة' : 'Image', isImage: true },
+        { key: 'pdf', label: 'PDF', isPdf: true }
+      ]
+    } else if (activeTab === 'drivers') {
+      data = drivers
+      tableName = 'drivers'
+      columns = [
+        { key: 'name', label: t[lang].driverName },
+        { key: 'license_number', label: t[lang].licenseNumber },
+        { key: 'phone', label: t[lang].phone },
+        { key: 'status', label: t[lang].status, badge: true },
+        { key: 'image', label: lang === 'ar' ? 'الصورة' : 'Image', isImage: true },
+        { key: 'pdf', label: 'PDF', isPdf: true }
+      ]
+    } else if (activeTab === 'maintenance') {
+      data = maintenance
+      tableName = 'maintenance'
+      columns = [
+        { key: 'vehicles.plate_number', label: t[lang].vehicle, nested: true },
+        { key: 'maintenance_type', label: t[lang].type },
+        { key: 'maintenance_date', label: t[lang].date },
+        { key: 'cost', label: t[lang].cost }
+      ]
+    } else if (activeTab === 'fuel') {
+      data = fuelLogs
+      tableName = 'fuel_logs'
+      columns = [
+        { key: 'vehicles.plate_number', label: t[lang].vehicle, nested: true },
+        { key: 'drivers.name', label: t[lang].driver, nested: true },
+        { key: 'date', label: t[lang].date },
+        { key: 'quantity', label: t[lang].quantity },
+        { key: 'cost', label: t[lang].cost }
+      ]
+    } else if (activeTab === 'incidents') {
+      data = incidents
+      tableName = 'incidents'
+      columns = [
+        { key: 'vehicles.plate_number', label: t[lang].vehicle, nested: true },
+        { key: 'drivers.name', label: t[lang].driver, nested: true },
+        { key: 'incident_date', label: t[lang].date },
+        { key: 'description', label: t[lang].description },
+        { key: 'repair_cost', label: t[lang].repairCost },
+        { key: 'status', label: t[lang].status, badge: true },
+        { key: 'pdf', label: 'PDF', isPdf: true }
+      ]
+    } else if (activeTab === 'violations') {
+      data = violations
+      tableName = 'violations'
+      columns = [
+        { key: 'vehicles.plate_number', label: t[lang].vehicle, nested: true },
+        { key: 'drivers.name', label: t[lang].driver, nested: true },
+        { key: 'violation_date', label: t[lang].date },
+        { key: 'violation_number', label: t[lang].violationNumber },
+        { key: 'fine_amount', label: t[lang].fineAmount },
+        { key: 'status', label: t[lang].status, badge: true },
+        { key: 'pdf', label: 'PDF', isPdf: true }
+      ]
+    } else if (activeTab === 'users') {
+      data = users
+      tableName = 'users'
+      columns = [
+        { key: 'email', label: t[lang].email },
+        { key: 'role', label: t[lang].role, badge: true }
+      ]
+    }
+    
+    const getValue = (item, key) => {
+      if (key.includes('.')) {
+        const parts = key.split('.')
+        return item[parts[0]]?.[parts[1]] || '-'
+      }
+      return item[key] || '-'
+    }
+    
+    return (
+      <div className="overflow-x-auto border rounded-lg">
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              {columns.map(col => (
+                <th key={col.key} className="px-4 py-3 text-start text-sm font-semibold text-gray-700">{col.label}</th>
+              ))}
+              {(userRole === 'admin' || userRole === 'editor') && (
+                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700"></th>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {data.map(item => (
+              <tr key={item.id} className="hover:bg-gray-50">
+                {columns.map(col => (
+                  <td key={col.key} className="px-4 py-3 text-sm text-gray-700">
+                    {col.isPdf ? (
+                      <button
+                        onClick={() => generatePDF(activeTab === 'fuel' ? 'fuel' : activeTab === 'maintenance' ? 'maintenance' : activeTab === 'incidents' ? 'incident' : activeTab === 'violations' ? 'violation' : activeTab === 'drivers' ? 'driver' : 'vehicle', item.id)}
+                        className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition text-xs font-medium"
+                        title={lang === 'ar' ? 'تحميل PDF' : 'Download PDF'}
+                      >
+                        📄 PDF
+                      </button>
+                    ) : col.isImage ? (
+                      getValue(item, col.key) ? (
+                        <img src={getValue(item, col.key)} alt="" className="w-14 h-14 object-cover rounded-lg shadow-sm" />
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )
+                    ) : col.badge ? (
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                        (getValue(item, col.key) === 'active' || getValue(item, col.key) === 'paid' || getValue(item, col.key) === 'closed') ? 'bg-green-100 text-green-700' : 
+                        (getValue(item, col.key) === 'admin') ? 'bg-purple-100 text-purple-700' :
+                        (getValue(item, col.key) === 'editor') ? 'bg-blue-100 text-blue-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {t[lang][getValue(item, col.key)] || getValue(item, col.key)}
+                      </span>
+                    ) : getValue(item, col.key)}
+                  </td>
+                ))}
+                {(userRole === 'admin' || userRole === 'editor') && (
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2 justify-center">
+                      <button onClick={() => openEditModal(item)} className="text-blue-600 hover:text-blue-800 text-lg">✏️</button>
+                      {userRole === 'admin' && (
+                        <button onClick={() => handleDelete(item.id, tableName)} className="text-red-600 hover:text-red-800 text-lg">🗑️</button>
+                      )}
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
   }
-
-  const addMaintenance = async () => {
-    await supabase.from('maintenance').insert([maintenanceForm])
-    setShowMaintenanceForm(false)
-    setMaintenanceForm({ vehicle_id: '', type: '', description: '', date: '', cost: '', next_date: '', status: 'pending' })
-    fetchData()
-  }
-
-  const addFuel = async () => {
-    const total_cost = fuelForm.liters * fuelForm.cost_per_liter
-    await supabase.from('fuel_logs').insert([{ ...fuelForm, total_cost }])
-    setShowFuelForm(false)
-    setFuelForm({ vehicle_id: '', driver_id: '', date: '', liters: '', cost_per_liter: '', odometer: '' })
-    fetchData()
-  }
-
-  const updatePreparation = async (id, val) => {
-    await supabase.from('vehicles').update({ preparation_status: val }).eq('id', id); fetchData()
-  }
-
-  const updateUserRole = async (userId, newRole) => {
-    await supabase.from('user_roles').update({ role: newRole }).eq('user_id', userId); fetchData()
-  }
-
-  const deleteUserRole = async (userId) => {
-    if (!confirm(lang === 'ar' ? 'Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ØŸ' : 'Are you sure?')) return
-    await supabase.from('user_roles').delete().eq('user_id', userId); fetchData()
-  }
-
-  const canEdit = currentRole === 'admin' || currentRole === 'editor'
-  const canDelete = currentRole === 'admin'
-
-  const deleteVehicle = async (id) => { if (!canDelete) return; await supabase.from('vehicles').delete().eq('id', id); fetchData() }
-  const deleteDriver = async (id) => { if (!canDelete) return; await supabase.from('drivers').delete().eq('id', id); fetchData() }
-  const deleteMaintenance = async (id) => { if (!canDelete) return; await supabase.from('maintenance').delete().eq('id', id); fetchData() }
-  const deleteFuel = async (id) => { if (!canDelete) return; await supabase.from('fuel_logs').delete().eq('id', id); fetchData() }
-  const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/' }
-
-  const totalFuelCost = fuelLogs.reduce((a, b) => a + (b.total_cost || 0), 0)
-  const totalFuelLiters = fuelLogs.reduce((a, b) => a + (Number(b.liters) || 0), 0)
-  const totalMaintenanceCost = maintenance.reduce((a, b) => a + (Number(b.cost) || 0), 0)
-  const activeVehicles = vehicles.filter(v => v.status === 'active').length
-  const readyVehicles = vehicles.filter(v => v.preparation_status === 'ready').length
-  const activeDrivers = drivers.filter(d => d.status === 'active').length
-
-  const statusColor = (s) => s === 'active' ? '#16a34a' : s === 'pending' ? '#d97706' : '#dc2626'
-  const statusBg = (s) => s === 'active' ? '#f0fdf4' : s === 'pending' ? '#fffbeb' : '#fef2f2'
-  const statusLabel = (s) => s === 'active' ? t.active : s === 'pending' ? t.pending : t.inactive
-  const prepColor = (s) => s === 'ready' ? '#16a34a' : s === 'in_progress' ? '#d97706' : '#dc2626'
-  const prepBg = (s) => s === 'ready' ? '#f0fdf4' : s === 'in_progress' ? '#fffbeb' : '#fef2f2'
-  const alertColor = (tp) => tp === 'expired' ? '#dc2626' : tp === 'critical' ? '#ea580c' : tp === 'warning' ? '#d97706' : '#2563eb'
-  const alertBg = (tp) => tp === 'expired' ? '#fef2f2' : tp === 'critical' ? '#fff7ed' : tp === 'warning' ? '#fffbeb' : '#eff6ff'
-  const alertLabel = (tp) => tp === 'expired' ? t.expiredLabel : tp === 'critical' ? t.criticalLabel : tp === 'warning' ? t.warningLabel : t.infoLabel
-  const roleLabel = (r) => r === 'admin' ? t.adminRole : r === 'editor' ? t.editorRole : t.viewerRole
-  const roleColor = (r) => r === 'admin' ? '#7c3aed' : r === 'editor' ? '#ff6b00' : '#16a34a'
-  const roleBg = (r) => r === 'admin' ? '#f5f3ff' : r === 'editor' ? '#fff7f2' : '#f0fdf4'
-
-  const getRegion = (v) => {
-    const code = v.vehicle_code || v.plate_number || ''
-    const firstChar = code.trim()[0]
-    const map = { 'N': 'شمال', 'S': 'جنوب', 'E': 'شرق', 'W': 'غرب' }
-    return map[firstChar] || 'غير محدد'
-  }
-  const filteredVehicles = vehicles.filter(v => regionFilter === 'all' || getRegion(v) === regionFilter).filter(v => (v.plate_number || '').includes(vehicleSearch) || (v.vehicle_code || '').includes(vehicleSearch) || (v.brand || '').includes(vehicleSearch) || (v.model || '').includes(vehicleSearch))
-  const filteredDrivers = drivers.filter(d => (d.full_name || '').includes(driverSearch) || (d.national_id || '').includes(driverSearch) || (d.passport_number || '').includes(driverSearch) || (d.phone || '').includes(driverSearch))
-
-  const vehicleTypes = vehicles.reduce((acc, v) => { const key = v.preparation_status || 'not_ready'; acc[key] = (acc[key] || 0) + 1; return acc }, {})
-  const fuelByVehicle = fuelLogs.reduce((acc, f) => { const key = f.vehicles?.plate_number || '?'; acc[key] = (acc[key] || 0) + (Number(f.total_cost) || 0); return acc }, {})
-  const topFuelVehicles = Object.entries(fuelByVehicle).sort((a, b) => b[1] - a[1]).slice(0, 5)
-
-  const C = { orange: '#ff6b00', orangeLight: '#fff7f2', white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8' }
-  const navItems = [['dashboard','ðŸ“Š',t.dashboard],['vehicles','ðŸš›',t.vehicles],['drivers','ðŸ‘¤',t.drivers],['maintenance','ðŸ”§',t.maintenance],['fuel','â›½',t.fuel],['reports','ðŸ“ˆ',t.reports],['alerts','ðŸ””',t.alerts],['users','ðŸ‘¥',t.users]]
-
-  const st = {
-    input: { width: '100%', padding: '10px 14px', background: '#fafafa', border: `1.5px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box' },
-    label: { color: '#555', fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '6px' },
-    btn: (c, outline) => ({ background: outline ? C.white : (c || C.orange), color: outline ? (c || C.orange) : C.white, border: `2px solid ${c || C.orange}`, borderRadius: '9px', padding: '9px 18px', fontSize: '13px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer' }),
-    badge: (s) => ({ background: statusBg(s), color: statusColor(s), padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', display: 'inline-block' }),
-    modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' },
-    modalBox: { background: C.white, borderRadius: '18px', padding: isMobile ? '20px' : '32px', width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto' },
-    formGrid: { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' },
-    card: { background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: isMobile ? '14px' : '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
-    th: { padding: '10px 12px', textAlign: isRTL ? 'right' : 'left', color: C.muted, fontSize: '11px', fontWeight: '600', borderBottom: `2px solid ${C.border}`, background: '#fafafa', whiteSpace: 'nowrap' },
-    td: { padding: '10px 12px', color: C.text, fontSize: '12px', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' },
-    editBtn: { background: '#fff7f2', border: '1px solid #ffccaa', color: C.orange, borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '600' },
-    deleteBtn: { background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '15px' },
-    prepSelect: (s) => ({ background: prepBg(s), color: prepColor(s), border: `1.5px solid ${prepColor(s)}`, borderRadius: '8px', padding: '3px 6px', fontSize: '10px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer', outline: 'none' }),
-  }
-
-  const FileInput = ({ label, icon, onChange, file }) => (
-    <div>
-      <label style={st.label}>{icon} {label}</label>
-      <label style={{ width: '100%', padding: '10px', background: file ? '#fff7f2' : '#fafafa', border: `2px dashed ${file ? C.orange : C.border}`, borderRadius: '8px', color: file ? C.orange : C.muted, fontSize: '12px', cursor: 'pointer', textAlign: 'center', display: 'block', boxSizing: 'border-box', fontWeight: '600' }}>
-        {file ? `${t.fileSelected} ${file.name}` : `${t.uploadFile} ${label}`}
-        <input type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={e => onChange(e.target.files[0])} />
-      </label>
-    </div>
-  )
-
-  const InputField = ({ label, field, type = 'text' }) => (
-    <div>
-      <label style={st.label}>{label}</label>
-      <input type={type} style={st.input} value={editForm[field] || ''} onChange={e => setEditForm({ ...editForm, [field]: e.target.value })} />
-    </div>
-  )
-
-  const SelectField = ({ label, field, options }) => (
-    <div>
-      <label style={st.label}>{label}</label>
-      <select style={st.input} value={editForm[field] || ''} onChange={e => setEditForm({ ...editForm, [field]: e.target.value })}>
-        {options.map(([val, lbl]) => <option key={val} value={val}>{lbl}</option>)}
-      </select>
-    </div>
-  )
-
-  const BarChart = ({ data, maxVal, color }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {data.map(([label, val]) => (
-        <div key={label}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span style={{ fontSize: '12px', color: C.text }}>{label}</span>
-            <span style={{ fontSize: '12px', fontWeight: '700', color }}>{val.toFixed(0)}</span>
+  
+  const renderForm = () => {
+    if (activeTab === 'vehicles') {
+      return (
+        <>
+          <input value={formData.plate_number || ''} onChange={e => setFormData({...formData, plate_number: e.target.value})} placeholder={t[lang].plateNumber} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.type || ''} onChange={e => setFormData({...formData, type: e.target.value})} placeholder={t[lang].vehicleType} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.model || ''} onChange={e => setFormData({...formData, model: e.target.value})} placeholder={t[lang].model} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.year || ''} onChange={e => setFormData({...formData, year: e.target.value})} placeholder={t[lang].year} type="number" className="w-full px-3 py-2 border rounded-lg" />
+          <select value={formData.status || 'active'} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+            <option value="active">{t[lang].active}</option>
+            <option value="inactive">{t[lang].inactive}</option>
+          </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'صورة المركبة' : 'Vehicle Image'}</label>
+            <input type="file" accept="image/*" onChange={e => setFormData({...formData, imageFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.image && !formData.imageFile && (
+              <a href={editItem.image} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                {lang === 'ar' ? 'عرض الصورة الحالية' : 'View current image'}
+              </a>
+            )}
           </div>
-          <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${maxVal > 0 ? (val / maxVal) * 100 : 0}%`, background: color, borderRadius: '4px' }} />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'الاستمارة (PDF)' : 'Registration (PDF)'}</label>
+            <input type="file" accept=".pdf" onChange={e => setFormData({...formData, istimaraPdfFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.istimara_pdf && !formData.istimaraPdfFile && (
+              <a href={editItem.istimara_pdf} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                📄 {lang === 'ar' ? 'عرض PDF الحالي' : 'View current PDF'}
+              </a>
+            )}
           </div>
-        </div>
-      ))}
-    </div>
-  )
-
-  const thumb = { width: '34px', height: '34px', borderRadius: '6px', objectFit: 'cover', cursor: 'pointer', border: `1px solid ${C.border}` }
-  const imgLink = { color: C.orange, fontSize: '11px', cursor: 'pointer', fontWeight: '600' }
-
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'التأمين (PDF)' : 'Insurance (PDF)'}</label>
+            <input type="file" accept=".pdf" onChange={e => setFormData({...formData, insurancePdfFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.insurance_pdf && !formData.insurancePdfFile && (
+              <a href={editItem.insurance_pdf} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                📄 {lang === 'ar' ? 'عرض PDF الحالي' : 'View current PDF'}
+              </a>
+            )}
+          </div>
+        </>
+      )
+    } else if (activeTab === 'drivers') {
+      return (
+        <>
+          <input value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} placeholder={t[lang].driverName} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.license_number || ''} onChange={e => setFormData({...formData, license_number: e.target.value})} placeholder={t[lang].licenseNumber} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.phone || ''} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder={t[lang].phone} className="w-full px-3 py-2 border rounded-lg" />
+          <select value={formData.status || 'active'} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+            <option value="active">{t[lang].active}</option>
+            <option value="inactive">{t[lang].inactive}</option>
+          </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'صورة السائق' : 'Driver Image'}</label>
+            <input type="file" accept="image/*" onChange={e => setFormData({...formData, imageFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.image && !formData.imageFile && (
+              <a href={editItem.image} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                {lang === 'ar' ? 'عرض الصورة الحالية' : 'View current image'}
+              </a>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'الرخصة (PDF)' : 'License (PDF)'}</label>
+            <input type="file" accept=".pdf" onChange={e => setFormData({...formData, licensePdfFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.license_pdf && !formData.licensePdfFile && (
+              <a href={editItem.license_pdf} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                📄 {lang === 'ar' ? 'عرض PDF الحالي' : 'View current PDF'}
+              </a>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{lang === 'ar' ? 'الإقامة (PDF)' : 'Iqama (PDF)'}</label>
+            <input type="file" accept=".pdf" onChange={e => setFormData({...formData, iqamaPdfFile: e.target.files[0]})} className="w-full px-3 py-2 border rounded-lg text-sm" />
+            {editMode && editItem?.iqama_pdf && !formData.iqamaPdfFile && (
+              <a href={editItem.iqama_pdf} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 block">
+                📄 {lang === 'ar' ? 'عرض PDF الحالي' : 'View current PDF'}
+              </a>
+            )}
+          </div>
+        </>
+      )
+    } else if (activeTab === 'maintenance') {
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].vehicle}</label>
+            {formData.vehicle_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-blue-900 text-sm">
+                    {vehicles.find(v => v.id === formData.vehicle_id)?.plate_number}
+                  </div>
+                  <div className="text-xs text-blue-600">
+                    {vehicles.find(v => v.id === formData.vehicle_id)?.type}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowVehiclePicker(true)}
+                  className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  {lang === 'ar' ? 'تغيير' : 'Change'}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowVehiclePicker(true)}
+                className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-600"
+              >
+                {lang === 'ar' ? 'اضغط لاختيار مركبة' : 'Click to select vehicle'}
+              </button>
+            )}
+          </div>
+          <input value={formData.maintenance_type || ''} onChange={e => setFormData({...formData, maintenance_type: e.target.value})} placeholder={t[lang].type} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.maintenance_date || ''} onChange={e => setFormData({...formData, maintenance_date: e.target.value})} type="date" className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.cost || ''} onChange={e => setFormData({...formData, cost: e.target.value})} placeholder={t[lang].cost} type="number" className="w-full px-3 py-2 border rounded-lg" />
+          <textarea value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder={t[lang].notes} className="w-full px-3 py-2 border rounded-lg" rows="2"></textarea>
+        </>
+      )
+    } else if (activeTab === 'fuel') {
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].vehicle}</label>
+            {formData.vehicle_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-blue-900 text-sm">
+                    {vehicles.find(v => v.id === formData.vehicle_id)?.plate_number}
+                  </div>
+                </div>
+                <button type="button" onClick={() => setShowVehiclePicker(true)} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">
+                  {lang === 'ar' ? 'تغيير' : 'Change'}
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowVehiclePicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-600">
+                {lang === 'ar' ? 'اضغط لاختيار مركبة' : 'Click to select vehicle'}
+              </button>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].driver} ({lang === 'ar' ? 'اختياري' : 'Optional'})</label>
+            {formData.driver_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-green-900 text-sm">
+                    {drivers.find(d => d.id === formData.driver_id)?.name}
+                  </div>
+                </div>
+                <button type="button" onClick={() => setFormData({...formData, driver_id: ''})} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
+                  {lang === 'ar' ? 'إزالة' : 'Remove'}
+                </button>
+                <button type="button" onClick={() => setShowDriverPicker(true)} className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">
+                  {lang === 'ar' ? 'تغيير' : 'Change'}
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowDriverPicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition text-sm text-gray-600">
+                {lang === 'ar' ? 'اضغط لاختيار سائق (اختياري)' : 'Click to select driver (optional)'}
+              </button>
+            )}
+          </div>
+          <input value={formData.date || ''} onChange={e => setFormData({...formData, date: e.target.value})} type="date" className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.quantity || ''} onChange={e => setFormData({...formData, quantity: e.target.value})} placeholder={t[lang].quantity} type="number" className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.cost || ''} onChange={e => setFormData({...formData, cost: e.target.value})} placeholder={t[lang].cost} type="number" className="w-full px-3 py-2 border rounded-lg" />
+          <textarea value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder={t[lang].notes} className="w-full px-3 py-2 border rounded-lg" rows="2"></textarea>
+        </>
+      )
+    } else if (activeTab === 'incidents') {
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].vehicle}</label>
+            {formData.vehicle_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex-1"><div className="font-medium text-blue-900 text-sm">{vehicles.find(v => v.id === formData.vehicle_id)?.plate_number}</div></div>
+                <button type="button" onClick={() => setShowVehiclePicker(true)} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">{lang === 'ar' ? 'تغيير' : 'Change'}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowVehiclePicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-600">{lang === 'ar' ? 'اضغط لاختيار مركبة' : 'Click to select vehicle'}</button>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].driver} ({lang === 'ar' ? 'اختياري' : 'Optional'})</label>
+            {formData.driver_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex-1"><div className="font-medium text-green-900 text-sm">{drivers.find(d => d.id === formData.driver_id)?.name}</div></div>
+                <button type="button" onClick={() => setFormData({...formData, driver_id: ''})} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">{lang === 'ar' ? 'إزالة' : 'Remove'}</button>
+                <button type="button" onClick={() => setShowDriverPicker(true)} className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">{lang === 'ar' ? 'تغيير' : 'Change'}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowDriverPicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition text-sm text-gray-600">{lang === 'ar' ? 'اضغط لاختيار سائق (اختياري)' : 'Click to select driver (optional)'}</button>
+            )}
+          </div>
+          <input value={formData.incident_date || ''} onChange={e => setFormData({...formData, incident_date: e.target.value})} type="date" className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} placeholder={t[lang].description} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.location || ''} onChange={e => setFormData({...formData, location: e.target.value})} placeholder={t[lang].location} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.repair_cost || ''} onChange={e => setFormData({...formData, repair_cost: e.target.value})} placeholder={t[lang].repairCost} type="number" className="w-full px-3 py-2 border rounded-lg" />
+          <select value={formData.status || 'open'} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+            <option value="open">{t[lang].open}</option>
+            <option value="closed">{t[lang].closed}</option>
+          </select>
+          <textarea value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder={t[lang].notes} className="w-full px-3 py-2 border rounded-lg" rows="2"></textarea>
+        </>
+      )
+    } else if (activeTab === 'violations') {
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].vehicle}</label>
+            {formData.vehicle_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex-1"><div className="font-medium text-blue-900 text-sm">{vehicles.find(v => v.id === formData.vehicle_id)?.plate_number}</div></div>
+                <button type="button" onClick={() => setShowVehiclePicker(true)} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">{lang === 'ar' ? 'تغيير' : 'Change'}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowVehiclePicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-sm text-gray-600">{lang === 'ar' ? 'اضغط لاختيار مركبة' : 'Click to select vehicle'}</button>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t[lang].driver} ({lang === 'ar' ? 'اختياري' : 'Optional'})</label>
+            {formData.driver_id ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex-1"><div className="font-medium text-green-900 text-sm">{drivers.find(d => d.id === formData.driver_id)?.name}</div></div>
+                <button type="button" onClick={() => setFormData({...formData, driver_id: ''})} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">{lang === 'ar' ? 'إزالة' : 'Remove'}</button>
+                <button type="button" onClick={() => setShowDriverPicker(true)} className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">{lang === 'ar' ? 'تغيير' : 'Change'}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowDriverPicker(true)} className="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition text-sm text-gray-600">{lang === 'ar' ? 'اضغط لاختيار سائق (اختياري)' : 'Click to select driver (optional)'}</button>
+            )}
+          </div>
+          <input value={formData.violation_date || ''} onChange={e => setFormData({...formData, violation_date: e.target.value})} type="date" className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.violation_number || ''} onChange={e => setFormData({...formData, violation_number: e.target.value})} placeholder={t[lang].violationNumber} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.violation_type || ''} onChange={e => setFormData({...formData, violation_type: e.target.value})} placeholder={t[lang].type} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.location || ''} onChange={e => setFormData({...formData, location: e.target.value})} placeholder={t[lang].location} className="w-full px-3 py-2 border rounded-lg" />
+          <input value={formData.fine_amount || ''} onChange={e => setFormData({...formData, fine_amount: e.target.value})} placeholder={t[lang].fineAmount} type="number" className="w-full px-3 py-2 border rounded-lg" />
+          <select value={formData.status || 'unpaid'} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+            <option value="unpaid">{t[lang].unpaid}</option>
+            <option value="paid">{t[lang].paid}</option>
+          </select>
+          <textarea value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder={t[lang].notes} className="w-full px-3 py-2 border rounded-lg" rows="2"></textarea>
+        </>
+      )
+    } else if (activeTab === 'users') {
+      return (
+        <>
+          <input value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} placeholder={t[lang].email} type="email" className="w-full px-3 py-2 border rounded-lg" disabled={editMode} />
+          <select value={formData.role || 'viewer'} onChange={e => setFormData({...formData, role: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+            <option value="viewer">{t[lang].viewer}</option>
+            <option value="editor">{t[lang].editor}</option>
+            <option value="admin">{t[lang].admin}</option>
+          </select>
+        </>
+      )
+    }
+  }
+  
+  const getStats = () => {
+    if (activeTab === 'vehicles') {
+      return [
+        { label: t[lang].total, value: vehicles.length, color: 'blue' },
+        { label: t[lang].active, value: vehicles.filter(v => v.status === 'active').length, color: 'green' },
+        { label: t[lang].inactive, value: vehicles.filter(v => v.status === 'inactive').length, color: 'red' }
+      ]
+    } else if (activeTab === 'drivers') {
+      return [
+        { label: t[lang].total, value: drivers.length, color: 'blue' },
+        { label: t[lang].active, value: drivers.filter(d => d.status === 'active').length, color: 'green' },
+        { label: t[lang].inactive, value: drivers.filter(d => d.status === 'inactive').length, color: 'red' }
+      ]
+    } else if (activeTab === 'incidents') {
+      return [
+        { label: t[lang].total, value: incidents.length, color: 'blue' },
+        { label: t[lang].open, value: incidents.filter(i => i.status === 'open').length, color: 'yellow' },
+        { label: t[lang].closed, value: incidents.filter(i => i.status === 'closed').length, color: 'green' }
+      ]
+    } else if (activeTab === 'violations') {
+      return [
+        { label: t[lang].total, value: violations.length, color: 'blue' },
+        { label: t[lang].unpaid, value: violations.filter(v => v.status === 'unpaid').length, color: 'red' },
+        { label: t[lang].paid, value: violations.filter(v => v.status === 'paid').length, color: 'green' }
+      ]
+    }
+    return []
+  }
+  
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: 'Cairo, sans-serif', direction: isRTL ? 'rtl' : 'ltr' }}>
-      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
-
-      {previewImage && (
-        <div style={{ ...st.modal, zIndex: 200 }} onClick={() => setPreviewImage(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: '14px', padding: '16px', maxWidth: '90vw' }}>
-            <img src={previewImage} style={{ maxWidth: '80vw', maxHeight: '80vh', borderRadius: '8px' }} alt="preview" />
-            <div style={{ textAlign: 'center', marginTop: '12px' }}><button style={st.btn('#888', true)} onClick={() => setPreviewImage(null)}>{t.close}</button></div>
-          </div>
-        </div>
-      )}
-
-      {isMobile && sidebarOpen && <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 30 }} onClick={() => setSidebarOpen(false)} />}
-
-      {/* Top Bar */}
-      <div style={{ background: C.white, borderBottom: `3px solid ${C.orange}`, padding: isMobile ? '8px 16px' : '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20, boxShadow: '0 2px 12px rgba(255,107,0,0.08)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {isMobile && <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: C.orange }}>â˜°</button>}
-          <img src="/logo-madinah.jpeg" alt="" style={{ height: isMobile ? '36px' : '50px', objectFit: 'contain' }} />
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: isMobile ? '11px' : '15px', fontWeight: '900', color: C.orange }}>
-            {isMobile ? (isRTL ? 'Ø£Ø³Ø·ÙˆÙ„ Ù†Ø¸Ø§ÙØ© Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©' : 'Cleaning Fleet') : (isRTL ? 'Ø£Ø³Ø·ÙˆÙ„ Ù…Ø´Ø§Ø±ÙŠØ¹ Ù†Ø¸Ø§ÙØ© Ø§Ù„Ù…Ø¯ÙŠÙ†Ø© Ø§Ù„Ù…Ù†ÙˆØ±Ø©' : 'Madinah Cleaning Fleet Management')}
-          </div>
-          {!isMobile && <div style={{ fontSize: '11px', color: C.muted }}>{t.yourPermission}: <span style={{ color: roleColor(currentRole), fontWeight: '700' }}>{roleLabel(currentRole)}</span></div>}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Language Switch */}
-          <button onClick={switchLang} style={{ background: C.orangeLight, border: `1.5px solid ${C.orange}`, borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: C.orange, fontFamily: 'Cairo, sans-serif' }}>
-            {lang === 'ar' ? 'ðŸ‡¬ðŸ‡§ EN' : 'ðŸ‡¸ðŸ‡¦ AR'}
-          </button>
-          {criticalAlerts.length > 0 && (
-            <div onClick={() => setActiveTab('alerts')} style={{ position: 'relative', cursor: 'pointer' }}>
-              <span style={{ fontSize: '22px' }}>ðŸ””</span>
-              <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>
+    <div className={`min-h-screen bg-gray-50 ${lang === 'ar' ? 'rtl' : 'ltr'}`} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="bg-white shadow-sm border-b sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">F</div>
+              <h1 className="text-xl font-bold text-gray-900">{t[lang].dashboard}</h1>
             </div>
-          )}
-          {!isMobile && <img src="/logo-mag.jpeg" alt="" style={{ height: '40px', objectFit: 'contain' }} />}
-          <button onClick={handleLogout} style={{ ...st.btn('#dc2626', true), padding: isMobile ? '6px 10px' : '9px 18px', fontSize: isMobile ? '11px' : '13px' }}>{t.logout}</button>
+            <div className="flex items-center gap-4">
+              <button onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} className="px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 transition font-medium">
+                {lang === 'ar' ? 'English' : 'العربية'}
+              </button>
+              <div className="text-sm text-gray-600">{user?.email}</div>
+              <button onClick={handleLogout} className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-medium">
+                {t[lang].logout}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div style={{ display: 'flex' }}>
-        {/* Sidebar */}
-        <div style={{ width: '220px', background: C.white, borderLeft: isRTL ? `1px solid ${C.border}` : 'none', borderRight: isRTL ? 'none' : `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', padding: '16px 0', position: isMobile ? 'fixed' : 'sticky', [isRTL ? 'right' : 'left']: isMobile ? (sidebarOpen ? 0 : (isRTL ? '-220px' : '-220px')) : 0, top: isMobile ? 0 : '63px', height: isMobile ? '100vh' : 'calc(100vh - 63px)', overflowY: 'auto', zIndex: isMobile ? 40 : 10, transition: `${isRTL ? 'right' : 'left'} 0.3s ease` }}>
-          {isMobile && (
-            <div style={{ padding: '16px 20px 8px', borderBottom: `1px solid ${C.border}`, marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: C.orange }}>{t.menu}</div>
-              <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>âœ•</button>
-            </div>
-          )}
-          {navItems.map(([id, icon, label]) => (
-            (!['users'].includes(id) || currentRole === 'admin') && (
-              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === id ? '700' : '400', color: activeTab === id ? C.orange : C.muted, background: activeTab === id ? C.orangeLight : 'transparent', borderRight: isRTL && activeTab === id ? `3px solid ${C.orange}` : isRTL ? '3px solid transparent' : 'none', borderLeft: !isRTL && activeTab === id ? `3px solid ${C.orange}` : !isRTL ? '3px solid transparent' : 'none', position: 'relative' }}
-                onClick={() => { setActiveTab(id); if (isMobile) setSidebarOpen(false) }}>
-                <span style={{ fontSize: '17px' }}>{icon}</span>
-                <span>{label}</span>
-                {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ marginRight: isRTL ? 'auto' : 0, marginLeft: isRTL ? 0 : 'auto', background: '#dc2626', color: '#fff', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: '700' }}>{criticalAlerts.length}</span>}
-              </div>
-            )
-          ))}
-          <div style={{ flex: 1 }} />
-          <div style={{ padding: '16px 20px', borderTop: `1px solid ${C.border}` }}>
-            <button onClick={handleLogout} style={{ ...st.btn('#dc2626', true), width: '100%' }}>{t.logout}</button>
-          </div>
-        </div>
-
-        {/* Main */}
-        <div style={{ flex: 1, padding: isMobile ? '16px' : '24px', overflowX: 'auto', [isRTL ? 'marginRight' : 'marginLeft']: isMobile ? 0 : '220px' }}>
-
-          {/* Dashboard */}
-          {activeTab === 'dashboard' && (
-            <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>ðŸ“Š {t.dashboardTitle}</div>
-              {criticalAlerts.length > 0 && (
-                <div onClick={() => setActiveTab('alerts')} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '24px' }}>ðŸš¨</span>
-                  <div><div style={{ fontWeight: '700', color: '#dc2626', fontSize: '14px' }}>{t.criticalAlert.replace('{n}', criticalAlerts.length)}</div><div style={{ color: '#888', fontSize: '12px' }}>{t.clickToView}</div></div>
-                  <div style={{ marginRight: isRTL ? 'auto' : 0, marginLeft: isRTL ? 0 : 'auto', color: '#dc2626', fontSize: '20px' }}>{isRTL ? 'â†' : 'â†’'}</div>
-                </div>
-              )}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[['ðŸš›',t.vehicles,vehicles.length,'#ff6b00'],['ðŸ‘¤',t.drivers,drivers.length,'#16a34a'],['ðŸ”§',t.maintenance,maintenance.length,'#d97706'],['ðŸ””',t.alerts,alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
-                  <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: isMobile ? '14px' : '20px', borderTop: `4px solid ${color}` }}>
-                    <div style={{ color: C.muted, fontSize: '11px', marginBottom: '6px', fontWeight: '600' }}>{icon} {label}</div>
-                    <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: '900', color }}>{val}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
-                <div style={st.card}>
-                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>ðŸš› {t.latestVehicles}</div>
-                  {vehicles.slice(0,5).map(v => (
-                    <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
-                      <div style={{ fontSize: '13px', fontWeight: '600' }}>{v.plate_number}</div>
-                      <span style={st.badge(v.status)}>{statusLabel(v.status)}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={st.card}>
-                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>ðŸ”” {t.latestAlerts}</div>
-                  {alerts.slice(0,5).map(a => (
-                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
-                      <span>{a.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '12px', fontWeight: '600', color: alertColor(a.type) }}>{a.title}</div>
-                        <div style={{ fontSize: '11px', color: C.muted }}>{a.detail}</div>
-                      </div>
-                    </div>
-                  ))}
-                  {alerts.length === 0 && <div style={{ color: '#16a34a', textAlign: 'center', padding: '20px', fontSize: '13px' }}>{t.noAlerts}</div>}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Vehicles */}
-          {activeTab === 'vehicles' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>ðŸš› {t.vehiclesTitle} ({filteredVehicles.length})</div>
-                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowVehicleForm(true)}>{t.addVehicle}</button>}
-              </div>
-              <input style={{ ...st.input, marginBottom: '16px' }} placeholder={t.searchVehicles} value={vehicleSearch} onChange={e => setVehicleSearch(e.target.value)} />
-              <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
-                {[["all","ðŸ—ºï¸ Ø§Ù„ÙƒÙ„"],["Ø´Ù…Ø§Ù„","â¬†ï¸ Ø´Ù…Ø§Ù„"],["Ø¬Ù†ÙˆØ¨","â¬‡ï¸ Ø¬Ù†ÙˆØ¨"],["Ø´Ø±Ù‚","âž¡ï¸ Ø´Ø±Ù‚"],["ØºØ±Ø¨","â¬…ï¸ ØºØ±Ø¨"]].map(([r, label]) => (
-                  <button key={r} onClick={() => setRegionFilter(r)} style={{ padding: "7px 16px", borderRadius: "20px", border: `2px solid ${regionFilter === r ? "#ff6b00" : "#e8e8e8"}`, background: regionFilter === r ? "#ff6b00" : "#fff", color: regionFilter === r ? "#fff" : "#888", fontWeight: "700", fontSize: "12px", cursor: "pointer", fontFamily: "Cairo, sans-serif" }}>
-                    {label} {r !== "all" && `(${vehicles.filter(v => getRegion(v) === r).length})`}
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex gap-6">
+          <div className="w-64 flex-shrink-0">
+            <div className="bg-white rounded-xl shadow-sm p-4 space-y-1 sticky top-24">
+              {['vehicles', 'drivers', 'maintenance', 'fuel', 'incidents', 'violations', ...(userRole === 'admin' ? ['users'] : []), 'reports'].map(tab => {
+                const icons = { vehicles: '🚗', drivers: '👤', maintenance: '🔧', fuel: '⛽', incidents: '🚨', violations: '🚦', users: '👥', reports: '📊' }
+                return (
+                  <button key={tab} onClick={() => setActiveTab(tab)} className={`w-full text-${lang === 'ar' ? 'right' : 'left'} px-4 py-3 rounded-lg transition font-medium ${activeTab === tab ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-700'}`}>
+                    <span className="mr-2">{icons[tab]}</span>{t[lang][tab]}
                   </button>
-                ))}
-              </div>
-              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
-                  <thead><tr>
-                    <th style={st.th}>{t.image}</th><th style={st.th}>{t.plateNumber}</th><th style={st.th}>{t.code}</th>
-                    {!isMobile && <><th style={st.th}>{t.brand}</th><th style={st.th}>{t.model}</th><th style={st.th}>{t.year}</th></>}
-                    <th style={st.th}>{t.status}</th><th style={st.th}>{t.preparationStatus}</th>
-                    <th style={st.th}>{t.istimara}</th>
-                    {canEdit && <th style={st.th}>{t.edit}</th>}
-                    {canDelete && <th style={st.th}>ðŸ—‘ï¸</th>}
-                  </tr></thead>
-                  <tbody>
-                    {filteredVehicles.map(v => (
-                      <tr key={v.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                        <td style={st.td}>{v.vehicle_image ? <img src={v.vehicle_image} style={thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" /> : 'â€”'}</td>
-                        <td style={{ ...st.td, fontWeight: '700' }}>{v.plate_number}</td>
-                        <td style={st.td}>{v.vehicle_code || 'â€”'}</td>
-                        {!isMobile && <><td style={st.td}>{v.brand}</td><td style={st.td}>{v.model}</td><td style={st.td}>{v.year}</td></>}
-                        <td style={st.td}><span style={st.badge(v.status)}>{statusLabel(v.status)}</span></td>
-                        <td style={st.td}>
-                          {canEdit ? (
-                            <select value={v.preparation_status || 'not_ready'} onChange={e => updatePreparation(v.id, e.target.value)} style={st.prepSelect(v.preparation_status || 'not_ready')}>
-                              <option value="not_ready">âŒ</option><option value="in_progress">ðŸ”„</option><option value="ready">âœ…</option>
-                            </select>
-                          ) : <span>{v.preparation_status === 'ready' ? 'âœ…' : v.preparation_status === 'in_progress' ? 'ðŸ”„' : 'âŒ'}</span>}
-                        </td>
-                        <td style={st.td}>{v.istimara_image ? <span style={imgLink} onClick={() => setPreviewImage(v.istimara_image)}>{t.view}</span> : 'â€”'}</td>
-                        {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('vehicle', v)}>âœï¸</button></td>}
-                        {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteVehicle(v.id)}>ðŸ—‘ï¸</button></td>}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {filteredVehicles.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>{t.noResults}</div>}
-              </div>
+                )
+              })}
             </div>
-          )}
-
-          {/* Drivers */}
-          {activeTab === 'drivers' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>ðŸ‘¤ {t.driversTitle} ({filteredDrivers.length})</div>
-                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowDriverForm(true)}>{t.addDriver}</button>}
-              </div>
-              <input style={{ ...st.input, marginBottom: '16px' }} placeholder={t.searchDrivers} value={driverSearch} onChange={e => setDriverSearch(e.target.value)} />
-              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
-                  <thead><tr>
-                    <th style={st.th}>{t.fullName}</th><th style={st.th}>{t.nationalId}</th>
-                    {!isMobile && <><th style={st.th}>{t.passport}</th><th style={st.th}>{t.phone}</th><th style={st.th}>{t.license}</th><th style={st.th}>{t.expiry}</th></>}
-                    <th style={st.th}>{t.iqama}</th><th style={st.th}>{t.license}</th>
-                    <th style={st.th}>{t.status}</th>
-                    {canEdit && <th style={st.th}>{t.edit}</th>}
-                    {canDelete && <th style={st.th}>ðŸ—‘ï¸</th>}
-                  </tr></thead>
-                  <tbody>
-                    {filteredDrivers.map(d => {
-                      const days = daysUntil(d.license_expiry)
-                      const expiring = days !== null && days <= 30
-                      return (
-                        <tr key={d.id} style={{ background: expiring ? '#fffbeb' : 'transparent' }} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background = expiring ? '#fffbeb' : 'transparent'}>
-                          <td style={{ ...st.td, fontWeight: '700' }}>{d.full_name}</td>
-                          <td style={st.td}>{d.national_id || 'â€”'}</td>
-                          {!isMobile && <><td style={st.td}>{d.passport_number || 'â€”'}</td><td style={st.td}>{d.phone || 'â€”'}</td><td style={st.td}>{d.license_number || 'â€”'}</td>
-                          <td style={st.td}><span style={{ color: days !== null && days < 0 ? '#dc2626' : days !== null && days <= 14 ? '#ea580c' : days !== null && days <= 30 ? '#d97706' : C.text, fontWeight: expiring ? '700' : '400' }}>{d.license_expiry || 'â€”'}{days !== null && days < 0 && ' âš ï¸'}</span></td></>}
-                          <td style={st.td}>{d.iqama_image ? <span style={imgLink} onClick={() => setPreviewImage(d.iqama_image)}>{t.view}</span> : 'â€”'}</td>
-                          <td style={st.td}>{d.license_image ? <span style={imgLink} onClick={() => setPreviewImage(d.license_image)}>{t.view}</span> : 'â€”'}</td>
-                          <td style={st.td}><span style={st.badge(d.status)}>{statusLabel(d.status)}</span></td>
-                          {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('driver', d)}>âœï¸</button></td>}
-                          {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteDriver(d.id)}>ðŸ—‘ï¸</button></td>}
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-                {filteredDrivers.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>{t.noResults}</div>}
-              </div>
-            </div>
-          )}
-
-          {/* Maintenance */}
-          {activeTab === 'maintenance' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>ðŸ”§ {t.maintenanceTitle}</div>
-                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowMaintenanceForm(true)}>{t.addMaintenance}</button>}
-              </div>
-              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
-                  <thead><tr>
-                    <th style={st.th}>{t.vehicle}</th><th style={st.th}>{t.type}</th>
-                    {!isMobile && <><th style={st.th}>{t.description}</th><th style={st.th}>{t.date}</th></>}
-                    <th style={st.th}>{t.cost}</th><th style={st.th}>{t.nextDate}</th>
-                    <th style={st.th}>{t.status}</th>
-                    {canEdit && <th style={st.th}>{t.edit}</th>}
-                    {canDelete && <th style={st.th}>ðŸ—‘ï¸</th>}
-                  </tr></thead>
-                  <tbody>
-                    {maintenance.map(m => {
-                      const days = daysUntil(m.next_date)
-                      const expiring = days !== null && days <= 7
-                      return (
-                        <tr key={m.id} style={{ background: expiring ? '#fff7ed' : 'transparent' }} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background = expiring ? '#fff7ed' : 'transparent'}>
-                          <td style={{ ...st.td, fontWeight: '700' }}>{m.vehicles?.plate_number}</td>
-                          <td style={st.td}>{m.type}</td>
-                          {!isMobile && <><td style={st.td}>{m.description}</td><td style={st.td}>{m.date}</td></>}
-                          <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{m.cost} {t.sar}</span></td>
-                          <td style={st.td}><span style={{ color: expiring ? '#dc2626' : C.text, fontWeight: expiring ? '700' : '400' }}>{m.next_date || 'â€”'}{expiring && ' âš ï¸'}</span></td>
-                          <td style={st.td}><span style={st.badge(m.status)}>{statusLabel(m.status)}</span></td>
-                          {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('maintenance', m)}>âœï¸</button></td>}
-                          {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteMaintenance(m.id)}>ðŸ—‘ï¸</button></td>}
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-                {maintenance.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>{t.noMaintenance}</div>}
-              </div>
-            </div>
-          )}
-
-          {/* Fuel */}
-          {activeTab === 'fuel' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>â›½ {t.fuelTitle}</div>
-                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowFuelForm(true)}>{t.addFuel}</button>}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px', borderTop: '4px solid #ff6b00' }}>
-                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>â›½ {t.totalCost}</div>
-                  <div style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: '900', color: '#ff6b00' }}>{totalFuelCost.toFixed(0)} {t.sar}</div>
-                </div>
-                <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px', borderTop: '4px solid #7c3aed' }}>
-                  <div style={{ color: C.muted, fontSize: '11px', fontWeight: '600' }}>ðŸ“‹ {t.totalRecords}</div>
-                  <div style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: '900', color: '#7c3aed' }}>{fuelLogs.length}</div>
-                </div>
-              </div>
-              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
-                  <thead><tr>
-                    <th style={st.th}>{t.vehicle}</th><th style={st.th}>{t.driver}</th>
-                    {!isMobile && <><th style={st.th}>{t.date}</th><th style={st.th}>{t.liters}</th></>}
-                    <th style={st.th}>{t.total}</th>
-                    {canEdit && <th style={st.th}>{t.edit}</th>}
-                    {canDelete && <th style={st.th}>ðŸ—‘ï¸</th>}
-                  </tr></thead>
-                  <tbody>
-                    {fuelLogs.map(f => (
-                      <tr key={f.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                        <td style={{ ...st.td, fontWeight: '700' }}>{f.vehicles?.plate_number}</td>
-                        <td style={st.td}>{f.drivers?.full_name}</td>
-                        {!isMobile && <><td style={st.td}>{f.date}</td><td style={st.td}>{f.liters}</td></>}
-                        <td style={st.td}><span style={{ color: C.orange, fontWeight: '700' }}>{f.total_cost} {t.sar}</span></td>
-                        {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('fuel', f)}>âœï¸</button></td>}
-                        {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteFuel(f.id)}>ðŸ—‘ï¸</button></td>}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {fuelLogs.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>{t.noFuel}</div>}
-              </div>
-            </div>
-          )}
-
-          {/* Reports */}
-          {activeTab === 'reports' && (
-            <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>ðŸ“ˆ {t.reportsTitle}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[[`ðŸš›`,t.totalVehicles,vehicles.length,'#ff6b00'],[`âœ…`,t.activeVehicles,activeVehicles,'#16a34a'],[`ðŸŸ¢`,t.readyVehicles,readyVehicles,'#16a34a'],[`ðŸ‘¤`,t.totalDrivers,drivers.length,'#2563eb'],[`ðŸ‘`,t.activeDrivers,activeDrivers,'#16a34a'],[`ðŸ””`,t.activeAlerts,alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
-                  <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', borderTop: `3px solid ${color}` }}>
-                    <div style={{ color: C.muted, fontSize: '11px', marginBottom: '6px' }}>{icon} {label}</div>
-                    <div style={{ fontSize: '26px', fontWeight: '900', color }}>{val}</div>
+          </div>
+          
+          <div className="flex-1">
+            {activeTab !== 'reports' ? (
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">{t[lang][activeTab]}</h2>
+                  <div className="flex gap-2">
+                    {(userRole === 'admin' || userRole === 'editor') && (
+                      <button onClick={openAddModal} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                        + {t[lang].add}
+                      </button>
+                    )}
+                    <button onClick={() => exportToExcel(activeTab === 'vehicles' ? vehicles : activeTab === 'drivers' ? drivers : activeTab === 'maintenance' ? maintenance : activeTab === 'fuel' ? fuelLogs : activeTab === 'incidents' ? incidents : activeTab === 'violations' ? violations : users, activeTab)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">
+                      {t[lang].export}
+                    </button>
                   </div>
-                ))}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div style={st.card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ fontWeight: '800' }}>â›½ {t.fuelReport}</div>
-                    <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>{t.export}</button>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                    <div style={{ background: '#fff7f2', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: C.orange }}>{totalFuelCost.toFixed(0)}</div>
-                      <div style={{ fontSize: '11px', color: C.muted }}>{t.totalFuelCost}</div>
-                    </div>
-                    <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#16a34a' }}>{totalFuelLiters.toFixed(0)}</div>
-                      <div style={{ fontSize: '11px', color: C.muted }}>{t.totalLiters}</div>
-                    </div>
-                  </div>
-                  <div style={{ fontWeight: '700', fontSize: '12px', marginBottom: '10px', color: C.muted }}>{t.top5Fuel}</div>
-                  <BarChart data={topFuelVehicles} maxVal={topFuelVehicles[0]?.[1] || 1} color={C.orange} />
                 </div>
-                <div style={st.card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ fontWeight: '800' }}>ðŸ”§ {t.maintenanceReport}</div>
-                    <button onClick={exportMaintenance} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>{t.export}</button>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                    <div style={{ background: '#fffbeb', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#d97706' }}>{totalMaintenanceCost.toFixed(0)}</div>
-                      <div style={{ fontSize: '11px', color: C.muted }}>{t.totalFuelCost}</div>
-                    </div>
-                    <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#16a34a' }}>{maintenance.filter(m => m.status === 'active').length}</div>
-                      <div style={{ fontSize: '11px', color: C.muted }}>{t.completedMaintenance}</div>
-                    </div>
-                  </div>
-                  <BarChart data={[[t.completedLabel,maintenance.filter(m=>m.status==='active').length],[t.pendingLabel,maintenance.filter(m=>m.status==='pending').length],[t.cancelledLabel,maintenance.filter(m=>m.status==='inactive').length]]} maxVal={maintenance.length||1} color="#d97706" />
-                </div>
-              </div>
-              <div style={st.card}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div style={{ fontWeight: '800' }}>ðŸš› {t.vehiclesReport}</div>
-                  <button onClick={exportVehicles} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>{t.export}</button>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-                  {[[t.ready,readyVehicles,'#16a34a'],[t.inProgress,vehicleTypes['in_progress']||0,'#d97706'],[t.notReady,vehicleTypes['not_ready']||0,'#dc2626']].map(([label,val,color]) => (
-                    <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '26px', fontWeight: '900', color }}>{val}</div>
-                      <div style={{ fontSize: '12px', color: C.muted }}>{label}</div>
-                      <div style={{ fontSize: '11px', color, fontWeight: '700' }}>{vehicles.length > 0 ? ((val/vehicles.length)*100).toFixed(0) : 0}%</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div style={{ ...st.card, marginTop: '16px' }}>
-                <div style={{ fontWeight: '800', marginBottom: '16px' }}>ðŸ“¥ {t.exportData}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '10px' }}>
-                  <button onClick={exportVehicles} style={{ ...st.btn('#ff6b00'), padding: '12px' }}>ðŸš› {t.vehicles}</button>
-                  <button onClick={exportDrivers} style={{ ...st.btn('#2563eb'), padding: '12px' }}>ðŸ‘¤ {t.drivers}</button>
-                  <button onClick={exportMaintenance} style={{ ...st.btn('#d97706'), padding: '12px' }}>ðŸ”§ {t.maintenance}</button>
-                  <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '12px' }}>â›½ {t.fuel}</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Alerts */}
-          {activeTab === 'alerts' && (
-            <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>ðŸ”” {t.alertsTitle} ({alerts.length})</div>
-              {alerts.length === 0 ? (
-                <div style={{ ...st.card, textAlign: 'center', padding: '60px' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>âœ…</div>
-                  <div style={{ fontSize: '16px', fontWeight: '700', color: '#16a34a' }}>{t.noAlertsTitle}</div>
-                  <div style={{ color: C.muted, fontSize: '13px', marginTop: '8px' }}>{t.noAlertsDesc}</div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {alerts.map(a => (
-                    <div key={a.id} style={{ background: alertBg(a.type), border: `1px solid ${alertColor(a.type)}33`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', [isRTL ? 'borderRight' : 'borderLeft']: `4px solid ${alertColor(a.type)}` }}>
-                      <span style={{ fontSize: '28px' }}>{a.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: '700', color: alertColor(a.type), fontSize: '14px' }}>{a.title}</div>
-                        <div style={{ color: C.muted, fontSize: '12px', marginTop: '4px' }}>{a.detail}</div>
+                
+                {getStats().length > 0 && (
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    {getStats().map((stat, i) => (
+                      <div key={i} className={`bg-gradient-to-br from-${stat.color}-50 to-${stat.color}-100 rounded-lg p-4 border border-${stat.color}-200`}>
+                        <div className={`text-sm text-${stat.color}-600 mb-1 font-medium`}>{stat.label}</div>
+                        <div className={`text-3xl font-bold text-${stat.color}-900`}>{stat.value}</div>
                       </div>
-                      <div style={{ background: alertColor(a.type), color: '#fff', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '700' }}>{alertLabel(a.type)}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Users */}
-          {activeTab === 'users' && currentRole === 'admin' && (
-            <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>ðŸ‘¥ {t.usersTitle}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[['admin',t.adminRole,t.adminDesc,'#7c3aed'],['editor',t.editorRole,t.editorDesc,'#ff6b00'],['viewer',t.viewerRole,t.viewerDesc,'#16a34a']].map(([role,label,desc,color]) => (
-                  <div key={role} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', borderTop: `3px solid ${color}` }}>
-                    <div style={{ fontWeight: '700', color, marginBottom: '4px' }}>{label}</div>
-                    <div style={{ fontSize: '12px', color: C.muted }}>{desc}</div>
-                    <div style={{ fontSize: '20px', fontWeight: '900', color, marginTop: '8px' }}>{userRoles.filter(u => u.role === role).length}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
-                <div style={{ fontWeight: '700', color: '#1d4ed8', marginBottom: '8px' }}>{t.howToAdd}</div>
-                <div style={{ fontSize: '13px', color: '#1e40af' }}>{t.howToAddDesc}</div>
-              </div>
-              <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr>
-                    <th style={st.th}>{t.user}</th>
-                    <th style={st.th}>{t.currentRole}</th>
-                    <th style={st.th}>{t.changeRole}</th>
-                    <th style={st.th}>{t.delete}</th>
-                  </tr></thead>
-                  <tbody>
-                    {userRoles.map(u => (
-                      <tr key={u.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                        <td style={st.td}>
-                          <div style={{ fontWeight: '700' }}>{u.full_name || t.user}</div>
-                          <div style={{ fontSize: '11px', color: C.muted }}>{u.user_id?.substring(0, 16)}...</div>
-                        </td>
-                        <td style={st.td}><span style={{ background: roleBg(u.role), color: roleColor(u.role), padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' }}>{roleLabel(u.role)}</span></td>
-                        <td style={st.td}>
-                          {u.user_id !== currentUser?.id ? (
-                            <select value={u.role} onChange={e => updateUserRole(u.user_id, e.target.value)} style={{ ...st.input, width: 'auto', padding: '6px 10px', fontSize: '12px' }}>
-                              <option value="admin">{t.adminRole}</option>
-                              <option value="editor">{t.editorRole}</option>
-                              <option value="viewer">{t.viewerRole}</option>
-                            </select>
-                          ) : <span style={{ color: C.muted, fontSize: '12px' }}>{t.you}</span>}
-                        </td>
-                        <td style={st.td}>
-                          {u.user_id !== currentUser?.id ? <button onClick={() => deleteUserRole(u.user_id)} style={st.deleteBtn}>ðŸ—‘ï¸</button> : 'â€”'}
-                        </td>
-                      </tr>
                     ))}
-                  </tbody>
-                </table>
-                {userRoles.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>{t.noUsers}</div>}
+                  </div>
+                )}
+                
+                {renderTable()}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">{t[lang].reports}</h2>
+                
+                {/* إحصائيات عامة */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                    <div className="text-sm text-blue-600 mb-1 font-medium">{lang === 'ar' ? 'إجمالي المركبات' : 'Total Vehicles'}</div>
+                    <div className="text-3xl font-bold text-blue-900">{vehicles.length}</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+                    <div className="text-sm text-green-600 mb-1 font-medium">{lang === 'ar' ? 'إجمالي السائقين' : 'Total Drivers'}</div>
+                    <div className="text-3xl font-bold text-green-900">{drivers.length}</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+                    <div className="text-sm text-orange-600 mb-1 font-medium">{lang === 'ar' ? 'الحوادث المفتوحة' : 'Open Incidents'}</div>
+                    <div className="text-3xl font-bold text-orange-900">{incidents.filter(i => i.status === 'open').length}</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border border-red-200">
+                    <div className="text-sm text-red-600 mb-1 font-medium">{lang === 'ar' ? 'مخالفات غير مدفوعة' : 'Unpaid Violations'}</div>
+                    <div className="text-3xl font-bold text-red-900">{violations.filter(v => v.status === 'unpaid').length}</div>
+                  </div>
+                </div>
+                
+                {/* التكاليف */}
+                <div className="grid grid-cols-3 gap-4 mb-8">
+                  <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+                    <div className="text-sm text-gray-600 mb-1">{lang === 'ar' ? 'إجمالي الصيانة' : 'Total Maintenance'}</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {maintenance.reduce((sum, m) => sum + (m.cost || 0), 0).toFixed(2)} {lang === 'ar' ? 'ريال' : 'SAR'}
+                    </div>
+                  </div>
+                  <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+                    <div className="text-sm text-gray-600 mb-1">{lang === 'ar' ? 'إجمالي الوقود' : 'Total Fuel'}</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {fuelLogs.reduce((sum, f) => sum + (f.cost || 0), 0).toFixed(2)} {lang === 'ar' ? 'ريال' : 'SAR'}
+                    </div>
+                  </div>
+                  <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+                    <div className="text-sm text-gray-600 mb-1">{lang === 'ar' ? 'إجمالي المخالفات' : 'Total Fines'}</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {violations.reduce((sum, v) => sum + (v.fine_amount || 0), 0).toFixed(2)} {lang === 'ar' ? 'ريال' : 'SAR'}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">{lang === 'ar' ? 'تصدير التقارير' : 'Export Reports'}</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <button onClick={() => exportToExcel(vehicles, 'vehicles')} className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm">
+                      📊 {lang === 'ar' ? 'المركبات' : 'Vehicles'}
+                    </button>
+                    <button onClick={() => exportToExcel(drivers, 'drivers')} className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm">
+                      📊 {lang === 'ar' ? 'السائقين' : 'Drivers'}
+                    </button>
+                    <button onClick={() => exportToExcel(maintenance, 'maintenance')} className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm">
+                      📊 {lang === 'ar' ? 'الصيانة' : 'Maintenance'}
+                    </button>
+                    <button onClick={() => exportToExcel(fuelLogs, 'fuel')} className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm">
+                      📊 {lang === 'ar' ? 'الوقود' : 'Fuel'}
+                    </button>
+                    <button onClick={() => exportToExcel(incidents, 'incidents')} className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm">
+                      📊 {lang === 'ar' ? 'الحوادث' : 'Incidents'}
+                    </button>
+                    <button onClick={() => exportToExcel(violations, 'violations')} className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm">
+                      📊 {lang === 'ar' ? 'المخالفات' : 'Violations'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Edit Modal */}
-      {editItem && (
-        <div style={st.modal}>
-          <div style={st.modalBox}>
-            <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '20px' }}>âœï¸ {t.edit} {editType === 'vehicle' ? t.vehicles : editType === 'driver' ? t.drivers : editType === 'maintenance' ? t.maintenance : t.fuel}</div>
-            {editType === 'vehicle' && (<div style={st.formGrid}>
-              <div><label style={st.label}>{t.plateNumber}</label><input style={st.input} value={editForm.plate_number||''} onChange={e=>setEditForm({...editForm,plate_number:e.target.value})} /></div>
-              <div><label style={st.label}>{t.vehicleCode}</label><input style={st.input} value={editForm.vehicle_code||''} onChange={e=>setEditForm({...editForm,vehicle_code:e.target.value})} /></div>
-              <div><label style={st.label}>{t.type}</label><input style={st.input} value={editForm.type||''} onChange={e=>setEditForm({...editForm,type:e.target.value})} /></div>
-              <div><label style={st.label}>{t.brand}</label><input style={st.input} value={editForm.brand||''} onChange={e=>setEditForm({...editForm,brand:e.target.value})} /></div>
-              <div><label style={st.label}>{t.model}</label><input style={st.input} value={editForm.model||''} onChange={e=>setEditForm({...editForm,model:e.target.value})} /></div>
-              <div><label style={st.label}>{t.year}</label><input style={st.input} value={editForm.year||''} onChange={e=>setEditForm({...editForm,year:e.target.value})} /></div>
-              <div><label style={st.label}>{t.color}</label><input style={st.input} value={editForm.color||''} onChange={e=>setEditForm({...editForm,color:e.target.value})} /></div>
-              <div><label style={st.label}>{t.fuelType}</label><input style={st.input} value={editForm.fuel_type||''} onChange={e=>setEditForm({...editForm,fuel_type:e.target.value})} /></div>
-              <div><label style={st.label}>{t.status}</label><select style={st.input} value={editForm.status||''} onChange={e=>setEditForm({...editForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option><option value="pending">{t.pending}</option></select></div>
-              <div><label style={st.label}>{t.preparationStatus}</label><select style={st.input} value={editForm.preparation_status||''} onChange={e=>setEditForm({...editForm,preparation_status:e.target.value})}><option value="not_ready">{t.notReady}</option><option value="in_progress">{t.inProgress}</option><option value="ready">{t.ready}</option></select></div>
-              <FileInput label={t.vehicleImage} icon="ðŸš›" onChange={setEditVehicleImage} file={editVehicleImage} />
-              <FileInput label={t.istamaraImage} icon="ðŸ“„" onChange={setEditIstamaraImage} file={editIstamaraImage} />
-            </div>)}
-            {editType === 'driver' && (<div style={st.formGrid}>
-              <div><label style={st.label}>{t.fullName}</label><input style={st.input} value={editForm.full_name||''} onChange={e=>setEditForm({...editForm,full_name:e.target.value})} /></div>
-              <div><label style={st.label}>{t.nationalId}</label><input style={st.input} value={editForm.national_id||''} onChange={e=>setEditForm({...editForm,national_id:e.target.value})} /></div>
-              <div><label style={st.label}>{t.passportNumber}</label><input style={st.input} value={editForm.passport_number||''} onChange={e=>setEditForm({...editForm,passport_number:e.target.value})} /></div>
-              <div><label style={st.label}>{t.phone}</label><input style={st.input} value={editForm.phone||''} onChange={e=>setEditForm({...editForm,phone:e.target.value})} /></div>
-              <div><label style={st.label}>{t.licenseNumber}</label><input style={st.input} value={editForm.license_number||''} onChange={e=>setEditForm({...editForm,license_number:e.target.value})} /></div>
-              <div><label style={st.label}>{t.licenseExpiry}</label><input type="date" style={st.input} value={editForm.license_expiry||''} onChange={e=>setEditForm({...editForm,license_expiry:e.target.value})} /></div>
-              <div><label style={st.label}>{t.status}</label><select style={st.input} value={editForm.status||''} onChange={e=>setEditForm({...editForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option></select></div>
-              <FileInput label={t.iqamaImage} icon="ðŸªª" onChange={setEditIqamaImage} file={editIqamaImage} />
-              <FileInput label={t.licenseImage} icon="ðŸš—" onChange={setEditLicenseImage} file={editLicenseImage} />
-            </div>)}
-            {editType === 'maintenance' && (<div style={st.formGrid}>
-              <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={editForm.vehicle_id||''} onChange={e=>setEditForm({...editForm,vehicle_id:e.target.value})}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-              <div><label style={st.label}>{t.type}</label><input style={st.input} value={editForm.type||''} onChange={e=>setEditForm({...editForm,type:e.target.value})} /></div>
-              <div><label style={st.label}>{t.description}</label><input style={st.input} value={editForm.description||''} onChange={e=>setEditForm({...editForm,description:e.target.value})} /></div>
-              <div><label style={st.label}>{t.cost}</label><input style={st.input} value={editForm.cost||''} onChange={e=>setEditForm({...editForm,cost:e.target.value})} /></div>
-              <div><label style={st.label}>{t.date}</label><input type="date" style={st.input} value={editForm.date||''} onChange={e=>setEditForm({...editForm,date:e.target.value})} /></div>
-              <div><label style={st.label}>{t.nextDate}</label><input type="date" style={st.input} value={editForm.next_date||''} onChange={e=>setEditForm({...editForm,next_date:e.target.value})} /></div>
-              <div><label style={st.label}>{t.status}</label><select style={st.input} value={editForm.status||''} onChange={e=>setEditForm({...editForm,status:e.target.value})}><option value="pending">{t.pending}</option><option value="active">{t.completed}</option><option value="inactive">{t.cancelled}</option></select></div>
-            </div>)}
-            {editType === 'fuel' && (<div style={st.formGrid}>
-              <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={editForm.vehicle_id||''} onChange={e=>setEditForm({...editForm,vehicle_id:e.target.value})}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-              <div><label style={st.label}>{t.driver}</label><select style={st.input} value={editForm.driver_id||''} onChange={e=>setEditForm({...editForm,driver_id:e.target.value})}>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
-              <div><label style={st.label}>{t.date}</label><input type="date" style={st.input} value={editForm.date||''} onChange={e=>setEditForm({...editForm,date:e.target.value})} /></div>
-              <div><label style={st.label}>{t.liters}</label><input type="number" style={st.input} value={editForm.liters||''} onChange={e=>setEditForm({...editForm,liters:e.target.value})} /></div>
-              <div><label style={st.label}>{t.pricePerLiter}</label><input type="number" style={st.input} value={editForm.cost_per_liter||''} onChange={e=>setEditForm({...editForm,cost_per_liter:e.target.value})} /></div>
-              <div><label style={st.label}>{t.odometer}</label><input type="number" style={st.input} value={editForm.odometer||''} onChange={e=>setEditForm({...editForm,odometer:e.target.value})} /></div>
-            </div>)}
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button style={st.btn()} onClick={saveEdit} disabled={uploading}>{uploading ? t.saving : `ðŸ’¾ ${t.save}`}</button>
-              <button style={st.btn('#888', true)} onClick={() => setEditItem(null)}>{t.cancel}</button>
+      
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-4">{editMode ? t[lang].edit : t[lang].add} {t[lang][activeTab]}</h3>
+            <div className="space-y-3">
+              {renderForm()}
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={handleSubmit} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                {t[lang].save}
+              </button>
+              <button onClick={closeModal} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">
+                {t[lang].cancel}
+              </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Add Vehicle Modal */}
-      {showVehicleForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>ðŸš› {t.addVehicleTitle}</div>
-        <div style={st.formGrid}>
-          {[[`plate_number`,t.plateNumber],[`vehicle_code`,t.vehicleCode],[`type`,t.type],[`brand`,t.brand],[`model`,t.model],[`year`,t.year],[`color`,t.color],[`fuel_type`,t.fuelType]].map(([key,label]) => (
-            <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={vehicleForm[key]} onChange={e => setVehicleForm({...vehicleForm,[key]:e.target.value})} /></div>
-          ))}
-          <div><label style={st.label}>{t.status}</label><select style={st.input} value={vehicleForm.status} onChange={e => setVehicleForm({...vehicleForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option><option value="pending">{t.pending}</option></select></div>
-          <div><label style={st.label}>{t.preparationStatus}</label><select style={st.input} value={vehicleForm.preparation_status} onChange={e => setVehicleForm({...vehicleForm,preparation_status:e.target.value})}><option value="not_ready">{t.notReady}</option><option value="in_progress">{t.inProgress}</option><option value="ready">{t.ready}</option></select></div>
-          <FileInput label={t.vehicleImage} icon="ðŸš›" onChange={setVehicleImage} file={vehicleImage} />
-          <FileInput label={t.istamaraImage} icon="ðŸ“„" onChange={setIstamaraImage} file={istamaraImage} />
-        </div>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button style={st.btn()} onClick={addVehicle} disabled={uploading}>{uploading ? t.uploading : t.save}</button>
-          <button style={st.btn('#888', true)} onClick={() => setShowVehicleForm(false)}>{t.cancel}</button>
-        </div>
-      </div></div>)}
-
-      {/* Add Driver Modal */}
-      {showDriverForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>ðŸ‘¤ {t.addDriverTitle}</div>
-        <div style={st.formGrid}>
-          {[[`full_name`,t.fullName],[`national_id`,t.nationalId],[`passport_number`,t.passportNumber],[`phone`,t.phone],[`license_number`,t.licenseNumber]].map(([key,label]) => (
-            <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={driverForm[key]} onChange={e => setDriverForm({...driverForm,[key]:e.target.value})} /></div>
-          ))}
-          <div><label style={st.label}>{t.licenseExpiry}</label><input type="date" style={st.input} value={driverForm.license_expiry} onChange={e => setDriverForm({...driverForm,license_expiry:e.target.value})} /></div>
-          <div><label style={st.label}>{t.status}</label><select style={st.input} value={driverForm.status} onChange={e => setDriverForm({...driverForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option></select></div>
-          <FileInput label={t.iqamaImage} icon="ðŸªª" onChange={setIqamaImage} file={iqamaImage} />
-          <FileInput label={t.licenseImage} icon="ðŸš—" onChange={setLicenseImage} file={licenseImage} />
-        </div>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button style={st.btn()} onClick={addDriver} disabled={uploading}>{uploading ? t.uploading : t.save}</button>
-          <button style={st.btn('#888', true)} onClick={() => setShowDriverForm(false)}>{t.cancel}</button>
-        </div>
-      </div></div>)}
-
-      {/* Add Maintenance Modal */}
-      {showMaintenanceForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>ðŸ”§ {t.addMaintenanceTitle}</div>
-        <div style={st.formGrid}>
-          <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={maintenanceForm.vehicle_id} onChange={e => setMaintenanceForm({...maintenanceForm,vehicle_id:e.target.value})}><option value="">{t.selectVehicle}</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-          <div><label style={st.label}>{t.type}</label><input style={st.input} value={maintenanceForm.type} onChange={e => setMaintenanceForm({...maintenanceForm,type:e.target.value})} /></div>
-          <div><label style={st.label}>{t.description}</label><input style={st.input} value={maintenanceForm.description} onChange={e => setMaintenanceForm({...maintenanceForm,description:e.target.value})} /></div>
-          <div><label style={st.label}>{t.cost}</label><input style={st.input} value={maintenanceForm.cost} onChange={e => setMaintenanceForm({...maintenanceForm,cost:e.target.value})} /></div>
-          <div><label style={st.label}>{t.date}</label><input type="date" style={st.input} value={maintenanceForm.date} onChange={e => setMaintenanceForm({...maintenanceForm,date:e.target.value})} /></div>
-          <div><label style={st.label}>{t.nextDate}</label><input type="date" style={st.input} value={maintenanceForm.next_date} onChange={e => setMaintenanceForm({...maintenanceForm,next_date:e.target.value})} /></div>
-          <div><label style={st.label}>{t.status}</label><select style={st.input} value={maintenanceForm.status} onChange={e => setMaintenanceForm({...maintenanceForm,status:e.target.value})}><option value="pending">{t.pending}</option><option value="active">{t.completed}</option><option value="inactive">{t.cancelled}</option></select></div>
-        </div>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button style={st.btn()} onClick={addMaintenance}>{t.save}</button>
-          <button style={st.btn('#888', true)} onClick={() => setShowMaintenanceForm(false)}>{t.cancel}</button>
-        </div>
-      </div></div>)}
-
-      {/* Add Fuel Modal */}
-      {showFuelForm && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>â›½ {t.addFuelTitle}</div>
-        <div style={st.formGrid}>
-          <div><label style={st.label}>{t.vehicle}</label><select style={st.input} value={fuelForm.vehicle_id} onChange={e => setFuelForm({...fuelForm,vehicle_id:e.target.value})}><option value="">{t.selectVehicle}</option>{vehicles.map(v=><option key={v.id} value={v.id}>{v.plate_number}</option>)}</select></div>
-          <div><label style={st.label}>{t.driver}</label><select style={st.input} value={fuelForm.driver_id} onChange={e => setFuelForm({...fuelForm,driver_id:e.target.value})}><option value="">{t.selectDriver}</option>{drivers.map(d=><option key={d.id} value={d.id}>{d.full_name}</option>)}</select></div>
-          <div><label style={st.label}>{t.date}</label><input type="date" style={st.input} value={fuelForm.date} onChange={e => setFuelForm({...fuelForm,date:e.target.value})} /></div>
-          <div><label style={st.label}>{t.liters}</label><input type="number" style={st.input} value={fuelForm.liters} onChange={e => setFuelForm({...fuelForm,liters:e.target.value})} /></div>
-          <div><label style={st.label}>{t.pricePerLiter}</label><input type="number" style={st.input} value={fuelForm.cost_per_liter} onChange={e => setFuelForm({...fuelForm,cost_per_liter:e.target.value})} /></div>
-          <div><label style={st.label}>{t.odometer}</label><input type="number" style={st.input} value={fuelForm.odometer} onChange={e => setFuelForm({...fuelForm,odometer:e.target.value})} /></div>
-        </div>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button style={st.btn()} onClick={addFuel}>{t.save}</button>
-          <button style={st.btn('#888', true)} onClick={() => setShowFuelForm(false)}>{t.cancel}</button>
-        </div>
-      </div></div>)}
-
-      {/* Mobile bottom nav */}
-      {isMobile && (
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: C.white, borderTop: `2px solid ${C.border}`, display: 'flex', justifyContent: 'space-around', padding: '6px 0', zIndex: 15 }}>
-          {navItems.filter(([id]) => id !== 'users' || currentRole === 'admin').map(([id, icon, label]) => (
-            <div key={id} onClick={() => setActiveTab(id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', cursor: 'pointer', color: activeTab === id ? C.orange : C.muted, fontSize: '9px', fontWeight: activeTab === id ? '700' : '400', minWidth: '36px', position: 'relative' }}>
-              <span style={{ fontSize: '16px' }}>{icon}</span>
-              <span>{label.split(' ')[0]}</span>
-              {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ position: 'absolute', top: '-2px', right: '2px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '13px', height: '13px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>}
+      
+      {/* نافذة البحث عن مركبة */}
+      {showVehiclePicker && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-4">{lang === 'ar' ? 'اختيار مركبة' : 'Select Vehicle'}</h3>
+            <input
+              type="text"
+              value={pickerSearch}
+              onChange={e => setPickerSearch(e.target.value)}
+              placeholder={lang === 'ar' ? 'ابحث برقم اللوحة أو النوع...' : 'Search by plate or type...'}
+              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg mb-4 focus:border-blue-500 focus:outline-none"
+              autoFocus
+            />
+            <div className="max-h-96 overflow-y-auto space-y-2">
+              {vehicles.filter(v => 
+                v.plate_number?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                v.type?.toLowerCase().includes(pickerSearch.toLowerCase())
+              ).map(vehicle => (
+                <button
+                  key={vehicle.id}
+                  onClick={() => {
+                    setFormData({...formData, vehicle_id: vehicle.id})
+                    setShowVehiclePicker(false)
+                    setPickerSearch('')
+                  }}
+                  className="w-full text-start px-4 py-3 bg-gray-50 hover:bg-blue-50 rounded-lg transition border border-gray-200 hover:border-blue-300"
+                >
+                  <div className="font-medium text-gray-900">{vehicle.plate_number}</div>
+                  <div className="text-sm text-gray-600">{vehicle.type} • {vehicle.model || '-'}</div>
+                </button>
+              ))}
+              {vehicles.filter(v => 
+                v.plate_number?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                v.type?.toLowerCase().includes(pickerSearch.toLowerCase())
+              ).length === 0 && (
+                <div className="text-center py-8 text-gray-500">{lang === 'ar' ? 'لا توجد نتائج' : 'No results'}</div>
+              )}
             </div>
-          ))}
+            <button
+              onClick={() => { setShowVehiclePicker(false); setPickerSearch('') }}
+              className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+            >
+              {t[lang].cancel}
+            </button>
+          </div>
         </div>
       )}
-      {isMobile && <div style={{ height: '70px' }} />}
+      
+      {/* نافذة البحث عن سائق */}
+      {showDriverPicker && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-4">{lang === 'ar' ? 'اختيار سائق' : 'Select Driver'}</h3>
+            <input
+              type="text"
+              value={pickerSearch}
+              onChange={e => setPickerSearch(e.target.value)}
+              placeholder={lang === 'ar' ? 'ابحث بالاسم أو رقم الرخصة...' : 'Search by name or license...'}
+              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg mb-4 focus:border-blue-500 focus:outline-none"
+              autoFocus
+            />
+            <div className="max-h-96 overflow-y-auto space-y-2">
+              {drivers.filter(d => 
+                d.name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                d.license_number?.toLowerCase().includes(pickerSearch.toLowerCase())
+              ).map(driver => (
+                <button
+                  key={driver.id}
+                  onClick={() => {
+                    setFormData({...formData, driver_id: driver.id})
+                    setShowDriverPicker(false)
+                    setPickerSearch('')
+                  }}
+                  className="w-full text-start px-4 py-3 bg-gray-50 hover:bg-green-50 rounded-lg transition border border-gray-200 hover:border-green-300"
+                >
+                  <div className="font-medium text-gray-900">{driver.name}</div>
+                  <div className="text-sm text-gray-600">{driver.license_number} • {driver.phone || '-'}</div>
+                </button>
+              ))}
+              {drivers.filter(d => 
+                d.name?.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                d.license_number?.toLowerCase().includes(pickerSearch.toLowerCase())
+              ).length === 0 && (
+                <div className="text-center py-8 text-gray-500">{lang === 'ar' ? 'لا توجد نتائج' : 'No results'}</div>
+              )}
+            </div>
+            <button
+              onClick={() => { setShowDriverPicker(false); setPickerSearch('') }}
+              className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+            >
+              {t[lang].cancel}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-
