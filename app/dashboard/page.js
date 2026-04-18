@@ -29,7 +29,8 @@ export default function Dashboard() {
   const [showDriverPicker, setShowDriverPicker] = useState(false)
   const [showVehiclePicker, setShowVehiclePicker] = useState(false)
   const [pickerSearch, setPickerSearch] = useState('')
-  
+  const [regionFilter, setRegionFilter] = useState('all')
+
   // حقول النماذج
   const [formData, setFormData] = useState({})
   
@@ -193,21 +194,21 @@ export default function Dashboard() {
     fetchData()
   }
   
-  const exportToExcelconst generatePDF = (type, itemId) => {
-  const doc = new jsPDF()
-  const w = doc.internal.pageSize.getWidth()
-  
-  doc.setFillColor(18, 130, 115)
-  doc.rect(0, 0, w, 35, 'F')
-  doc.setTextColor(255, 255, 255)
-  doc.setFontSize(16)
-  doc.text('أمانة المدينة - المجال المرئي', w/2, 20, {align: 'center'})
-  
-  doc.setTextColor(0, 0, 0)
-  doc.setFontSize(12)
-  doc.text('تقرير ' + type, 15, 50)
-  doc.save(type + '.pdf')
-} = (data, filename) => {
+  const generatePDF = (type, itemId) => {
+    const doc = new jsPDF()
+    const w = doc.internal.pageSize.getWidth()
+    doc.setFillColor(18, 130, 115)
+    doc.rect(0, 0, w, 35, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(16)
+    doc.text('أمانة المدينة - المجال المرئي', w/2, 20, {align: 'center'})
+    doc.setTextColor(0, 0, 0)
+    doc.setFontSize(12)
+    doc.text('تقرير ' + type, 15, 50)
+    doc.save(type + '.pdf')
+  }
+
+  const exportToExcel = (data, filename) => {
     if (!data?.length) { alert('No data'); return }
     const csv = [Object.keys(data[0]).join(','), ...data.map(r => Object.values(r).map(v => `"${v}"`).join(','))].join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -226,14 +227,21 @@ export default function Dashboard() {
     const { data } = supabase.storage.from('fleet-files').getPublicUrl(filePath)
     return data.publicUrl
   }
-  
+
+  const getRegion = (vehicle) => {
+    const code = vehicle.vehicle_code || vehicle.plate_letters || vehicle.plate_number || ''
+    const firstChar = code.trim().toUpperCase()[0]
+    const map = { 'N': 'شمال', 'S': 'جنوب', 'E': 'شرق', 'W': 'غرب' }
+    return map[firstChar] || 'غير محدد'
+  }
+
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-xl">{lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}</div></div>
   
   const renderTable = () => {
     let data = [], columns = [], tableName = ''
     
     if (activeTab === 'vehicles') {
-      data = vehicles
+      data = vehicles.filter(v => regionFilter === 'all' || getRegion(v) === regionFilter)
       tableName = 'vehicles'
       columns = [
        { key: 'plate_display', label: t[lang].plateNumber },
@@ -681,7 +689,7 @@ export default function Dashboard() {
     }
     return []
   }
-  
+
   return (
     <div className={`min-h-screen bg-gray-50 ${lang === 'ar' ? 'rtl' : 'ltr'}`} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <div className="bg-white shadow-sm border-b sticky top-0 z-10">
@@ -747,6 +755,28 @@ export default function Dashboard() {
                   </div>
                 )}
                 
+                {activeTab === 'vehicles' && (
+                  <div className="flex gap-2 mb-4 flex-wrap">
+                    {['all', 'شمال', 'جنوب', 'شرق', 'غرب'].map(r => (
+                      <button
+                        key={r}
+                        onClick={() => setRegionFilter(r)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition border ${
+                          regionFilter === r
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {r === 'all' ? 'الكل' : r === 'شمال' ? 'شمال' : r === 'جنوب' ? 'جنوب' : r === 'شرق' ? 'شرق' : 'غرب'}
+                        {r !== 'all' && (
+                          <span className="mr-1 text-xs opacity-75">
+                            ({vehicles.filter(v => getRegion(v) === r).length})
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {renderTable()}
               </div>
             ) : (

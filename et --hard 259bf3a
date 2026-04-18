@@ -1,0 +1,113 @@
+[33mcommit 091206736cbf32ba9f4efc6d8e26e1f0cc314e02[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Thu Apr 16 18:07:04 2026 +0300
+
+    revert to working version
+
+[33mcommit 259bf3a3ebc8d2552f92d6c5bccfc5814a68092c[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Wed Apr 15 17:25:49 2026 +0300
+
+    separate plate letters and numbers
+
+[33mcommit 3c11f9696ba66316741da63b81daa720ea26d33c[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Wed Apr 15 15:37:25 2026 +0300
+
+    add PDF
+
+[33mcommit d5116748c525956bb0204f7014051271420e94ae[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Mon Apr 13 17:16:26 2026 +0300
+
+    add smart search
+
+[33mcommit 0b06252408473024962c5161afe9c1c6505a8986[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Mon Apr 13 17:12:38 2026 +0300
+
+    add images and pdf upload
+
+[33mcommit e5679d40f5ab07430c5b149dec22b49dc7ecee98[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Mon Apr 13 17:02:29 2026 +0300
+
+    phase 1 complete
+
+[33mcommit 702db870644bf62a9662baea5fb2ef8cdcbdb043[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Mon Apr 13 03:03:00 2026 +0300
+
+    add incidents and violations
+
+[33mcommit 439018643c863f75261a55687d961463cb99ccae[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Sun Apr 12 18:44:35 2026 +0300
+
+    add bilingual Arabic English support
+
+[33mcommit 49dd9fef0541d2c75d5c597101120dc5214cb052[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Sun Apr 12 16:28:07 2026 +0300
+
+    enable role change from dashboard
+
+[33mcommit ca57395cc974b36adfd8170d2d691cf1c6cda688[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Sun Apr 12 16:19:02 2026 +0300
+
+    fix roles - admin only from supabase
+
+[33mcommit e4daabe897bb262d24dec3c45db91c2a705e9c60[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Sun Apr 12 16:07:38 2026 +0300
+
+    add user roles management
+
+[33mcommit 6158b9f57f3688c0315a27de333b0b7f373d6b31[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Sun Apr 12 15:49:41 2026 +0300
+
+    add reports and excel export
+
+[33mcommit c5cebb35c951ec5e26270df502b7eeafd3f33ac8[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Sun Apr 12 15:38:03 2026 +0300
+
+    add alerts system
+
+[33mcommit dfd6aa5fdf2b82dd43296663eb81c08927a60110[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Sun Apr 12 15:30:29 2026 +0300
+
+    responsive design + search
+
+[33mcommit 4c8fb836edea82e335b950eea07c213a827e5a73[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Sun Apr 12 07:52:01 2026 +0300
+
+    add image upload in edit
+
+[33mcommit aece1b24089f97057e1910dce341da48e4948b7b[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Sat Apr 11 22:30:11 2026 +0300
+
+    add edit feature
+
+[33mcommit 8631a56fda516b0218f25f841e8e0de00bc24777[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Sat Apr 11 21:18:17 2026 +0300
+
+    add preparation and passport
+
+[33mcommit 80d7e9a2c2840cb165127babbc8923d1f725ab69[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Sat Apr 11 20:58:31 2026 +0300
+
+    new design
+
+[33mcommit 196a4e168312568e52a056ac6e5b114d73d8cf26[m
+Author: faris <eng.fares98@gmail.com>
+Date:   Sat Apr 11 20:25:19 2026 +0300
+
+    first commit
