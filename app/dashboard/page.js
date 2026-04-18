@@ -48,6 +48,10 @@ export default function Dashboard() {
   const [editIqamaImage, setEditIqamaImage] = useState(null)
   const [editLicenseImage, setEditLicenseImage] = useState(null)
   const [previewImage, setPreviewImage] = useState(null)
+  const [showBulkUpload, setShowBulkUpload] = useState(false)
+  const [bulkFiles, setBulkFiles] = useState([])
+  const [bulkResults, setBulkResults] = useState([])
+  const [bulkUploading, setBulkUploading] = useState(false)
 
   useEffect(() => {
     const savedLang = localStorage.getItem('lang') || 'ar'
@@ -144,6 +148,31 @@ export default function Dashboard() {
     if (error) return null
     const { data } = supabase.storage.from('fleet-files').getPublicUrl(fileName)
     return data.publicUrl
+  }
+
+  const bulkUploadIstamara = async () => {
+    if (!bulkFiles.length) return
+    setBulkUploading(true)
+    const results = []
+    for (const file of bulkFiles) {
+      // استخرج الأرقام من اسم الملف فقط
+      const numMatch = file.name.replace(/\.[^.]+$/, '').match(/\d+/)
+      const fileNum = numMatch ? numMatch[0] : null
+      if (!fileNum) { results.push({ file: file.name, status: 'error', msg: 'لا يوجد رقم في الاسم' }); continue }
+      // ابحث عن مركبة رقم لوحتها يحتوي على هذا الرقم
+      const matched = vehicles.find(v => (v.plate_number || '').replace(/\s/g, '').includes(fileNum))
+      if (!matched) { results.push({ file: file.name, status: 'notfound', msg: `لم يتم العثور على مركبة: ${fileNum}` }); continue }
+      const ext = file.name.split('.').pop()
+      const fileName = `istimara/${matched.id}_${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('fleet-files').upload(fileName, file)
+      if (error) { results.push({ file: file.name, status: 'error', msg: 'فشل الرفع' }); continue }
+      const { data } = supabase.storage.from('fleet-files').getPublicUrl(fileName)
+      await supabase.from('vehicles').update({ istimara_image: data.publicUrl }).eq('id', matched.id)
+      results.push({ file: file.name, status: 'success', msg: `✅ ${matched.plate_number}` })
+    }
+    setBulkResults(results)
+    setBulkUploading(false)
+    fetchData()
   }
 
   const openEdit = (type, item) => {
@@ -439,7 +468,10 @@ export default function Dashboard() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🚛 {t.vehiclesTitle} ({filteredVehicles.length})</div>
-                {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowVehicleForm(true)}>{t.addVehicle}</button>}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {canEdit && <button style={{ ...st.btn('#16a34a'), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => { setShowBulkUpload(true); setBulkFiles([]); setBulkResults([]) }}>📂 رفع استمارات</button>}
+                  {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowVehicleForm(true)}>{t.addVehicle}</button>}
+                </div>
               </div>
               <input style={{ ...st.input, marginBottom: '16px' }} placeholder={t.searchVehicles} value={vehicleSearch} onChange={e => setVehicleSearch(e.target.value)} />
               <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
@@ -823,6 +855,54 @@ export default function Dashboard() {
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <button style={st.btn()} onClick={saveEdit} disabled={uploading}>{uploading ? t.saving : `💾 ${t.save}`}</button>
               <button style={st.btn('#888', true)} onClick={() => setEditItem(null)}>{t.cancel}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Upload Istamara Modal */}
+      {showBulkUpload && (
+        <div style={st.modal}>
+          <div style={{ ...st.modalBox, maxWidth: '620px' }}>
+            <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>📂 رفع استمارات جماعي</div>
+            <div style={{ fontSize: '12px', color: '#888', marginBottom: '14px', background: '#f8f9fa', padding: '10px 14px', borderRadius: '8px' }}>
+              ⚠️ يجب أن يكون اسم كل صورة يحتوي على رقم اللوحة فقط — مثال: <strong>2122.jpg</strong>
+            </div>
+            <label style={{ width: '100%', padding: '20px', background: bulkFiles.length ? '#fff7f2' : '#fafafa', border: `2px dashed ${bulkFiles.length ? '#ff6b00' : '#e8e8e8'}`, borderRadius: '10px', color: bulkFiles.length ? '#ff6b00' : '#888', fontSize: '13px', cursor: 'pointer', textAlign: 'center', display: 'block', boxSizing: 'border-box', fontWeight: '600', marginBottom: '16px' }}>
+              {bulkFiles.length ? `✅ تم اختيار ${bulkFiles.length} صورة` : '🖼️ اضغط هنا لاختيار الصور (متعدد)'}
+              <input type="file" accept="image/*,.pdf" multiple style={{ display: 'none' }} onChange={e => { setBulkFiles(Array.from(e.target.files)); setBulkResults([]) }} />
+            </label>
+
+            {bulkFiles.length > 0 && !bulkResults.length && (
+              <div style={{ maxHeight: '180px', overflowY: 'auto', marginBottom: '16px', border: `1px solid #e8e8e8`, borderRadius: '8px' }}>
+                {bulkFiles.map((f, i) => (
+                  <div key={i} style={{ padding: '8px 14px', borderBottom: '1px solid #f1f1f1', fontSize: '12px', color: '#444' }}>
+                    🖼️ {f.name}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {bulkResults.length > 0 && (
+              <div style={{ maxHeight: '220px', overflowY: 'auto', marginBottom: '16px', border: `1px solid #e8e8e8`, borderRadius: '8px' }}>
+                <div style={{ padding: '8px 14px', background: '#f8f9fa', fontSize: '11px', fontWeight: '700', color: '#555', borderBottom: '1px solid #e8e8e8' }}>
+                  ✅ {bulkResults.filter(r => r.status === 'success').length} نجح &nbsp;|&nbsp;
+                  ❌ {bulkResults.filter(r => r.status !== 'success').length} فشل
+                </div>
+                {bulkResults.map((r, i) => (
+                  <div key={i} style={{ padding: '7px 14px', borderBottom: '1px solid #f1f1f1', fontSize: '12px', display: 'flex', justifyContent: 'space-between', color: r.status === 'success' ? '#16a34a' : '#dc2626' }}>
+                    <span>{r.file}</span>
+                    <span>{r.msg}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button style={st.btn()} onClick={bulkUploadIstamara} disabled={bulkUploading || !bulkFiles.length}>
+                {bulkUploading ? '⏳ جاري الرفع...' : '🚀 ابدأ الرفع'}
+              </button>
+              <button style={st.btn('#888', true)} onClick={() => { setShowBulkUpload(false); setBulkFiles([]); setBulkResults([]) }}>إغلاق</button>
             </div>
           </div>
         </div>
