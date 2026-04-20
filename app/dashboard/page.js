@@ -30,7 +30,7 @@ export default function Dashboard() {
   const [istamaraImage, setIstamaraImage] = useState(null)
 
   const [showDriverForm, setShowDriverForm] = useState(false)
-  const [driverForm, setDriverForm] = useState({ full_name: '', national_id: '', passport_number: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
+  const [driverForm, setDriverForm] = useState({ file_number: '', full_name: '', national_id: '', passport_number: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
   const [iqamaImage, setIqamaImage] = useState(null)
   const [licenseImage, setLicenseImage] = useState(null)
 
@@ -214,7 +214,7 @@ export default function Dashboard() {
     const license_image = await uploadFile(licenseImage, 'licenses')
     await supabase.from('drivers').insert([{ ...driverForm, iqama_image, license_image }])
     setShowDriverForm(false)
-    setDriverForm({ full_name: '', national_id: '', passport_number: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
+    setDriverForm({ file_number: '', full_name: '', national_id: '', passport_number: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
     setIqamaImage(null); setLicenseImage(null); setUploading(false); fetchData()
   }
 
@@ -484,6 +484,7 @@ export default function Dashboard() {
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                   <thead><tr>
+                    <th style={{ ...st.th, width: '40px' }}>#</th>
                     <th style={st.th}>{t.image}</th><th style={st.th}>{t.plateNumber}</th><th style={st.th}>{t.code}</th>
                     {!isMobile && <><th style={st.th}>{t.brand}</th><th style={st.th}>{t.model}</th><th style={st.th}>{t.year}</th></>}
                     <th style={st.th}>{t.status}</th><th style={st.th}>{t.preparationStatus}</th>
@@ -492,8 +493,9 @@ export default function Dashboard() {
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
-                    {filteredVehicles.map(v => (
+                    {filteredVehicles.map((v, idx) => (
                       <tr key={v.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <td style={{ ...st.td, color: C.muted, fontWeight: '700', textAlign: 'center' }}>{idx + 1}</td>
                         <td style={st.td}>{v.vehicle_image ? <img src={v.vehicle_image} style={thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" /> : '—'}</td>
                         <td style={{ ...st.td, fontWeight: '700' }}>{v.plate_number}</td>
                         <td style={st.td}>{v.vehicle_code || '—'}</td>
@@ -529,6 +531,8 @@ export default function Dashboard() {
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
                   <thead><tr>
+                    <th style={{ ...st.th, width: '40px' }}>#</th>
+                    <th style={st.th}>رقم الملف</th>
                     <th style={st.th}>{t.fullName}</th><th style={st.th}>{t.nationalId}</th>
                     {!isMobile && <><th style={st.th}>{t.passport}</th><th style={st.th}>{t.phone}</th><th style={st.th}>{t.license}</th><th style={st.th}>{t.expiry}</th></>}
                     <th style={st.th}>{t.iqama}</th><th style={st.th}>{t.license}</th>
@@ -537,11 +541,13 @@ export default function Dashboard() {
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
-                    {filteredDrivers.map(d => {
+                    {filteredDrivers.map((d, idx) => {
                       const days = daysUntil(d.license_expiry)
                       const expiring = days !== null && days <= 30
                       return (
                         <tr key={d.id} style={{ background: expiring ? '#fffbeb' : 'transparent' }} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background = expiring ? '#fffbeb' : 'transparent'}>
+                          <td style={{ ...st.td, color: C.muted, fontWeight: '700', textAlign: 'center' }}>{idx + 1}</td>
+                          <td style={st.td}>{d.file_number || '—'}</td>
                           <td style={{ ...st.td, fontWeight: '700' }}>{d.full_name}</td>
                           <td style={st.td}>{d.national_id || '—'}</td>
                           {!isMobile && <><td style={st.td}>{d.passport_number || '—'}</td><td style={st.td}>{d.phone || '—'}</td><td style={st.td}>{d.license_number || '—'}</td>
@@ -571,6 +577,7 @@ export default function Dashboard() {
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
                   <thead><tr>
+                    <th style={{ ...st.th, width: '40px' }}>#</th>
                     <th style={st.th}>{t.vehicle}</th><th style={st.th}>{t.type}</th>
                     {!isMobile && <><th style={st.th}>{t.description}</th><th style={st.th}>{t.date}</th></>}
                     <th style={st.th}>{t.cost}</th><th style={st.th}>{t.nextDate}</th>
@@ -579,11 +586,12 @@ export default function Dashboard() {
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
-                    {maintenance.map(m => {
+                    {maintenance.map((m, idx) => {
                       const days = daysUntil(m.next_date)
                       const expiring = days !== null && days <= 7
                       return (
                         <tr key={m.id} style={{ background: expiring ? '#fff7ed' : 'transparent' }} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background = expiring ? '#fff7ed' : 'transparent'}>
+                          <td style={{ ...st.td, color: C.muted, fontWeight: '700', textAlign: 'center' }}>{idx + 1}</td>
                           <td style={{ ...st.td, fontWeight: '700' }}>{m.vehicles?.plate_number}</td>
                           <td style={st.td}>{m.type}</td>
                           {!isMobile && <><td style={st.td}>{m.description}</td><td style={st.td}>{m.date}</td></>}
@@ -622,6 +630,7 @@ export default function Dashboard() {
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
                   <thead><tr>
+                    <th style={{ ...st.th, width: '40px' }}>#</th>
                     <th style={st.th}>{t.vehicle}</th><th style={st.th}>{t.driver}</th>
                     {!isMobile && <><th style={st.th}>{t.date}</th><th style={st.th}>{t.liters}</th></>}
                     <th style={st.th}>{t.total}</th>
@@ -629,8 +638,9 @@ export default function Dashboard() {
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
-                    {fuelLogs.map(f => (
+                    {fuelLogs.map((f, idx) => (
                       <tr key={f.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <td style={{ ...st.td, color: C.muted, fontWeight: '700', textAlign: 'center' }}>{idx + 1}</td>
                         <td style={{ ...st.td, fontWeight: '700' }}>{f.vehicles?.plate_number}</td>
                         <td style={st.td}>{f.drivers?.full_name}</td>
                         {!isMobile && <><td style={st.td}>{f.date}</td><td style={st.td}>{f.liters}</td></>}
@@ -827,6 +837,7 @@ export default function Dashboard() {
               <FileInput label={t.istamaraImage} icon="📄" onChange={setEditIstamaraImage} file={editIstamaraImage} />
             </div>)}
             {editType === 'driver' && (<div style={st.formGrid}>
+              <div><label style={st.label}>رقم الملف</label><input style={st.input} value={editForm.file_number||''} onChange={e=>setEditForm({...editForm,file_number:e.target.value})} /></div>
               <div><label style={st.label}>{t.fullName}</label><input style={st.input} value={editForm.full_name||''} onChange={e=>setEditForm({...editForm,full_name:e.target.value})} /></div>
               <div><label style={st.label}>{t.nationalId}</label><input style={st.input} value={editForm.national_id||''} onChange={e=>setEditForm({...editForm,national_id:e.target.value})} /></div>
               <div><label style={st.label}>{t.passportNumber}</label><input style={st.input} value={editForm.passport_number||''} onChange={e=>setEditForm({...editForm,passport_number:e.target.value})} /></div>
@@ -932,7 +943,7 @@ export default function Dashboard() {
       {showDriverForm && (<div style={st.modal}><div style={st.modalBox}>
         <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>👤 {t.addDriverTitle}</div>
         <div style={st.formGrid}>
-          {[[`full_name`,t.fullName],[`national_id`,t.nationalId],[`passport_number`,t.passportNumber],[`phone`,t.phone],[`license_number`,t.licenseNumber]].map(([key,label]) => (
+          {[[`file_number`,`رقم الملف`],[`full_name`,t.fullName],[`national_id`,t.nationalId],[`passport_number`,t.passportNumber],[`phone`,t.phone],[`license_number`,t.licenseNumber]].map(([key,label]) => (
             <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={driverForm[key]} onChange={e => setDriverForm({...driverForm,[key]:e.target.value})} /></div>
           ))}
           <div><label style={st.label}>{t.licenseExpiry}</label><input type="date" style={st.input} value={driverForm.license_expiry} onChange={e => setDriverForm({...driverForm,license_expiry:e.target.value})} /></div>
