@@ -420,33 +420,3 @@ export default function PrepReport({ vehicles, drivers, t, isRTL, lang, isMobile
     </div>
   )
 }
-{{ padding: '7px 6px', border: `1px solid ${C.border}`, color: '#aaa' }}>—</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-
-                {/* Footer / signature area */}
-                <div style={{ marginTop: '40px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', paddingTop: '20px', borderTop: `1px dashed ${C.border}`, fontSize: '11px' }}>
-                  <div>
-                    <div style={{ color: '#777', marginBottom: '40px' }}>{t.preparedBy}:</div>
-                    <div style={{ borderTop: `1px solid #1a1a1a`, paddingTop: '4px', fontWeight: '700' }}>{currentUser?.email || '—'}</div>
-                  </div>
-                  <div>
-                    <div style={{ color: '#777', marginBottom: '40px' }}>{isRTL ? 'التوقيع' : 'Signature'}:</div>
-                    <div style={{ borderTop: `1px solid #1a1a1a`, paddingTop: '4px' }}>&nbsp;</div>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'center', color: '#aaa', fontSize: '10px', marginTop: '24px' }}>
-                  {isRTL ? 'أسطول مشاريع نظافة المدينة المنورة' : 'Madinah Cleaning Fleet Management'} · {todayStr}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
