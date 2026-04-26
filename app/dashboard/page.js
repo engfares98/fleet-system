@@ -487,7 +487,7 @@ export default function Dashboard() {
                   <thead><tr>
                     <th style={{ ...st.th, width: '40px' }}>#</th>
                     <th style={st.th}>{t.image}</th><th style={st.th}>{t.plateNumber}</th><th style={st.th}>{t.code}</th>
-                    {!isMobile && <><th style={st.th}>{t.brand}</th><th style={st.th}>{t.model}</th><th style={st.th}>{t.year}</th></>}
+                    {!isMobile && <><th style={st.th}>{t.brand}</th><th style={st.th}>{t.model}</th><th style={st.th}>{t.equipmentType}</th></>}
                     <th style={st.th}>{t.status}</th><th style={st.th}>{t.preparationStatus}</th>
                     <th style={st.th}>{t.istimara}</th>
                     {canEdit && <th style={st.th}>{t.edit}</th>}
@@ -500,7 +500,7 @@ export default function Dashboard() {
                         <td style={st.td}>{v.vehicle_image ? <img src={v.vehicle_image} style={thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" /> : '—'}</td>
                         <td style={{ ...st.td, fontWeight: '700' }}>{v.plate_number}</td>
                         <td style={st.td}>{v.vehicle_code || '—'}</td>
-                        {!isMobile && <><td style={st.td}>{v.brand}</td><td style={st.td}>{v.model}</td><td style={st.td}>{v.year}</td></>}
+                        {!isMobile && <><td style={st.td}>{v.brand}</td><td style={st.td}>{v.model}</td><td style={st.td}>{v.type || '—'}</td></>}
                         <td style={st.td}><span style={st.badge(v.status)}>{statusLabel(v.status)}</span></td>
                         <td style={st.td}>
                           {canEdit ? (
