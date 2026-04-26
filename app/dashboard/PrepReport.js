@@ -147,7 +147,13 @@ export default function PrepReport({ vehicles, drivers, t, isRTL, lang, isMobile
           page += 1
         }
       }
-      const fileName = `${(t.prepReportTitle || 'preparation-report').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`
+      // Build filename in English (compatible with all apps incl. WhatsApp):
+      // "Equipment_Preparation_Report - South - 2026-04-26.pdf"
+      const dateStr = new Date().toISOString().slice(0, 10)
+      const regionEnMap = { all: 'All_Regions', north: 'North', south: 'South', east: 'East', west: 'West', unknown: 'Unspecified' }
+      const regionPart = regionEnMap[region] || 'All_Regions'
+      const rawName = `Equipment_Preparation_Report - ${regionPart} - ${dateStr}.pdf`
+      const fileName = rawName.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim()
       const blob = pdf.output('blob')
       const file = new File([blob], fileName, { type: 'application/pdf' })
 
