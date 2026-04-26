@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import { translations } from './translations'
+import PrepReport from './PrepReport'
 
 export default function Dashboard() {
   const [lang, setLang] = useState('ar')
@@ -729,6 +730,17 @@ export default function Dashboard() {
                   <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '12px' }}>⛽ {t.fuel}</button>
                 </div>
               </div>
+
+              {/* Equipment Preparation PDF Report */}
+              <PrepReport
+                vehicles={vehicles}
+                drivers={drivers}
+                t={t}
+                isRTL={isRTL}
+                lang={lang}
+                isMobile={isMobile}
+                currentUser={currentUser}
+              />
             </div>
           )}
 
