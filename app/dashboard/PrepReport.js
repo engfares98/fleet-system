@@ -14,8 +14,8 @@ export default function PrepReport({ vehicles, drivers, t, isRTL, lang, isMobile
   const [region, setRegion] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
-  const [selectedIds, setSelectedIds] = useState({}) // { vehicleId: true }
-  const [assignedDriver, setAssignedDriver] = useState({}) // { vehicleId: driverId }
+  const [selectedIds, setSelectedIds] = useState({})
+  const [assignedDriver, setAssignedDriver] = useState({})
   const [showPreview, setShowPreview] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [toast, setToast] = useState(null)
@@ -102,18 +102,22 @@ export default function PrepReport({ vehicles, drivers, t, isRTL, lang, isMobile
     setTimeout(() => setToast(null), 3500)
   }
 
-  const generatePDF = async (action /* 'download' | 'share' */) => {
+  const generatePDF = async (action) => {
     if (selectedVehicles.length === 0) { showToast(t.selectVehiclesFirst); return }
     setShowPreview(true)
     setGenerating(true)
-    // wait for the preview to render
     await new Promise(r => setTimeout(r, 350))
     try {
       const html2canvas = (await import('html2canvas')).default
       const { jsPDF } = await import('jspdf')
       const node = previewRef.current
       if (!node) throw new Error('preview node missing')
-      const canvas = await html2canvas(node, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false })
+      const imgs = Array.from(node.querySelectorAll('img'))
+      await Promise.all(imgs.map(img => (img.complete && img.naturalWidth > 0)
+        ? Promise.resolve()
+        : new Promise(res => { img.onload = res; img.onerror = res; setTimeout(res, 2500) })
+      ))
+      const canvas = await html2canvas(node, { scale: 2, backgroundColor: '#ffffff', useCORS: true, allowTaint: true, logging: false, imageTimeout: 5000 })
       const imgData = canvas.toDataURL('image/jpeg', 0.92)
       const pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' })
       const pageW = pdf.internal.pageSize.getWidth()
@@ -122,14 +126,8 @@ export default function PrepReport({ vehicles, drivers, t, isRTL, lang, isMobile
       let imgW = pageW - 40
       let imgH = imgW / ratio
       if (imgH < pageH - 40) {
-        // fits on one page
         pdf.addImage(imgData, 'JPEG', 20, 20, imgW, imgH)
       } else {
-        // split across multiple pages
-        imgH = pageH - 40
-        imgW = imgH * ratio
-        if (imgW > pageW - 40) imgW = pageW - 40
-        // simple multi-page: slice canvas vertically
         const sliceHeight = (canvas.width / (pageW - 40)) * (pageH - 40)
         let y = 0
         let page = 0
@@ -158,7 +156,6 @@ export default function PrepReport({ vehicles, drivers, t, isRTL, lang, isMobile
           await navigator.share({ files: [file], title: t.prepReportTitle, text: t.reportSubtitle })
           showToast(t.pdfReady)
         } catch (err) {
-          // user cancelled or share failed → fall back to download
           pdf.save(fileName)
           showToast(t.pdfReady)
         }
@@ -303,25 +300,38 @@ export default function PrepReport({ vehicles, drivers, t, isRTL, lang, isMobile
               </div>
             </div>
             <div style={{ overflow: 'auto', padding: '20px', background: '#f1f3f5' }}>
-              {/* The actual rendered report — what gets captured to PDF */}
-              <div ref={previewRef} dir={isRTL ? 'rtl' : 'ltr'} style={{ width: '794px', minHeight: '1123px', margin: '0 auto', background: '#fff', padding: '36px 40px', fontFamily: 'Cairo, sans-serif', color: '#1a1a1a', fontSize: '12px', lineHeight: '1.55', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
-                {/* Header */}
-                <div style={{ borderBottom: `3px solid ${C.orange}`, paddingBottom: '16px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: '20px', fontWeight: '900', color: C.orange }}>{t.prepReportTitle}</div>
-                    <div style={{ fontSize: '12px', color: '#555', marginTop: '4px' }}>{t.reportSubtitle}</div>
+              <div ref={previewRef} dir={isRTL ? 'rtl' : 'ltr'} style={{ width: '794px', minHeight: '1123px', margin: '0 auto', background: '#fff', padding: '32px 36px', fontFamily: 'Cairo, sans-serif', color: '#1a1a1a', fontSize: '12px', lineHeight: '1.55', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
+                {/* Header with logos */}
+                <div style={{ borderBottom: `3px solid ${C.orange}`, paddingBottom: '14px', marginBottom: '18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ flex: '0 0 auto', width: '90px', height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <img src="/logo-madinah.jpeg" alt="Amana" crossOrigin="anonymous" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    </div>
+                    <div style={{ flex: 1, textAlign: 'center' }}>
+                      <div style={{ fontSize: '14px', fontWeight: '700', color: '#1a1a1a' }}>
+                        {isRTL ? 'أمانة منطقة المدينة المنورة' : 'Madinah Region Municipality'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>
+                        {isRTL ? 'مشاريع نظافة المدينة المنورة' : 'Madinah Cleaning Projects'}
+                      </div>
+                      <div style={{ fontSize: '20px', fontWeight: '900', color: C.orange, marginTop: '8px' }}>{t.prepReportTitle}</div>
+                      <div style={{ fontSize: '11px', color: '#777' }}>{t.reportSubtitle}</div>
+                    </div>
+                    <div style={{ flex: '0 0 auto', width: '90px', height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <img src="/logo-mag.jpeg" alt="MAG" crossOrigin="anonymous" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    </div>
                   </div>
-                  <div style={{ textAlign: isRTL ? 'left' : 'right', fontSize: '11px', color: '#555' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', fontSize: '11px', color: '#555', background: '#fafafa', padding: '8px 12px', borderRadius: '6px' }}>
                     <div><strong>{t.reportNumber}:</strong> {reportNo}</div>
                     <div><strong>{t.reportDate}:</strong> {todayStr}</div>
-                    {currentUser?.email && <div><strong>{t.preparedBy}:</strong> {currentUser.email}</div>}
+                    {currentUser?.email ? <div><strong>{t.preparedBy}:</strong> {currentUser.email}</div> : null}
                   </div>
                 </div>
 
                 {/* Filter info */}
                 <div style={{ background: '#fafafa', border: `1px solid ${C.border}`, borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', fontSize: '11px' }}>
                   <div><span style={{ color: '#777' }}>{t.region}: </span><strong>{region === 'all' ? t.allRegions : regionLabel(region)}</strong></div>
-                  <div><span style={{ color: '#777' }}>{t.statusFilter}: </span><strong>{statusFilter === 'all' ? t.allStatuses : statusFilter === 'ready' ? t.ready : statusFilter === 'in_progress' ? t.inProgress : t.notReady}</strong></div>
+                  <div><span style={{ color: '#777' }}>{t.statusFilter}: </span><strong>{statusFilter === 'all' ? t.allStatuses : (statusFilter === 'ready' ? t.ready : (statusFilter === 'in_progress' ? t.inProgress : t.notReady))}</strong></div>
                   <div><span style={{ color: '#777' }}>{t.totalSelected}: </span><strong>{summaryStats.total}</strong></div>
                 </div>
 
@@ -373,9 +383,44 @@ export default function PrepReport({ vehicles, drivers, t, isRTL, lang, isMobile
                             <span style={{ background: prepBg(status), color: prepColor(status), padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '700' }}>{prepLabel(status)}</span>
                           </td>
                           <td style={{ padding: '7px 6px', border: `1px solid ${C.border}` }}>
-                            {drv ? (<><strong>{drv.full_name}</strong>{drv.phone && <div style={{ fontSize: '10px', color: '#777' }}>{drv.phone}</div>}</>) : <span style={{ color: '#aaa' }}>—</span>}
+                            {drv ? (
+                              <div>
+                                <strong>{drv.full_name}</strong>
+                                {drv.phone ? <div style={{ fontSize: '10px', color: '#777' }}>{drv.phone}</div> : null}
+                              </div>
+                            ) : <span style={{ color: '#aaa' }}>—</span>}
                           </td>
                           <td style={{ padding: '7px 6px', border: `1px solid ${C.border}`, color: '#aaa' }}>—</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+
+                {/* Footer / signature area */}
+                <div style={{ marginTop: '40px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', paddingTop: '20px', borderTop: `1px dashed ${C.border}`, fontSize: '11px' }}>
+                  <div>
+                    <div style={{ color: '#777', marginBottom: '40px' }}>{t.preparedBy}:</div>
+                    <div style={{ borderTop: `1px solid #1a1a1a`, paddingTop: '4px', fontWeight: '700' }}>{currentUser?.email || '—'}</div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#777', marginBottom: '40px' }}>{isRTL ? 'التوقيع' : 'Signature'}:</div>
+                    <div style={{ borderTop: `1px solid #1a1a1a`, paddingTop: '4px' }}>&nbsp;</div>
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'center', color: '#aaa', fontSize: '10px', marginTop: '24px' }}>
+                  {isRTL ? 'أسطول مشاريع نظافة المدينة المنورة' : 'Madinah Cleaning Fleet Management'} · {todayStr}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+{{ padding: '7px 6px', border: `1px solid ${C.border}`, color: '#aaa' }}>—</td>
                         </tr>
                       )
                     })}
