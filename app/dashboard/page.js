@@ -500,7 +500,7 @@ export default function Dashboard() {
                         <td style={st.td}>{v.vehicle_image ? <img src={v.vehicle_image} style={thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" /> : '—'}</td>
                         <td style={{ ...st.td, fontWeight: '700' }}>{v.plate_number}</td>
                         <td style={st.td}>{v.vehicle_code || '—'}</td>
-                        {!isMobile && <><td style={st.td}>{v.brand}</td><td style={st.td}>{v.model}</td><td style={st.td}>{v.type || '—'}</td></>}
+                        {!isMobile && <><td style={st.td}>{v.brand}</td><td style={st.td}>{v.model}</td><td style={st.td}>{v.year || '—'}</td></>}
                         <td style={st.td}><span style={st.badge(v.status)}>{statusLabel(v.status)}</span></td>
                         <td style={st.td}>
                           {canEdit ? (
