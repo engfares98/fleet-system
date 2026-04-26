@@ -108,7 +108,7 @@ export default function PrepReport({ vehicles, drivers, t, isRTL, lang, isMobile
     setGenerating(true)
     await new Promise(r => setTimeout(r, 350))
     try {
-      const html2canvas = (await import('html2canvas')).default
+      const htmlToImage = await import('html-to-image')
       const { jsPDF } = await import('jspdf')
       const node = previewRef.current
       if (!node) throw new Error('preview node missing')
@@ -117,33 +117,44 @@ export default function PrepReport({ vehicles, drivers, t, isRTL, lang, isMobile
         ? Promise.resolve()
         : new Promise(res => { img.onload = res; img.onerror = res; setTimeout(res, 2500) })
       ))
-      const canvas = await html2canvas(node, { scale: 2, backgroundColor: '#ffffff', useCORS: true, allowTaint: true, logging: false, imageTimeout: 5000 })
-      const imgData = canvas.toDataURL('image/jpeg', 0.92)
+      // html-to-image uses SVG <foreignObject> which preserves Arabic letter shaping
+      const dataUrl = await htmlToImage.toPng(node, {
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        cacheBust: true,
+        style: { fontFamily: 'Cairo, sans-serif' },
+      })
+      const tmpImg = new Image()
+      tmpImg.src = dataUrl
+      await new Promise(r => { tmpImg.onload = r; tmpImg.onerror = r; setTimeout(r, 3000) })
+      const cw = tmpImg.naturalWidth || tmpImg.width
+      const ch = tmpImg.naturalHeight || tmpImg.height
       const pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' })
       const pageW = pdf.internal.pageSize.getWidth()
       const pageH = pdf.internal.pageSize.getHeight()
-      const ratio = canvas.width / canvas.height
-      let imgW = pageW - 40
-      let imgH = imgW / ratio
+      const ratio = cw / ch
+      const imgW = pageW - 40
+      const imgH = imgW / ratio
       if (imgH < pageH - 40) {
-        pdf.addImage(imgData, 'JPEG', 20, 20, imgW, imgH)
+        pdf.addImage(dataUrl, 'PNG', 20, 20, imgW, imgH)
       } else {
-        const sliceHeight = (canvas.width / (pageW - 40)) * (pageH - 40)
+        // multi-page: slice the image vertically
+        const sliceHpx = (cw / (pageW - 40)) * (pageH - 40)
         let y = 0
         let page = 0
-        while (y < canvas.height) {
+        while (y < ch) {
           const sliceCanvas = document.createElement('canvas')
-          sliceCanvas.width = canvas.width
-          sliceCanvas.height = Math.min(sliceHeight, canvas.height - y)
+          sliceCanvas.width = cw
+          sliceCanvas.height = Math.min(sliceHpx, ch - y)
           const ctx = sliceCanvas.getContext('2d')
           ctx.fillStyle = '#fff'
           ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height)
-          ctx.drawImage(canvas, 0, y, canvas.width, sliceCanvas.height, 0, 0, canvas.width, sliceCanvas.height)
-          const slimg = sliceCanvas.toDataURL('image/jpeg', 0.92)
+          ctx.drawImage(tmpImg, 0, y, cw, sliceCanvas.height, 0, 0, cw, sliceCanvas.height)
+          const slimg = sliceCanvas.toDataURL('image/png')
           if (page > 0) pdf.addPage()
-          const sH = (sliceCanvas.height * (pageW - 40)) / canvas.width
-          pdf.addImage(slimg, 'JPEG', 20, 20, pageW - 40, sH)
-          y += sliceHeight
+          const sH = (sliceCanvas.height * (pageW - 40)) / cw
+          pdf.addImage(slimg, 'PNG', 20, 20, pageW - 40, sH)
+          y += sliceHpx
           page += 1
         }
       }
@@ -416,7 +427,7 @@ export default function PrepReport({ vehicles, drivers, t, isRTL, lang, isMobile
                 </div>
 
                 <div style={{ textAlign: 'center', color: '#aaa', fontSize: '10px', marginTop: '24px' }}>
-                  {isRTL ? 'أسطول مشاريع نظافة المدينة المنورة' : 'Madinah Cleaning Fleet Management'} · {todayStr}
+                {isRTL ? 'أسطول مشاريع نظافة المدينة المنورة' : 'Madinah Cleaning Fleet Management'} · {todayStr}
                 </div>
               </div>
             </div>
