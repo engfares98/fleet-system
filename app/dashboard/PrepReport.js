@@ -365,7 +365,7 @@ export default function PrepReport({ vehicles, drivers, t, isRTL, lang, isMobile
                       <th style={{ padding: '8px 6px', textAlign: 'center', border: '1px solid #e5751c', width: '32px' }}>{t.no}</th>
                       <th style={{ padding: '8px 6px', textAlign: isRTL ? 'right' : 'left', border: '1px solid #e5751c' }}>{t.plateNumber}</th>
                       <th style={{ padding: '8px 6px', textAlign: isRTL ? 'right' : 'left', border: '1px solid #e5751c' }}>{t.vehicleCode}</th>
-                      <th style={{ padding: '8px 6px', textAlign: isRTL ? 'right' : 'left', border: '1px solid #e5751c' }}>{t.type}</th>
+                      <th style={{ padding: '8px 6px', textAlign: isRTL ? 'right' : 'left', border: '1px solid #e5751c' }}>{t.equipmentType}</th>
                       <th style={{ padding: '8px 6px', textAlign: isRTL ? 'right' : 'left', border: '1px solid #e5751c' }}>{t.region}</th>
                       <th style={{ padding: '8px 6px', textAlign: isRTL ? 'right' : 'left', border: '1px solid #e5751c' }}>{t.preparationStatus}</th>
                       <th style={{ padding: '8px 6px', textAlign: isRTL ? 'right' : 'left', border: '1px solid #e5751c' }}>{t.assignDriver}</th>
@@ -383,7 +383,7 @@ export default function PrepReport({ vehicles, drivers, t, isRTL, lang, isMobile
                           <td style={{ padding: '7px 6px', textAlign: 'center', border: `1px solid ${C.border}`, fontWeight: '700' }}>{i + 1}</td>
                           <td style={{ padding: '7px 6px', border: `1px solid ${C.border}`, fontWeight: '700' }}>{v.plate_number || '—'}</td>
                           <td style={{ padding: '7px 6px', border: `1px solid ${C.border}` }}>{v.vehicle_code || '—'}</td>
-                          <td style={{ padding: '7px 6px', border: `1px solid ${C.border}` }}>{[v.brand, v.model, v.type].filter(Boolean).join(' ') || '—'}</td>
+                          <td style={{ padding: '7px 6px', border: `1px solid ${C.border}` }}>{v.year || '—'}</td>
                           <td style={{ padding: '7px 6px', border: `1px solid ${C.border}` }}>{regionLabel(getRegion(v))}</td>
                           <td style={{ padding: '7px 6px', border: `1px solid ${C.border}` }}>
                             <span style={{ background: prepBg(status), color: prepColor(status), padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '700' }}>{prepLabel(status)}</span>
