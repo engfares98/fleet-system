@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [lang, setLang] = useState('ar')
   const t = translations[lang]
   const isRTL = lang === 'ar'
+  const langLabel = lang === 'ar' ? 'EN' : lang === 'en' ? 'বাং' : 'ع'
 
   const [vehicles, setVehicles] = useState([])
   const [drivers, setDrivers] = useState([])
@@ -65,7 +66,7 @@ export default function Dashboard() {
   }, [])
 
   const switchLang = () => {
-    const newLang = lang === 'ar' ? 'en' : 'ar'
+    const newLang = lang === 'ar' ? 'en' : lang === 'en' ? 'bn' : 'ar'
     setLang(newLang)
     localStorage.setItem('lang', newLang)
   }
@@ -243,7 +244,7 @@ export default function Dashboard() {
   }
 
   const deleteUserRole = async (userId) => {
-    if (!confirm(lang === 'ar' ? 'هل أنت متأكد؟' : 'Are you sure?')) return
+    if (!confirm(lang === 'ar' ? 'هل أنت متأكد؟' : lang === 'bn' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?')) return
     await supabase.from('user_roles').delete().eq('user_id', userId); fetchData()
   }
 
@@ -377,7 +378,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* Language Switch */}
           <button onClick={switchLang} style={{ background: C.orangeLight, border: `1.5px solid ${C.orange}`, borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: C.orange, fontFamily: 'Cairo, sans-serif' }}>
-            {lang === 'ar' ? '🇬🇧 EN' : '🇸🇦 AR'}
+            {lang === 'ar' ? '🇬🇧 EN' : lang === 'en' ? '🇧🇩 বাং' : '🇸🇦 ع'}
           </button>
           {criticalAlerts.length > 0 && (
             <div onClick={() => setActiveTab('alerts')} style={{ position: 'relative', cursor: 'pointer' }}>
