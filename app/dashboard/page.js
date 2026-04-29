@@ -487,7 +487,7 @@ export default function Dashboard() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                   <thead><tr>
                     <th style={{ ...st.th, width: '40px' }}>#</th>
-                    <th style={st.th}>{t.image}</th><th style={st.th}>{t.plateNumber}</th><th style={st.th}>{t.code}</th>
+                    <th style={st.th}>{t.plateNumber}</th><th style={st.th}>{t.code}</th>
                     {!isMobile && <><th style={st.th}>{t.brand}</th><th style={st.th}>{t.model}</th><th style={st.th}>{t.equipmentType}</th></>}
                     <th style={st.th}>{t.status}</th><th style={st.th}>{t.preparationStatus}</th>
                     <th style={st.th}>{t.istimara}</th>
@@ -498,7 +498,6 @@ export default function Dashboard() {
                     {filteredVehicles.map((v, idx) => (
                       <tr key={v.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                         <td style={{ ...st.td, color: C.muted, fontWeight: '700', textAlign: 'center' }}>{idx + 1}</td>
-                        <td style={st.td}>{v.vehicle_image ? <img src={v.vehicle_image} style={thumb} onClick={() => setPreviewImage(v.vehicle_image)} alt="" /> : '—'}</td>
                         <td style={{ ...st.td, fontWeight: '700' }}>{v.plate_number}</td>
                         <td style={st.td}>{v.vehicle_code || '—'}</td>
                         {!isMobile && <><td style={st.td}>{v.brand}</td><td style={st.td}>{v.model}</td><td style={st.td}>{v.year || '—'}</td></>}
