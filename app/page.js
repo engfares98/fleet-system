@@ -93,22 +93,28 @@ export default function Home() {
         .eye-btn     { transition: color 0.2s; }
         @media (max-width: 600px) {
           .login-card {
-            padding: 28px 22px 22px !important;
-            border-radius: 18px !important;
-            margin-left: 20px !important;
-            margin-right: 20px !important;
-            width: calc(100% - 40px) !important;
+            padding: 20px 18px 18px !important;
+            border-radius: 16px !important;
+            margin-left: 24px !important;
+            margin-right: 24px !important;
+            width: calc(100% - 48px) !important;
+            margin-top: 80px !important;
           }
-          .login-icon { width:56px!important; height:56px!important; font-size:26px!important; border-radius:14px!important; }
-          .login-title { font-size:16px!important; }
-          .login-subtitle { font-size:11px!important; }
-          .login-header { padding:8px 16px!important; }
-          .login-header img:first-child { height:44px!important; }
-          .login-header img:last-child  { height:36px!important; }
-          .login-header-title { font-size:11px!important; }
-          .login-header-sub   { font-size:9px!important; }
-          .login-field-gap { gap:14px!important; }
-          .login-btn { padding:13px!important; font-size:14px!important; }
+          .login-icon { width:44px!important; height:44px!important; font-size:20px!important; border-radius:12px!important; margin-bottom:8px!important; box-shadow:0 6px 16px rgba(255,107,0,0.3)!important; }
+          .login-title { font-size:14px!important; margin-bottom:3px!important; }
+          .login-subtitle { font-size:10px!important; }
+          .login-header { padding:7px 14px!important; }
+          .login-header img:first-child { height:38px!important; }
+          .login-header img:last-child  { height:30px!important; }
+          .login-header-title { font-size:10px!important; }
+          .login-header-sub   { display:none!important; }
+          .login-field-gap { gap:10px!important; }
+          .login-btn { padding:12px!important; font-size:13px!important; }
+          .login-input { padding:10px 12px!important; font-size:13px!important; }
+          label { font-size:11px!important; margin-bottom:5px!important; }
+          .login-divider { margin-bottom:14px!important; }
+          .login-footer { margin-top:14px!important; padding-top:12px!important; }
+          .login-icon-wrap { margin-bottom:14px!important; }
         }
       `}</style>
 
@@ -144,7 +150,7 @@ export default function Home() {
         </div>
 
         {/* فاصل */}
-        <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'28px' }}>
+        <div className="login-divider" style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'28px' }}>
           <div style={{ flex:1, height:'1px', background:'linear-gradient(90deg,transparent,#e8e8e8)' }} />
           <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:'#ff6b00' }} />
           <div style={{ flex:1, height:'1px', background:'linear-gradient(90deg,#e8e8e8,transparent)' }} />
@@ -220,7 +226,7 @@ export default function Home() {
           </div>
         )}
 
-        <div style={{ marginTop:'28px', paddingTop:'20px', borderTop:'1px solid #f0f0f0', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' }}>
+        <div className="login-footer" style={{ marginTop:'28px', paddingTop:'20px', borderTop:'1px solid #f0f0f0', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' }}>
           <div style={{ width:'5px', height:'5px', borderRadius:'50%', background:'#ff6b00' }} />
           <span style={{ color:'#bbb', fontSize:'11px' }}>نظام آمن ومشفر</span>
           <div style={{ width:'5px', height:'5px', borderRadius:'50%', background:'#ff6b00' }} />
