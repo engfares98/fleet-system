@@ -2,270 +2,176 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 
-// الرقم الوظيفي يُحوَّل داخلياً إلى email لـ Supabase
 const toEmail = (empId) => `${empId.trim()}@fleet.mag.sa`
 
 export default function Home() {
-  const [empId, setEmpId] = useState('')
-  const [password, setPassword] = useState('')
+  const [empId, setEmpId]               = useState('')
+  const [password, setPassword]         = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [resetMode, setResetMode] = useState(false)
-  const [resetSent, setResetSent] = useState(false)
-  const [isInvite, setIsInvite] = useState(false)
-  const [inviteMsg, setInviteMsg] = useState('')
+  const [rememberMe, setRememberMe]     = useState(false)
+  const [loading, setLoading]           = useState(false)
+  const [error, setError]               = useState('')
+  const [resetSent, setResetSent]       = useState(false)
+  const [isInvite, setIsInvite]         = useState(false)
+  const [inviteMsg, setInviteMsg]       = useState('')
+  const [mounted, setMounted]           = useState(false)
 
   useEffect(() => {
-    // تحميل الرقم الوظيفي المحفوظ
+    setMounted(true)
     const saved = localStorage.getItem('saved_emp_id')
-    if (saved) {
-      setEmpId(saved)
-      setRememberMe(true)
-    }
-
-    // تحقق من وجود invite/recovery token في الـ URL hash
+    if (saved) { setEmpId(saved); setRememberMe(true) }
     const hash = window.location.hash
     const params = new URLSearchParams(hash.replace('#', '?'))
     const type = params.get('type')
     const accessToken = params.get('access_token')
-
     if ((type === 'invite' || type === 'recovery') && accessToken) {
       setIsInvite(true)
-      setInviteMsg('تم التحقق من الدعوة — اختر كلمة مرور جديدة لإكمال التسجيل')
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: params.get('refresh_token') || ''
-      })
+      setInviteMsg('تم التحقق — اختر كلمة مرور جديدة لإكمال التسجيل')
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: params.get('refresh_token') || '' })
     }
   }, [])
 
   const handleLogin = async () => {
     if (!empId.trim()) { setError('الرجاء إدخال الرقم الوظيفي'); return }
-    if (!password) { setError('الرجاء إدخال كلمة المرور'); return }
-
-    setLoading(true)
-    setError('')
-
+    if (!password)     { setError('الرجاء إدخال كلمة المرور'); return }
+    setLoading(true); setError('')
     if (isInvite) {
       const { error } = await supabase.auth.updateUser({ password })
-      if (error) {
-        setError('حدث خطأ أثناء تعيين كلمة المرور')
-      } else {
-        window.location.href = '/dashboard'
-      }
-      setLoading(false)
-      return
+      if (error) setError('حدث خطأ أثناء تعيين كلمة المرور')
+      else window.location.href = '/dashboard'
+      setLoading(false); return
     }
-
-    // حفظ أو حذف الرقم الوظيفي حسب خاصية تذكرني
-    if (rememberMe) {
-      localStorage.setItem('saved_emp_id', empId.trim())
-    } else {
-      localStorage.removeItem('saved_emp_id')
-    }
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: toEmail(empId),
-      password
-    })
-
-    if (error) {
-      setError('الرقم الوظيفي أو كلمة المرور غير صحيحة')
-    } else {
-      window.location.href = '/dashboard'
-    }
+    rememberMe
+      ? localStorage.setItem('saved_emp_id', empId.trim())
+      : localStorage.removeItem('saved_emp_id')
+    const { error } = await supabase.auth.signInWithPassword({ email: toEmail(empId), password })
+    if (error) setError('الرقم الوظيفي أو كلمة المرور غير صحيحة')
+    else window.location.href = '/dashboard'
     setLoading(false)
   }
 
   const handleForgotPassword = async () => {
-    if (!empId.trim()) { setError('أدخل رقمك الوظيفي أولاً لإعادة تعيين كلمة المرور'); return }
-    setLoading(true)
-    setError('')
-    const { error } = await supabase.auth.resetPasswordForEmail(toEmail(empId), {
-      redirectTo: `${window.location.origin}/`
-    })
-    if (error) {
-      setError('تعذّر إرسال رابط إعادة التعيين — تحقق من الرقم الوظيفي')
-    } else {
-      setResetSent(true)
-    }
+    if (!empId.trim()) { setError('أدخل رقمك الوظيفي أولاً'); return }
+    setLoading(true); setError('')
+    const { error } = await supabase.auth.resetPasswordForEmail(toEmail(empId), { redirectTo: `${window.location.origin}/` })
+    if (error) setError('تعذّر إرسال رابط إعادة التعيين')
+    else setResetSent(true)
     setLoading(false)
   }
 
+  const inp = {
+    width:'100%', padding:'13px 16px', background:'#fafafa',
+    border:'1.5px solid #e8e8e8', borderRadius:'10px', color:'#1a1a1a',
+    fontSize:'14px', outline:'none', boxSizing:'border-box',
+    fontFamily:'Cairo, sans-serif', transition:'border-color 0.2s, box-shadow 0.2s',
+  }
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #fff7f2 0%, #fff 60%, #fff3e8 100%)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'Cairo, sans-serif',
-      direction: 'rtl',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
+    <div style={{ minHeight:'100vh', background:'#f0f2f5', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'Cairo, sans-serif', direction:'rtl', position:'relative', overflow:'hidden' }}>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
+      <style>{`
+        @keyframes slideUp    { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeIn     { from{opacity:0} to{opacity:1} }
+        @keyframes slideDown  { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes float      { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        @keyframes shimmerBg  { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+        @keyframes spin       { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        .login-card  { animation: slideUp 0.6s cubic-bezier(.16,1,.3,1) both; }
+        .login-btn:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 12px 36px rgba(255,107,0,0.45)!important; }
+        .login-btn:active:not(:disabled){ transform:translateY(0); }
+        .login-btn   { transition: all 0.25s; }
+        .login-input:focus { border-color:#ff6b00!important; box-shadow:0 0 0 3px rgba(255,107,0,0.1)!important; }
+        .forgot-btn:hover { opacity:0.75; }
+        .forgot-btn  { transition: opacity 0.2s; }
+        .eye-btn:hover { color:#ff6b00!important; }
+        .eye-btn     { transition: color 0.2s; }
+      `}</style>
 
-      {/* Background decoration */}
-      <div style={{ position: 'absolute', top: 0, right: 0, width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(255,107,0,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: 0, left: 0, width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(255,107,0,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
-      {/* Logos bar */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0,
-        background: '#fff',
-        borderBottom: '3px solid #ff6b00',
-        padding: '12px 40px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        boxShadow: '0 2px 12px rgba(255,107,0,0.1)'
-      }}>
-        <img src="/logo-madinah.jpeg" alt="أمانة المدينة المنورة" style={{ height: '60px', objectFit: 'contain' }} />
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '13px', color: '#ff6b00', fontWeight: '700' }}>نظام إدارة مركبات النظافة</div>
-          <div style={{ fontSize: '11px', color: '#999' }}>Cleaning Fleet Management System</div>
-        </div>
-        <img src="/logo-mag.jpeg" alt="MAG المجال العربي" style={{ height: '50px', objectFit: 'contain' }} />
+      {/* خلفية — دوائر وتفاصيل */}
+      <div style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none' }}>
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:'5px', background:'linear-gradient(90deg,#1a1a2e,#ff6b00,#1a1a2e)', backgroundSize:'200% 200%', animation:'shimmerBg 4s ease infinite' }} />
+        <div style={{ position:'absolute', top:'-150px', right:'-150px', width:'550px', height:'550px', borderRadius:'50%', background:'radial-gradient(circle, rgba(255,107,0,0.07) 0%, transparent 65%)' }} />
+        <div style={{ position:'absolute', bottom:'-100px', left:'-100px', width:'420px', height:'420px', borderRadius:'50%', background:'radial-gradient(circle, rgba(26,26,46,0.06) 0%, transparent 65%)' }} />
+        {mounted && Array.from({length:10}).map((_,i)=>(
+          <div key={i} style={{ position:'absolute', top:`${12+(i*8)%80}%`, left:`${8+(i*17)%85}%`, width: i%3===0?'7px':'4px', height:i%3===0?'7px':'4px', borderRadius:'50%', background:i%2===0?'rgba(255,107,0,0.18)':'rgba(26,26,46,0.1)', animation:`float ${3+(i%3)}s ease-in-out ${i*0.35}s infinite` }} />
+        ))}
       </div>
 
-      {/* Login card */}
-      <div style={{
-        background: '#fff',
-        borderRadius: '20px',
-        padding: '48px 44px',
-        width: '100%',
-        maxWidth: '420px',
-        boxShadow: '0 20px 60px rgba(255,107,0,0.12), 0 4px 20px rgba(0,0,0,0.06)',
-        border: '1px solid rgba(255,107,0,0.12)',
-        marginTop: '80px'
-      }}>
+      {/* هيدر رسمي */}
+      <div style={{ position:'absolute', top:0, left:0, right:0, background:'linear-gradient(135deg,#1a1a2e 0%,#12122a 100%)', borderBottom:'3px solid #ff6b00', padding:'12px 40px', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'0 4px 24px rgba(0,0,0,0.2)', zIndex:10 }}>
+        <img src="/logo-madinah.jpeg" alt="أمانة المدينة المنورة" style={{ height:'58px', objectFit:'contain', filter:'brightness(1.1)' }} />
+        <div style={{ textAlign:'center' }}>
+          <div style={{ fontSize:'13px', color:'#ff6b00', fontWeight:'800', letterSpacing:'0.5px' }}>نظام إدارة مركبات النظافة</div>
+          <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)', marginTop:'3px', letterSpacing:'1.5px' }}>CLEANING FLEET MANAGEMENT SYSTEM</div>
+        </div>
+        <img src="/logo-mag.jpeg" alt="MAG" style={{ height:'48px', objectFit:'contain', filter:'brightness(1.1)' }} />
+      </div>
 
-        {/* Icon */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{
-            width: '70px', height: '70px',
-            background: 'linear-gradient(135deg, #ff6b00, #ff9a3c)',
-            borderRadius: '18px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '32px',
-            margin: '0 auto 14px',
-            boxShadow: '0 8px 24px rgba(255,107,0,0.3)'
-          }}>🚛</div>
-          <h1 style={{ color: '#1a1a1a', fontSize: '20px', fontWeight: '900', margin: '0 0 4px' }}>
-            أسطول مشاريع نظافة المدينة المنورة
-          </h1>
-          <p style={{ color: '#999', fontSize: '12px', margin: 0 }}>
-            {isInvite ? 'أكمل تسجيل حسابك' : 'قم بتسجيل الدخول للمتابعة'}
+      {/* بطاقة الدخول */}
+      <div className="login-card" style={{ background:'#fff', borderRadius:'24px', padding:'48px 44px 40px', width:'100%', maxWidth:'430px', boxShadow:'0 24px 80px rgba(0,0,0,0.12), 0 8px 24px rgba(255,107,0,0.08)', border:'1px solid rgba(255,107,0,0.1)', marginTop:'90px', position:'relative', zIndex:5 }}>
+        <div style={{ position:'absolute', top:0, left:'20px', right:'20px', height:'3px', background:'linear-gradient(90deg,transparent,#ff6b00,transparent)', borderRadius:'0 0 3px 3px' }} />
+
+        {/* أيقونة + عنوان */}
+        <div style={{ textAlign:'center', marginBottom:'32px' }}>
+          <div style={{ width:'76px', height:'76px', background:'linear-gradient(135deg,#1a1a2e 0%,#ff6b00 100%)', borderRadius:'20px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'34px', margin:'0 auto 16px', boxShadow:'0 12px 32px rgba(255,107,0,0.35)' }}>🚛</div>
+          <h1 style={{ color:'#1a1a2e', fontSize:'20px', fontWeight:'900', margin:'0 0 6px', lineHeight:'1.3' }}>أسطول مشاريع نظافة المدينة المنورة</h1>
+          <p style={{ color:'#999', fontSize:'12px', margin:0, letterSpacing:'0.3px' }}>
+            {isInvite ? 'أكمل تسجيل حسابك' : 'بوابة الدخول الرسمية — للموظفين المخولين فقط'}
           </p>
         </div>
 
-        {/* Divider */}
-        <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, #ff6b00, transparent)', marginBottom: '28px', borderRadius: '2px' }} />
+        {/* فاصل */}
+        <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'28px' }}>
+          <div style={{ flex:1, height:'1px', background:'linear-gradient(90deg,transparent,#e8e8e8)' }} />
+          <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:'#ff6b00' }} />
+          <div style={{ flex:1, height:'1px', background:'linear-gradient(90deg,#e8e8e8,transparent)' }} />
+        </div>
 
         {isInvite && (
-          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', color: '#16a34a', fontSize: '13px', marginBottom: '18px', fontWeight: '600' }}>
-            ✅ {inviteMsg}
+          <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:'10px', padding:'12px 16px', color:'#16a34a', fontSize:'13px', marginBottom:'20px', fontWeight:'600', display:'flex', alignItems:'center', gap:'8px' }}>
+            <span>✅</span> {inviteMsg}
           </div>
         )}
 
         {resetSent ? (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>📧</div>
-            <div style={{ color: '#16a34a', fontWeight: '700', fontSize: '15px', marginBottom: '8px' }}>تم إرسال رابط إعادة التعيين</div>
-            <div style={{ color: '#666', fontSize: '13px', marginBottom: '24px' }}>تفقّد البريد الإلكتروني المرتبط برقمك الوظيفي</div>
-            <button onClick={() => { setResetSent(false); setResetMode(false) }} style={{ background: 'none', border: 'none', color: '#ff6b00', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}>
+          <div style={{ textAlign:'center', padding:'24px 0', animation:'fadeIn 0.4s ease' }}>
+            <div style={{ fontSize:'44px', marginBottom:'14px' }}>📧</div>
+            <div style={{ color:'#1a1a2e', fontWeight:'800', fontSize:'16px', marginBottom:'8px' }}>تم الإرسال بنجاح</div>
+            <div style={{ color:'#777', fontSize:'13px', marginBottom:'28px', lineHeight:'1.7' }}>تم إرسال رابط إعادة تعيين كلمة المرور<br/>إلى البريد المرتبط برقمك الوظيفي</div>
+            <button onClick={()=>setResetSent(false)} style={{ background:'none', border:'none', color:'#ff6b00', fontSize:'13px', fontWeight:'700', cursor:'pointer', fontFamily:'Cairo, sans-serif', textDecoration:'underline' }}>
               ← العودة لتسجيل الدخول
             </button>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
 
-            {/* حقل الرقم الوظيفي */}
+            {/* الرقم الوظيفي */}
             {!isInvite && (
               <div>
-                <label style={{ color: '#555', fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
-                  الرقم الوظيفي
-                </label>
-                <input
-                  type="text"
-                  value={empId}
-                  onChange={e => setEmpId(e.target.value)}
-                  placeholder="أدخل رقمك الوظيفي"
-                  style={{
-                    width: '100%', padding: '13px 16px',
-                    background: '#fafafa', border: '1.5px solid #e8e8e8',
-                    borderRadius: '10px', color: '#1a1a1a', fontSize: '14px',
-                    outline: 'none', boxSizing: 'border-box', transition: 'border 0.2s',
-                    fontFamily: 'Cairo, sans-serif'
-                  }}
-                  onFocus={e => e.target.style.borderColor = '#ff6b00'}
-                  onBlur={e => e.target.style.borderColor = '#e8e8e8'}
-                />
+                <label style={{ color:'#444', fontSize:'12px', fontWeight:'700', display:'block', marginBottom:'8px' }}>الرقم الوظيفي</label>
+                <input className="login-input" type="text" value={empId} onChange={e=>{setEmpId(e.target.value);setError('')}} placeholder="أدخل رقمك الوظيفي" style={inp} />
               </div>
             )}
 
-            {/* حقل كلمة المرور مع زر إظهار/إخفاء */}
+            {/* كلمة المرور */}
             <div>
-              <label style={{ color: '#555', fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>كلمة المرور</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                  style={{
-                    width: '100%', padding: '13px 48px 13px 16px',
-                    background: '#fafafa', border: '1.5px solid #e8e8e8',
-                    borderRadius: '10px', color: '#1a1a1a', fontSize: '14px',
-                    outline: 'none', boxSizing: 'border-box',
-                    fontFamily: 'Cairo, sans-serif'
-                  }}
-                  onFocus={e => e.target.style.borderColor = '#ff6b00'}
-                  onBlur={e => e.target.style.borderColor = '#e8e8e8'}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: '18px', padding: '0', lineHeight: 1, color: '#aaa'
-                  }}
-                  title={showPassword ? 'إخفاء' : 'إظهار'}
-                >
+              <label style={{ color:'#444', fontSize:'12px', fontWeight:'700', display:'block', marginBottom:'8px' }}>كلمة المرور</label>
+              <div style={{ position:'relative' }}>
+                <input className="login-input" type={showPassword?'text':'password'} value={password} onChange={e=>{setPassword(e.target.value);setError('')}} placeholder="••••••••" onKeyDown={e=>e.key==='Enter'&&handleLogin()} style={{ ...inp, paddingLeft:'48px' }} />
+                <button className="eye-btn" type="button" onClick={()=>setShowPassword(!showPassword)} style={{ position:'absolute', left:'13px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', fontSize:'17px', padding:0, lineHeight:1, color:'#bbb' }}>
                   {showPassword ? '🙈' : '👁️'}
                 </button>
               </div>
             </div>
 
-            {/* تذكرني + نسيت كلمة المرور */}
+            {/* تذكرني + نسيت */}
             {!isInvite && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '-6px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#555', userSelect: 'none' }}>
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={e => setRememberMe(e.target.checked)}
-                    style={{ accentColor: '#ff6b00', width: '16px', height: '16px', cursor: 'pointer' }}
-                  />
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:'-4px' }}>
+                <label style={{ display:'flex', alignItems:'center', gap:'8px', cursor:'pointer', fontSize:'13px', color:'#555', userSelect:'none' }}>
+                  <input type="checkbox" checked={rememberMe} onChange={e=>setRememberMe(e.target.checked)} style={{ accentColor:'#ff6b00', width:'15px', height:'15px', cursor:'pointer' }} />
                   تذكرني
                 </label>
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  disabled={loading}
-                  style={{
-                    background: 'none', border: 'none', color: '#ff6b00',
-                    fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-                    fontFamily: 'Cairo, sans-serif', padding: 0,
-                    textDecoration: 'underline', textUnderlineOffset: '3px'
-                  }}
-                >
+                <button className="forgot-btn" type="button" onClick={handleForgotPassword} disabled={loading} style={{ background:'none', border:'none', color:'#ff6b00', fontSize:'13px', fontWeight:'600', cursor:'pointer', fontFamily:'Cairo, sans-serif', padding:0, textDecoration:'underline', textUnderlineOffset:'3px' }}>
                   نسيت كلمة المرور؟
                 </button>
               </div>
@@ -273,35 +179,33 @@ export default function Home() {
 
             {/* رسالة الخطأ */}
             {error && (
-              <div style={{
-                background: '#fff5f5', border: '1px solid #ffcccc',
-                borderRadius: '8px', padding: '10px 14px',
-                color: '#e53e3e', fontSize: '13px'
-              }}>{error}</div>
+              <div style={{ background:'#fff5f5', border:'1px solid #fca5a5', borderRadius:'10px', padding:'11px 14px', color:'#dc2626', fontSize:'13px', display:'flex', alignItems:'center', gap:'8px', animation:'slideDown 0.3s ease' }}>
+                <span>⚠️</span> {error}
+              </div>
             )}
 
             {/* زر الدخول */}
-            <button
-              onClick={handleLogin}
-              disabled={loading}
-              style={{
-                background: loading ? '#ccc' : 'linear-gradient(135deg, #ff6b00, #ff9a3c)',
-                color: '#fff', border: 'none', borderRadius: '12px',
-                padding: '15px', fontSize: '15px', fontWeight: '700',
-                fontFamily: 'Cairo, sans-serif', cursor: loading ? 'not-allowed' : 'pointer',
-                marginTop: '4px', boxShadow: loading ? 'none' : '0 6px 20px rgba(255,107,0,0.35)',
-                transition: 'all 0.2s', width: '100%'
-              }}
-            >
-              {loading ? '⏳ جاري التحقق...' : isInvite ? 'تعيين كلمة المرور والدخول →' : 'تسجيل الدخول →'}
+            <button className="login-btn" onClick={handleLogin} disabled={loading} style={{ background:loading?'#ddd':'linear-gradient(135deg,#1a1a2e 0%,#ff6b00 100%)', color:'#fff', border:'none', borderRadius:'12px', padding:'16px', fontSize:'15px', fontWeight:'800', fontFamily:'Cairo, sans-serif', cursor:loading?'not-allowed':'pointer', marginTop:'4px', boxShadow:loading?'none':'0 8px 24px rgba(255,107,0,0.3)', width:'100%', letterSpacing:'0.5px' }}>
+              {loading
+                ? <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'10px' }}>
+                    <span style={{ display:'inline-block', width:'16px', height:'16px', border:'2px solid rgba(255,255,255,0.35)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
+                    جاري التحقق...
+                  </span>
+                : 'تسجيل الدخول'
+              }
             </button>
           </div>
         )}
+
+        <div style={{ marginTop:'28px', paddingTop:'20px', borderTop:'1px solid #f0f0f0', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' }}>
+          <div style={{ width:'5px', height:'5px', borderRadius:'50%', background:'#ff6b00' }} />
+          <span style={{ color:'#bbb', fontSize:'11px' }}>نظام آمن ومشفر</span>
+          <div style={{ width:'5px', height:'5px', borderRadius:'50%', background:'#ff6b00' }} />
+        </div>
       </div>
 
-      {/* Footer */}
-      <div style={{ marginTop: '24px', color: '#bbb', fontSize: '11px', textAlign: 'center' }}>
-        جميع الحقوق محفوظة © 2026 — MAG المجال العربي
+      <div style={{ marginTop:'24px', color:'#aaa', fontSize:'11px', textAlign:'center', position:'relative', zIndex:5 }}>
+        جميع الحقوق محفوظة 2026 MAG
       </div>
     </div>
   )

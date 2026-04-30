@@ -54,6 +54,9 @@ export default function Dashboard() {
   const [bulkFiles, setBulkFiles] = useState([])
   const [bulkResults, setBulkResults] = useState([])
   const [bulkUploading, setBulkUploading] = useState(false)
+  const [toasts, setToasts] = useState([])
+  const [dataLoading, setDataLoading] = useState(true)
+  const [statsKey, setStatsKey] = useState(0)
 
   useEffect(() => {
     const savedLang = localStorage.getItem('lang') || 'ar'
@@ -80,6 +83,7 @@ export default function Dashboard() {
   }
 
   const fetchData = async () => {
+    setDataLoading(true)
     const [v, d, m, f, ur] = await Promise.all([
       supabase.from('vehicles').select('*').order('created_at', { ascending: false }),
       supabase.from('drivers').select('*').order('created_at', { ascending: false }),
@@ -90,6 +94,8 @@ export default function Dashboard() {
     setVehicles(v.data || []); setDrivers(d.data || [])
     setMaintenance(m.data || []); setFuelLogs(f.data || [])
     setUserRoles(ur.data || [])
+    setDataLoading(false)
+    setStatsKey(k => k + 1)
   }
 
   const daysUntil = (dateStr) => {
@@ -198,6 +204,7 @@ export default function Dashboard() {
     }
     await supabase.from(table).update(updateData).eq('id', editItem.id)
     setEditItem(null); setEditType(null); setUploading(false); fetchData()
+    showToast('✅ تم الحفظ بنجاح')
   }
 
   const addVehicle = async () => {
@@ -208,6 +215,7 @@ export default function Dashboard() {
     setShowVehicleForm(false)
     setVehicleForm({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
     setVehicleImage(null); setIstamaraImage(null); setUploading(false); fetchData()
+    showToast('✅ تم إضافة المركبة بنجاح')
   }
 
   const addDriver = async () => {
@@ -218,6 +226,7 @@ export default function Dashboard() {
     setShowDriverForm(false)
     setDriverForm({ file_number: '', full_name: '', national_id: '', passport_number: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
     setIqamaImage(null); setLicenseImage(null); setUploading(false); fetchData()
+    showToast('✅ تم إضافة السائق بنجاح')
   }
 
   const addMaintenance = async () => {
@@ -225,6 +234,7 @@ export default function Dashboard() {
     setShowMaintenanceForm(false)
     setMaintenanceForm({ vehicle_id: '', type: '', description: '', date: '', cost: '', next_date: '', status: 'pending' })
     fetchData()
+    showToast('✅ تم إضافة سجل الصيانة')
   }
 
   const addFuel = async () => {
@@ -233,6 +243,7 @@ export default function Dashboard() {
     setShowFuelForm(false)
     setFuelForm({ vehicle_id: '', driver_id: '', date: '', liters: '', cost_per_liter: '', odometer: '' })
     fetchData()
+    showToast('✅ تم إضافة سجل الوقود')
   }
 
   const updatePreparation = async (id, val) => {
@@ -251,11 +262,17 @@ export default function Dashboard() {
   const canEdit = currentRole === 'admin' || currentRole === 'editor'
   const canDelete = currentRole === 'admin'
 
-  const deleteVehicle = async (id) => { if (!canDelete) return; await supabase.from('vehicles').delete().eq('id', id); fetchData() }
-  const deleteDriver = async (id) => { if (!canDelete) return; await supabase.from('drivers').delete().eq('id', id); fetchData() }
-  const deleteMaintenance = async (id) => { if (!canDelete) return; await supabase.from('maintenance').delete().eq('id', id); fetchData() }
-  const deleteFuel = async (id) => { if (!canDelete) return; await supabase.from('fuel_logs').delete().eq('id', id); fetchData() }
+  const deleteVehicle = async (id) => { if (!canDelete) return; await supabase.from('vehicles').delete().eq('id', id); fetchData(); showToast('🗑️ تم حذف المركبة', 'warning') }
+  const deleteDriver = async (id) => { if (!canDelete) return; await supabase.from('drivers').delete().eq('id', id); fetchData(); showToast('🗑️ تم حذف السائق', 'warning') }
+  const deleteMaintenance = async (id) => { if (!canDelete) return; await supabase.from('maintenance').delete().eq('id', id); fetchData(); showToast('🗑️ تم حذف سجل الصيانة', 'warning') }
+  const deleteFuel = async (id) => { if (!canDelete) return; await supabase.from('fuel_logs').delete().eq('id', id); fetchData(); showToast('🗑️ تم حذف سجل الوقود', 'warning') }
   const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/' }
+
+  const showToast = (msg, type = 'success') => {
+    const id = Date.now()
+    setToasts(prev => [...prev, { id, msg, type }])
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3200)
+  }
 
   const totalFuelCost = fuelLogs.reduce((a, b) => a + (b.total_cost || 0), 0)
   const totalFuelLiters = fuelLogs.reduce((a, b) => a + (Number(b.liters) || 0), 0)
@@ -284,22 +301,22 @@ export default function Dashboard() {
   const fuelByVehicle = fuelLogs.reduce((acc, f) => { const key = f.vehicles?.plate_number || '?'; acc[key] = (acc[key] || 0) + (Number(f.total_cost) || 0); return acc }, {})
   const topFuelVehicles = Object.entries(fuelByVehicle).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
-  const C = { orange: '#ff6b00', orangeLight: '#fff7f2', white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8' }
+  const C = { orange: '#ff6b00', orangeLight: '#fff7f2', white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8', navy: '#1a1a2e', navyDark: '#12122a', navyLight: '#f0f0f8' }
   const navItems = [['dashboard','📊',t.dashboard],['vehicles','🚛',t.vehicles],['drivers','👤',t.drivers],['maintenance','🔧',t.maintenance],['fuel','⛽',t.fuel],['reports','📈',t.reports],['alerts','🔔',t.alerts],['users','👥',t.users]]
 
   const st = {
-    input: { width: '100%', padding: '10px 14px', background: '#fafafa', border: `1.5px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box' },
-    label: { color: '#555', fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '6px' },
-    btn: (c, outline) => ({ background: outline ? C.white : (c || C.orange), color: outline ? (c || C.orange) : C.white, border: `2px solid ${c || C.orange}`, borderRadius: '9px', padding: '9px 18px', fontSize: '13px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer' }),
+    input: { width: '100%', padding: '10px 14px', background: '#fafafa', border: `1.5px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s, box-shadow 0.2s' },
+    label: { color: '#444', fontSize: '12px', fontWeight: '700', display: 'block', marginBottom: '6px', letterSpacing: '0.2px' },
+    btn: (c, outline) => ({ background: outline ? C.white : (c || C.orange), color: outline ? (c || C.orange) : C.white, border: `2px solid ${c || C.orange}`, borderRadius: '9px', padding: '9px 18px', fontSize: '13px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer', transition: 'all 0.2s' }),
     badge: (s) => ({ background: statusBg(s), color: statusColor(s), padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', display: 'inline-block' }),
-    modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' },
-    modalBox: { background: C.white, borderRadius: '18px', padding: isMobile ? '20px' : '32px', width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto' },
-    formGrid: { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' },
-    card: { background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: isMobile ? '14px' : '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
-    th: { padding: '10px 12px', textAlign: isRTL ? 'right' : 'left', color: C.muted, fontSize: '11px', fontWeight: '600', borderBottom: `2px solid ${C.border}`, background: '#fafafa', whiteSpace: 'nowrap' },
-    td: { padding: '10px 12px', color: C.text, fontSize: '12px', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' },
-    editBtn: { background: '#fff7f2', border: '1px solid #ffccaa', color: C.orange, borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '600' },
-    deleteBtn: { background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '15px' },
+    modal: { position: 'fixed', inset: 0, background: 'rgba(10,10,20,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px', backdropFilter: 'blur(4px)' },
+    modalBox: { background: C.white, borderRadius: '20px', padding: isMobile ? '20px' : '36px', width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', border: `1px solid ${C.border}` },
+    formGrid: { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' },
+    card: { background: C.white, border: `1px solid ${C.border}`, borderRadius: '16px', padding: isMobile ? '16px' : '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.05)', transition: 'box-shadow 0.2s' },
+    th: { padding: '12px 14px', textAlign: isRTL ? 'right' : 'left', color: '#666', fontSize: '11px', fontWeight: '700', borderBottom: `2px solid ${C.border}`, background: '#fafbfc', whiteSpace: 'nowrap', letterSpacing: '0.3px' },
+    td: { padding: '11px 14px', color: C.text, fontSize: '12px', borderBottom: `1px solid #f0f0f0`, whiteSpace: 'nowrap' },
+    editBtn: { background: '#fff7f2', border: '1px solid #ffccaa', color: C.orange, borderRadius: '7px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700', transition: 'all 0.15s' },
+    deleteBtn: { background: '#fff5f5', border: '1px solid #ffcccc', color: '#dc2626', cursor: 'pointer', fontSize: '12px', borderRadius: '7px', padding: '5px 8px', fontFamily: 'Cairo, sans-serif', fontWeight: '700', transition: 'all 0.15s' },
     prepSelect: (s) => ({ background: prepBg(s), color: prepColor(s), border: `1.5px solid ${prepColor(s)}`, borderRadius: '8px', padding: '3px 6px', fontSize: '10px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer', outline: 'none' }),
   }
 
@@ -348,9 +365,72 @@ export default function Dashboard() {
   const thumb = { width: '34px', height: '34px', borderRadius: '6px', objectFit: 'cover', cursor: 'pointer', border: `1px solid ${C.border}` }
   const imgLink = { color: C.orange, fontSize: '11px', cursor: 'pointer', fontWeight: '600' }
 
+  // مكوّن الأرقام المتحركة
+  const CountUp = ({ target, suffix = '', duration = 1000 }) => {
+    const [count, setCount] = useState(0)
+    useEffect(() => {
+      if (!target) { setCount(0); return }
+      let start = 0; let raf
+      const startTime = performance.now()
+      const tick = (now) => {
+        const elapsed = now - startTime
+        const progress = Math.min(elapsed / duration, 1)
+        const ease = 1 - Math.pow(1 - progress, 3)
+        setCount(Math.floor(ease * target))
+        if (progress < 1) raf = requestAnimationFrame(tick)
+        else setCount(target)
+      }
+      raf = requestAnimationFrame(tick)
+      return () => cancelAnimationFrame(raf)
+    }, [target, duration])
+    return <span>{count.toLocaleString('ar-SA')}{suffix}</span>
+  }
+
+  // مكوّن Skeleton
+  const Skeleton = ({ w = '100%', h = '18px', r = '8px' }) => (
+    <div className="skeleton" style={{ width: w, height: h, borderRadius: r }} />
+  )
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: 'Cairo, sans-serif', direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div style={{ minHeight: '100vh', background: '#f0f2f5', fontFamily: 'Cairo, sans-serif', direction: isRTL ? 'rtl' : 'ltr' }}>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
+      <style>{`
+        @keyframes toastSlideIn { from{opacity:0;transform:translateX(80px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes slideUp      { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeIn       { from{opacity:0} to{opacity:1} }
+        @keyframes spin         { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes statPop      { 0%{transform:scale(0.85);opacity:0} 60%{transform:scale(1.04)} 100%{transform:scale(1);opacity:1} }
+        @keyframes shimmer      { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+        .skeleton { background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:600px 100%; animation:shimmer 1.4s infinite linear; border-radius:8px; }
+        .nav-item  { transition: all 0.2s !important; }
+        .nav-item:hover { background: rgba(255,107,0,0.08) !important; color: #ff6b00 !important; }
+        .dash-card { transition: box-shadow 0.2s, transform 0.2s; }
+        .dash-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.1) !important; transform: translateY(-2px); }
+        .action-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+        .action-btn { transition: all 0.15s; }
+        tr.data-row:hover td { background: #fff7f2 !important; }
+        ::-webkit-scrollbar { width:5px; height:5px; }
+        ::-webkit-scrollbar-thumb { background:#e0e0e0; border-radius:3px; }
+        ::-webkit-scrollbar-thumb:hover { background:#ff6b00; }
+      `}</style>
+
+      {/* Toast Notifications */}
+      <div style={{ position:'fixed', top:'80px', [isRTL?'left':'right']:'20px', zIndex:999, display:'flex', flexDirection:'column', gap:'10px', maxWidth:'320px' }}>
+        {toasts.map(toast => (
+          <div key={toast.id} style={{
+            background: toast.type === 'error' ? '#fff5f5' : toast.type === 'warning' ? '#fffbeb' : '#f0fdf4',
+            border: `1px solid ${toast.type === 'error' ? '#fca5a5' : toast.type === 'warning' ? '#fcd34d' : '#86efac'}`,
+            color: toast.type === 'error' ? '#dc2626' : toast.type === 'warning' ? '#d97706' : '#16a34a',
+            borderRadius:'12px', padding:'14px 18px', fontSize:'13px', fontWeight:'700',
+            boxShadow:'0 8px 24px rgba(0,0,0,0.12)',
+            animation:'toastSlideIn 0.35s cubic-bezier(.16,1,.3,1)',
+            display:'flex', alignItems:'center', gap:'10px',
+            borderRight: `4px solid ${toast.type === 'error' ? '#dc2626' : toast.type === 'warning' ? '#d97706' : '#16a34a'}`,
+          }}>
+            {toast.msg}
+          </div>
+        ))}
+      </div>
 
       {previewImage && (
         <div style={{ ...st.modal, zIndex: 200 }} onClick={() => setPreviewImage(null)}>
@@ -364,65 +444,72 @@ export default function Dashboard() {
       {isMobile && sidebarOpen && <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 30 }} onClick={() => setSidebarOpen(false)} />}
 
       {/* Top Bar */}
-      <div style={{ background: C.white, borderBottom: `3px solid ${C.orange}`, padding: isMobile ? '8px 16px' : '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20, boxShadow: '0 2px 12px rgba(255,107,0,0.08)' }}>
+      <div style={{ background: `linear-gradient(135deg, ${C.navy} 0%, ${C.navyDark} 100%)`, borderBottom: `3px solid ${C.orange}`, padding: isMobile ? '8px 16px' : '10px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.25)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {isMobile && <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: C.orange }}>☰</button>}
-          <img src="/logo-madinah.jpeg" alt="" style={{ height: isMobile ? '36px' : '50px', objectFit: 'contain' }} />
+          {isMobile && <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 9px', fontSize: '18px', cursor: 'pointer', color: '#fff' }}>☰</button>}
+          <img src="/logo-madinah.jpeg" alt="" style={{ height: isMobile ? '36px' : '50px', objectFit: 'contain', filter: 'brightness(1.1)' }} />
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: isMobile ? '11px' : '15px', fontWeight: '900', color: C.orange }}>
+          <div style={{ fontSize: isMobile ? '11px' : '15px', fontWeight: '900', color: '#fff', letterSpacing: '0.3px' }}>
             {isMobile ? (isRTL ? 'أسطول نظافة المدينة' : 'Cleaning Fleet') : (isRTL ? 'أسطول مشاريع نظافة المدينة المنورة' : 'Madinah Cleaning Fleet Management')}
           </div>
-          {!isMobile && <div style={{ fontSize: '11px', color: C.muted }}>{t.yourPermission}: <span style={{ color: roleColor(currentRole), fontWeight: '700' }}>{roleLabel(currentRole)}</span></div>}
+          {!isMobile && <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>{t.yourPermission}: <span style={{ color: C.orange, fontWeight: '700' }}>{roleLabel(currentRole)}</span></div>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Language Switch */}
-          <button onClick={switchLang} style={{ background: C.orangeLight, border: `1.5px solid ${C.orange}`, borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: C.orange, fontFamily: 'Cairo, sans-serif' }}>
+          <button onClick={switchLang} style={{ background: 'rgba(255,107,0,0.15)', border: `1px solid rgba(255,107,0,0.3)`, borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: C.orange, fontFamily: 'Cairo, sans-serif', transition: 'all 0.2s' }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,107,0,0.25)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(255,107,0,0.15)'}>
             {lang === 'ar' ? '🇬🇧 EN' : lang === 'en' ? '🇧🇩 বাং' : '🇸🇦 ع'}
           </button>
           {criticalAlerts.length > 0 && (
-            <div onClick={() => setActiveTab('alerts')} style={{ position: 'relative', cursor: 'pointer' }}>
-              <span style={{ fontSize: '22px' }}>🔔</span>
-              <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>
+            <div onClick={() => setActiveTab('alerts')} style={{ position: 'relative', cursor: 'pointer', background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: '8px', padding: '6px 10px' }}>
+              <span style={{ fontSize: '18px' }}>🔔</span>
+              <span style={{ position: 'absolute', top: '-6px', [isRTL?'left':'right']: '-6px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>
             </div>
           )}
-          {!isMobile && <img src="/logo-mag.jpeg" alt="" style={{ height: '40px', objectFit: 'contain' }} />}
-          <button onClick={handleLogout} style={{ ...st.btn('#dc2626', true), padding: isMobile ? '6px 10px' : '9px 18px', fontSize: isMobile ? '11px' : '13px' }}>{t.logout}</button>
+          {!isMobile && <img src="/logo-mag.jpeg" alt="" style={{ height: '40px', objectFit: 'contain', filter: 'brightness(1.1)' }} />}
+          <button className="action-btn" onClick={handleLogout} style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: '9px', padding: isMobile ? '6px 10px' : '8px 16px', fontSize: isMobile ? '11px' : '13px', fontWeight: '700', cursor: 'pointer', color: '#ff6b6b', fontFamily: 'Cairo, sans-serif' }}>{t.logout}</button>
         </div>
       </div>
 
       <div style={{ display: 'flex' }}>
         {/* Sidebar */}
-        <div style={{ width: '220px', background: C.white, borderLeft: isRTL ? `1px solid ${C.border}` : 'none', borderRight: isRTL ? 'none' : `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', padding: '16px 0', position: isMobile ? 'fixed' : 'sticky', [isRTL ? 'right' : 'left']: isMobile ? (sidebarOpen ? 0 : (isRTL ? '-220px' : '-220px')) : 0, top: isMobile ? 0 : '63px', height: isMobile ? '100vh' : 'calc(100vh - 63px)', overflowY: 'auto', zIndex: isMobile ? 40 : 10, transition: `${isRTL ? 'right' : 'left'} 0.3s ease` }}>
+        <div style={{ width: '230px', background: `linear-gradient(180deg, ${C.navy} 0%, ${C.navyDark} 100%)`, display: 'flex', flexDirection: 'column', padding: '12px 0', position: isMobile ? 'fixed' : 'sticky', [isRTL ? 'right' : 'left']: isMobile ? (sidebarOpen ? 0 : '-230px') : 0, top: isMobile ? 0 : '67px', height: isMobile ? '100vh' : 'calc(100vh - 67px)', overflowY: 'auto', zIndex: isMobile ? 40 : 10, transition: `${isRTL ? 'right' : 'left'} 0.3s cubic-bezier(.16,1,.3,1)`, boxShadow: isMobile ? '4px 0 20px rgba(0,0,0,0.3)' : 'none' }}>
           {isMobile && (
-            <div style={{ padding: '16px 20px 8px', borderBottom: `1px solid ${C.border}`, marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: C.orange }}>{t.menu}</div>
-              <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+            <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '14px', fontWeight: '800', color: C.orange }}>{t.menu}</div>
+              <button onClick={() => setSidebarOpen(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '6px', width: '28px', height: '28px', fontSize: '14px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
           )}
-          {navItems.map(([id, icon, label]) => (
-            (!['users'].includes(id) || currentRole === 'admin') && (
-              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === id ? '700' : '400', color: activeTab === id ? C.orange : C.muted, background: activeTab === id ? C.orangeLight : 'transparent', borderRight: isRTL && activeTab === id ? `3px solid ${C.orange}` : isRTL ? '3px solid transparent' : 'none', borderLeft: !isRTL && activeTab === id ? `3px solid ${C.orange}` : !isRTL ? '3px solid transparent' : 'none', position: 'relative' }}
-                onClick={() => { setActiveTab(id); if (isMobile) setSidebarOpen(false) }}>
-                <span style={{ fontSize: '17px' }}>{icon}</span>
-                <span>{label}</span>
-                {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ marginRight: isRTL ? 'auto' : 0, marginLeft: isRTL ? 0 : 'auto', background: '#dc2626', color: '#fff', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: '700' }}>{criticalAlerts.length}</span>}
-              </div>
-            )
-          ))}
+          <div style={{ padding: '8px 12px', marginBottom: '8px' }}>
+            {navItems.map(([id, icon, label]) => (
+              (!['users'].includes(id) || currentRole === 'admin') && (
+                <div key={id} className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '11px', padding: '11px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === id ? '700' : '500', color: activeTab === id ? '#fff' : 'rgba(255,255,255,0.55)', background: activeTab === id ? `rgba(255,107,0,0.2)` : 'transparent', borderRadius: '10px', marginBottom: '3px', borderRight: isRTL && activeTab === id ? `3px solid ${C.orange}` : isRTL ? '3px solid transparent' : 'none', borderLeft: !isRTL && activeTab === id ? `3px solid ${C.orange}` : !isRTL ? '3px solid transparent' : 'none', position: 'relative', transition: 'all 0.2s' }}
+                  onClick={() => { setActiveTab(id); if (id === 'dashboard') setStatsKey(k=>k+1); if (isMobile) setSidebarOpen(false) }}>
+                  <span style={{ fontSize: '17px', filter: activeTab === id ? 'none' : 'grayscale(0.3)' }}>{icon}</span>
+                  <span>{label}</span>
+                  {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ marginRight: isRTL ? 'auto' : 0, marginLeft: isRTL ? 0 : 'auto', background: '#dc2626', color: '#fff', borderRadius: '20px', padding: '2px 8px', fontSize: '10px', fontWeight: '700' }}>{criticalAlerts.length}</span>}
+                </div>
+              )
+            ))}
+          </div>
           <div style={{ flex: 1 }} />
-          <div style={{ padding: '16px 20px', borderTop: `1px solid ${C.border}` }}>
-            <button onClick={handleLogout} style={{ ...st.btn('#dc2626', true), width: '100%' }}>{t.logout}</button>
+          <div style={{ padding: '12px 12px 16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', marginBottom: '10px', textAlign: 'center', letterSpacing: '0.5px' }}>
+              MAG © 2026 — نظام مرخّص
+            </div>
+            <button className="action-btn" onClick={handleLogout} style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', color: '#ff8888', fontFamily: 'Cairo, sans-serif', width: '100%', transition: 'all 0.2s' }}>{t.logout} 🚪</button>
           </div>
         </div>
 
         {/* Main */}
-        <div style={{ flex: 1, padding: isMobile ? '16px' : '24px', overflowX: 'auto', [isRTL ? 'marginRight' : 'marginLeft']: isMobile ? 0 : '220px' }}>
+        <div style={{ flex: 1, padding: isMobile ? '16px' : '28px', overflowX: 'auto', [isRTL ? 'marginRight' : 'marginLeft']: isMobile ? 0 : '230px', minWidth: 0 }}>
 
           {/* Dashboard */}
           {activeTab === 'dashboard' && (
             <div>
-              <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>📊 {t.dashboardTitle}</div>
+              <div style={{ marginBottom: '24px', animation: 'fadeIn 0.4s ease' }}>
+                <div style={{ fontSize: isMobile ? '17px' : '22px', fontWeight: '900', color: C.navy }}>{t.dashboardTitle}</div>
+                <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>آخر تحديث: {new Date().toLocaleDateString('ar-SA', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</div>
+              </div>
               {criticalAlerts.length > 0 && (
                 <div onClick={() => setActiveTab('alerts')} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontSize: '24px' }}>🚨</span>
@@ -430,36 +517,54 @@ export default function Dashboard() {
                   <div style={{ marginRight: isRTL ? 'auto' : 0, marginLeft: isRTL ? 0 : 'auto', color: '#dc2626', fontSize: '20px' }}>{isRTL ? '←' : '→'}</div>
                 </div>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
-                {[['🚛',t.vehicles,vehicles.length,'#ff6b00'],['👤',t.drivers,drivers.length,'#16a34a'],['🔧',t.maintenance,maintenance.length,'#d97706'],['🔔',t.alerts,alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
-                  <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: isMobile ? '14px' : '20px', borderTop: `4px solid ${color}` }}>
-                    <div style={{ color: C.muted, fontSize: '11px', marginBottom: '6px', fontWeight: '600' }}>{icon} {label}</div>
-                    <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: '900', color }}>{val}</div>
+              {/* بطاقات الإحصائيات المتحركة */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '14px', marginBottom: '24px' }}>
+                {[
+                  { icon:'🚛', label: t.vehicles,    val: vehicles.length,    color:'#ff6b00', bg:'linear-gradient(135deg,#fff7f2,#fff)', sub: `${activeVehicles} نشط • ${readyVehicles} جاهز` },
+                  { icon:'👤', label: t.drivers,     val: drivers.length,     color:'#16a34a', bg:'linear-gradient(135deg,#f0fdf4,#fff)', sub: `${activeDrivers} سائق نشط` },
+                  { icon:'🔧', label: t.maintenance, val: maintenance.length, color:'#d97706', bg:'linear-gradient(135deg,#fffbeb,#fff)', sub: `إجمالي ${totalMaintenanceCost.toLocaleString('ar-SA')} ر.س` },
+                  { icon:'🔔', label: t.alerts,      val: alerts.length,      color:'#dc2626', bg:'linear-gradient(135deg,#fff5f5,#fff)', sub: `${criticalAlerts.length} حرجة` },
+                ].map(({ icon, label, val, color, bg, sub }, i) => (
+                  <div key={label} className="dash-card" style={{ background: bg, border: `1px solid ${color}22`, borderRadius: '18px', padding: isMobile ? '16px' : '22px', borderTop: `4px solid ${color}`, boxShadow: `0 4px 20px ${color}15`, animation: `statPop 0.5s cubic-bezier(.16,1,.3,1) ${i*0.08}s both` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#666', letterSpacing: '0.3px' }}>{label}</span>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>{icon}</div>
+                    </div>
+                    <div style={{ fontSize: isMobile ? '28px' : '36px', fontWeight: '900', color, lineHeight: 1 }}>
+                      {dataLoading ? <div className="skeleton" style={{ height: '36px', width: '60px', borderRadius: '8px' }} /> : <CountUp key={statsKey} target={val} />}
+                    </div>
+                    {!isMobile && <div style={{ fontSize: '11px', color: '#999', marginTop: '6px', fontWeight: '500' }}>{sub}</div>}
                   </div>
                 ))}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
-                <div style={st.card}>
-                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>🚛 {t.latestVehicles}</div>
-                  {vehicles.slice(0,5).map(v => (
-                    <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
-                      <div style={{ fontSize: '13px', fontWeight: '600' }}>{v.plate_number}</div>
+                <div style={{ ...st.card, animation: 'slideUp 0.5s ease 0.3s both' }}>
+                  <div style={{ fontWeight: '800', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+                    <span style={{ width: '28px', height: '28px', background: '#fff7f2', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🚛</span>
+                    {t.latestVehicles}
+                  </div>
+                  {dataLoading ? Array.from({length:4}).map((_,i)=><div key={i} className="skeleton" style={{ height:'32px', marginBottom:'8px' }} />) : vehicles.slice(0,5).map(v => (
+                    <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: `1px solid #f5f5f5` }}>
+                      <div style={{ fontSize: '13px', fontWeight: '700' }}>{v.plate_number}</div>
                       <span style={st.badge(v.status)}>{statusLabel(v.status)}</span>
                     </div>
                   ))}
                 </div>
-                <div style={st.card}>
-                  <div style={{ fontWeight: '800', marginBottom: '14px' }}>🔔 {t.latestAlerts}</div>
-                  {alerts.slice(0,5).map(a => (
-                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
-                      <span>{a.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '12px', fontWeight: '600', color: alertColor(a.type) }}>{a.title}</div>
+                <div style={{ ...st.card, animation: 'slideUp 0.5s ease 0.4s both' }}>
+                  <div style={{ fontWeight: '800', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+                    <span style={{ width: '28px', height: '28px', background: '#fff5f5', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔔</span>
+                    {t.latestAlerts}
+                  </div>
+                  {dataLoading ? Array.from({length:4}).map((_,i)=><div key={i} className="skeleton" style={{ height:'36px', marginBottom:'8px' }} />) : alerts.slice(0,5).map(a => (
+                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 0', borderBottom: `1px solid #f5f5f5` }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: alertBg(a.type), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', flexShrink: 0 }}>{a.icon}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: alertColor(a.type), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</div>
                         <div style={{ fontSize: '11px', color: C.muted }}>{a.detail}</div>
                       </div>
                     </div>
                   ))}
-                  {alerts.length === 0 && <div style={{ color: '#16a34a', textAlign: 'center', padding: '20px', fontSize: '13px' }}>{t.noAlerts}</div>}
+                  {alerts.length === 0 && <div style={{ color: '#16a34a', textAlign: 'center', padding: '20px', fontSize: '13px', fontWeight: '600' }}>✅ {t.noAlerts}</div>}
                 </div>
               </div>
             </div>
@@ -1011,12 +1116,4 @@ export default function Dashboard() {
             <div key={id} onClick={() => setActiveTab(id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', cursor: 'pointer', color: activeTab === id ? C.orange : C.muted, fontSize: '9px', fontWeight: activeTab === id ? '700' : '400', minWidth: '36px', position: 'relative' }}>
               <span style={{ fontSize: '16px' }}>{icon}</span>
               <span>{label.split(' ')[0]}</span>
-              {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ position: 'absolute', top: '-2px', right: '2px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '13px', height: '13px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>}
-            </div>
-          ))}
-        </div>
-      )}
-      {isMobile && <div style={{ height: '70px' }} />}
-    </div>
-  )
-}
+              {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ position: 'absolute', top: '-2px', right: '2px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '13px', height: '13px', fontSize: '8px
