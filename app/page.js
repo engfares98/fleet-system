@@ -67,7 +67,7 @@ export default function Home() {
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:'#1a1a2e', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'Cairo, sans-serif', direction:'rtl', position:'relative', overflow:'hidden' }}>
+    <div style={{ minHeight:'100vh', backgroundImage:'url(/bg-login.jpeg)', backgroundSize:'cover', backgroundPosition:'center', backgroundAttachment:'fixed', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'Cairo, sans-serif', direction:'rtl', position:'relative', overflow:'hidden' }}>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
       <style>{`
         @keyframes slideUp    { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
@@ -87,15 +87,10 @@ export default function Home() {
         .eye-btn     { transition: color 0.2s; }
       `}</style>
 
-      {/* خلفية — صورة الأسطول */}
-      <div style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none' }}>
-        {/* الصورة */}
-        <img src="/bg-login.jpeg" alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center' }} />
-        {/* طبقة تعتيم متدرجة */}
-        <div style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, rgba(10,10,30,0.82) 0%, rgba(10,10,30,0.65) 50%, rgba(255,107,0,0.25) 100%)' }} />
-        {/* شريط علوي برتقالي */}
-        <div style={{ position:'absolute', top:0, left:0, right:0, height:'4px', background:'linear-gradient(90deg,#1a1a2e,#ff6b00,#1a1a2e)', backgroundSize:'200% 200%', animation:'shimmerBg 4s ease infinite' }} />
-      </div>
+      {/* طبقة تعتيم فوق الصورة */}
+      <div style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, rgba(10,10,30,0.85) 0%, rgba(10,10,30,0.70) 50%, rgba(255,107,0,0.2) 100%)', pointerEvents:'none' }} />
+      {/* شريط علوي */}
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:'4px', background:'linear-gradient(90deg,#1a1a2e,#ff6b00,#1a1a2e)', backgroundSize:'200% 200%', animation:'shimmerBg 4s ease infinite', zIndex:2, pointerEvents:'none' }} />
 
       {/* هيدر رسمي */}
       <div style={{ position:'absolute', top:0, left:0, right:0, background:'linear-gradient(135deg,#1a1a2e 0%,#12122a 100%)', borderBottom:'3px solid #ff6b00', padding:'12px 40px', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'0 4px 24px rgba(0,0,0,0.2)', zIndex:10 }}>
