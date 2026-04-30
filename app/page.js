@@ -91,6 +91,25 @@ export default function Home() {
         .forgot-btn  { transition: opacity 0.2s; }
         .eye-btn:hover { color:#ff6b00!important; }
         .eye-btn     { transition: color 0.2s; }
+        @media (max-width: 600px) {
+          .login-card {
+            padding: 28px 22px 22px !important;
+            border-radius: 18px !important;
+            margin-left: 20px !important;
+            margin-right: 20px !important;
+            width: calc(100% - 40px) !important;
+          }
+          .login-icon { width:56px!important; height:56px!important; font-size:26px!important; border-radius:14px!important; }
+          .login-title { font-size:16px!important; }
+          .login-subtitle { font-size:11px!important; }
+          .login-header { padding:8px 16px!important; }
+          .login-header img:first-child { height:44px!important; }
+          .login-header img:last-child  { height:36px!important; }
+          .login-header-title { font-size:11px!important; }
+          .login-header-sub   { font-size:9px!important; }
+          .login-field-gap { gap:14px!important; }
+          .login-btn { padding:13px!important; font-size:14px!important; }
+        }
       `}</style>
 
       {/* الصورة كـ layer ثابت */}
@@ -102,24 +121,24 @@ export default function Home() {
       <div style={{ position:'fixed', top:0, left:0, right:0, height:'4px', background:'linear-gradient(90deg,#1a1a2e,#ff6b00,#1a1a2e)', zIndex:3 }} />
 
       {/* هيدر رسمي */}
-      <div style={{ position:'absolute', top:0, left:0, right:0, background:'linear-gradient(135deg,#1a1a2e 0%,#12122a 100%)', borderBottom:'3px solid #ff6b00', padding:'12px 40px', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'0 4px 24px rgba(0,0,0,0.2)', zIndex:10 }}>
+      <div className="login-header" style={{ position:'absolute', top:0, left:0, right:0, background:'linear-gradient(135deg,#1a1a2e 0%,#12122a 100%)', borderBottom:'3px solid #ff6b00', padding:'12px 40px', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'0 4px 24px rgba(0,0,0,0.2)', zIndex:10 }}>
         <img src="/logo-madinah.jpeg" alt="أمانة المدينة المنورة" style={{ height:'58px', objectFit:'contain', filter:'brightness(1.1)' }} />
         <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:'13px', color:'#ff6b00', fontWeight:'800', letterSpacing:'0.5px' }}>نظام إدارة مركبات النظافة</div>
-          <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)', marginTop:'3px', letterSpacing:'1.5px' }}>CLEANING FLEET MANAGEMENT SYSTEM</div>
+          <div className="login-header-title" style={{ fontSize:'13px', color:'#ff6b00', fontWeight:'800', letterSpacing:'0.5px' }}>نظام إدارة مركبات النظافة</div>
+          <div className="login-header-sub" style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)', marginTop:'3px', letterSpacing:'1.5px' }}>CLEANING FLEET MANAGEMENT SYSTEM</div>
         </div>
         <img src="/logo-mag.jpeg" alt="MAG" style={{ height:'48px', objectFit:'contain', filter:'brightness(1.1)' }} />
       </div>
 
       {/* بطاقة الدخول */}
-      <div className="login-card" style={{ background:'#fff', borderRadius:'24px', padding:'48px 44px 40px', width:'100%', maxWidth:'430px', boxShadow:'0 24px 80px rgba(0,0,0,0.12), 0 8px 24px rgba(255,107,0,0.08)', border:'1px solid rgba(255,107,0,0.1)', marginTop:'90px', position:'relative', zIndex:5 }}>
+      <div className="login-card" style={{ background:'#fff', borderRadius:'24px', padding:'48px 44px 40px', width:'100%', maxWidth:'430px', boxShadow:'0 24px 80px rgba(0,0,0,0.12), 0 8px 24px rgba(255,107,0,0.08)', border:'1px solid rgba(255,107,0,0.1)', marginTop:'90px', marginBottom:'16px', position:'relative', zIndex:5 }}>
         <div style={{ position:'absolute', top:0, left:'20px', right:'20px', height:'3px', background:'linear-gradient(90deg,transparent,#ff6b00,transparent)', borderRadius:'0 0 3px 3px' }} />
 
         {/* أيقونة + عنوان */}
-        <div style={{ textAlign:'center', marginBottom:'32px' }}>
-          <div style={{ width:'76px', height:'76px', background:'linear-gradient(135deg,#1a1a2e 0%,#ff6b00 100%)', borderRadius:'20px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'34px', margin:'0 auto 16px', boxShadow:'0 12px 32px rgba(255,107,0,0.35)' }}>🚛</div>
-          <h1 style={{ color:'#1a1a2e', fontSize:'20px', fontWeight:'900', margin:'0 0 6px', lineHeight:'1.3' }}>أسطول مشاريع نظافة المدينة المنورة</h1>
-          <p style={{ color:'#999', fontSize:'12px', margin:0, letterSpacing:'0.3px' }}>
+        <div style={{ textAlign:'center', marginBottom:'24px' }}>
+          <div className="login-icon" style={{ width:'76px', height:'76px', background:'linear-gradient(135deg,#1a1a2e 0%,#ff6b00 100%)', borderRadius:'20px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'34px', margin:'0 auto 14px', boxShadow:'0 12px 32px rgba(255,107,0,0.35)' }}>🚛</div>
+          <h1 className="login-title" style={{ color:'#1a1a2e', fontSize:'20px', fontWeight:'900', margin:'0 0 6px', lineHeight:'1.3' }}>أسطول مشاريع نظافة المدينة المنورة</h1>
+          <p className="login-subtitle" style={{ color:'#999', fontSize:'12px', margin:0, letterSpacing:'0.3px' }}>
             {isInvite ? 'أكمل تسجيل حسابك' : 'بوابة الدخول الرسمية — للموظفين المخولين فقط'}
           </p>
         </div>
@@ -147,7 +166,7 @@ export default function Home() {
             </button>
           </div>
         ) : (
-          <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
+          <div className="login-field-gap" style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
 
             {/* الرقم الوظيفي */}
             {!isInvite && (
