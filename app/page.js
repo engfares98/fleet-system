@@ -67,7 +67,7 @@ export default function Home() {
   }
 
   return (
-    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'Cairo, sans-serif', direction:'rtl', position:'relative' }}>
+    <div className="login-wrapper" style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'Cairo, sans-serif', direction:'rtl', position:'relative' }}>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
       <style>{`
         body {
@@ -92,15 +92,21 @@ export default function Home() {
         .eye-btn:hover { color:#ff6b00!important; }
         .eye-btn     { transition: color 0.2s; }
         @media (max-width: 600px) {
+          .login-wrapper {
+            align-items: flex-end !important;
+            justify-content: flex-start !important;
+            padding-top: 92px !important;
+            padding-right: 14px !important;
+            padding-bottom: 20px !important;
+          }
           .login-card {
             padding: 18px 18px 16px !important;
             border-radius: 14px !important;
-            margin-left: 28px !important;
-            margin-right: 28px !important;
-            width: calc(100% - 56px) !important;
-            margin-top: 84px !important;
-            margin-bottom: 12px !important;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 4px 12px rgba(255,107,0,0.1) !important;
+            margin: 0 !important;
+            width: 260px !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.22), 0 4px 12px rgba(255,107,0,0.12) !important;
+            background: rgba(255,255,255,0.93) !important;
+            backdrop-filter: blur(8px) !important;
           }
           .login-icon { display:none !important; }
           .login-title { font-size:13px !important; margin:0 0 2px !important; }
@@ -126,7 +132,7 @@ export default function Home() {
       {/* الصورة كـ layer ثابت */}
       <div style={{ position:'fixed', inset:0, zIndex:0 }}>
         <img src="/bg-login.jpeg" alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center', display:'block' }} />
-        <div style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, rgba(10,10,30,0.85) 0%, rgba(10,10,30,0.70) 50%, rgba(255,107,0,0.2) 100%)' }} />
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, rgba(10,10,30,0.55) 0%, rgba(10,10,30,0.40) 50%, rgba(255,107,0,0.12) 100%)' }} />
       </div>
       {/* شريط علوي */}
       <div style={{ position:'fixed', top:0, left:0, right:0, height:'4px', background:'linear-gradient(90deg,#1a1a2e,#ff6b00,#1a1a2e)', zIndex:3 }} />
