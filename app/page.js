@@ -93,10 +93,10 @@ export default function Home() {
         .eye-btn     { transition: color 0.2s; }
         @media (max-width: 600px) {
           .login-wrapper {
-            align-items: flex-end !important;
+            align-items: flex-start !important;
             justify-content: flex-start !important;
             padding-top: 92px !important;
-            padding-right: 14px !important;
+            padding-left: 14px !important;
             padding-bottom: 20px !important;
           }
           .login-card {
@@ -132,7 +132,7 @@ export default function Home() {
       {/* الصورة كـ layer ثابت */}
       <div style={{ position:'fixed', inset:0, zIndex:0 }}>
         <img src="/bg-login.jpeg" alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center', display:'block' }} />
-        <div style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, rgba(10,10,30,0.55) 0%, rgba(10,10,30,0.40) 50%, rgba(255,107,0,0.12) 100%)' }} />
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, rgba(10,10,30,0.80) 0%, rgba(10,10,30,0.65) 50%, rgba(255,107,0,0.18) 100%)' }} />
       </div>
       {/* شريط علوي */}
       <div style={{ position:'fixed', top:0, left:0, right:0, height:'4px', background:'linear-gradient(90deg,#1a1a2e,#ff6b00,#1a1a2e)', zIndex:3 }} />
