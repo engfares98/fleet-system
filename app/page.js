@@ -93,28 +93,13 @@ export default function Home() {
         .eye-btn     { transition: color 0.2s; }
         @media (max-width: 600px) {
           .login-card {
-            padding: 20px 18px 18px !important;
-            border-radius: 16px !important;
-            margin-left: 24px !important;
-            margin-right: 24px !important;
-            width: calc(100% - 48px) !important;
-            margin-top: 80px !important;
+            margin-left: 16px !important;
+            margin-right: 16px !important;
+            width: calc(100% - 32px) !important;
           }
-          .login-icon { width:44px!important; height:44px!important; font-size:20px!important; border-radius:12px!important; margin-bottom:8px!important; box-shadow:0 6px 16px rgba(255,107,0,0.3)!important; }
-          .login-title { font-size:14px!important; margin-bottom:3px!important; }
-          .login-subtitle { font-size:10px!important; }
-          .login-header { padding:7px 14px!important; }
-          .login-header img:first-child { height:38px!important; }
-          .login-header img:last-child  { height:30px!important; }
-          .login-header-title { font-size:10px!important; }
-          .login-header-sub   { display:none!important; }
-          .login-field-gap { gap:10px!important; }
-          .login-btn { padding:12px!important; font-size:13px!important; }
-          .login-input { padding:10px 12px!important; font-size:13px!important; }
-          label { font-size:11px!important; margin-bottom:5px!important; }
-          .login-divider { margin-bottom:14px!important; }
-          .login-footer { margin-top:14px!important; padding-top:12px!important; }
-          .login-icon-wrap { margin-bottom:14px!important; }
+          .login-header { padding:10px 16px!important; }
+          .login-header img:first-child { height:46px!important; }
+          .login-header img:last-child  { height:38px!important; }
         }
       `}</style>
 
