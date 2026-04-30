@@ -93,13 +93,33 @@ export default function Home() {
         .eye-btn     { transition: color 0.2s; }
         @media (max-width: 600px) {
           .login-card {
-            margin-left: 16px !important;
-            margin-right: 16px !important;
-            width: calc(100% - 32px) !important;
+            padding: 18px 18px 16px !important;
+            border-radius: 14px !important;
+            margin-left: 28px !important;
+            margin-right: 28px !important;
+            width: calc(100% - 56px) !important;
+            margin-top: 84px !important;
+            margin-bottom: 12px !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 4px 12px rgba(255,107,0,0.1) !important;
           }
-          .login-header { padding:10px 16px!important; }
-          .login-header img:first-child { height:46px!important; }
-          .login-header img:last-child  { height:38px!important; }
+          .login-icon { display:none !important; }
+          .login-title { font-size:13px !important; margin:0 0 2px !important; }
+          .login-subtitle { font-size:10px !important; }
+          .login-icon-wrap { margin-bottom:10px !important; }
+          .login-divider { margin-bottom:12px !important; margin-top:0 !important; }
+          .login-divider > div:first-child,
+          .login-divider > div:last-child { display:none !important; }
+          .login-divider > div:nth-child(2) { display:none !important; }
+          .login-field-gap { gap:10px !important; }
+          .login-btn { padding:11px !important; font-size:13px !important; border-radius:10px !important; }
+          .login-input { padding:9px 12px !important; font-size:13px !important; border-radius:8px !important; }
+          .login-footer { margin-top:12px !important; padding-top:10px !important; }
+          .login-header { padding:7px 14px !important; }
+          .login-header img:first-child { height:40px !important; }
+          .login-header img:last-child  { height:32px !important; }
+          .login-header-title { font-size:10px !important; }
+          .login-header-sub   { display:none !important; }
+          label { font-size:11px !important; margin-bottom:4px !important; display:block; }
         }
       `}</style>
 
@@ -126,7 +146,7 @@ export default function Home() {
         <div style={{ position:'absolute', top:0, left:'20px', right:'20px', height:'3px', background:'linear-gradient(90deg,transparent,#ff6b00,transparent)', borderRadius:'0 0 3px 3px' }} />
 
         {/* أيقونة + عنوان */}
-        <div style={{ textAlign:'center', marginBottom:'24px' }}>
+        <div className="login-icon-wrap" style={{ textAlign:'center', marginBottom:'24px' }}>
           <div className="login-icon" style={{ width:'76px', height:'76px', background:'linear-gradient(135deg,#1a1a2e 0%,#ff6b00 100%)', borderRadius:'20px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'34px', margin:'0 auto 14px', boxShadow:'0 12px 32px rgba(255,107,0,0.35)' }}>🚛</div>
           <h1 className="login-title" style={{ color:'#1a1a2e', fontSize:'20px', fontWeight:'900', margin:'0 0 6px', lineHeight:'1.3' }}>أسطول مشاريع نظافة المدينة المنورة</h1>
           <p className="login-subtitle" style={{ color:'#999', fontSize:'12px', margin:0, letterSpacing:'0.3px' }}>
