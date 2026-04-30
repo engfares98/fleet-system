@@ -92,6 +92,7 @@ export default function Home() {
         .eye-btn:hover { color:#ff6b00!important; }
         .eye-btn     { transition: color 0.2s; }
         @media (max-width: 600px) {
+          .bg-overlay { display: none !important; }
           .login-wrapper {
             align-items: flex-start !important;
             justify-content: flex-start !important;
@@ -104,10 +105,19 @@ export default function Home() {
             border-radius: 14px !important;
             margin: 0 !important;
             width: 260px !important;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.22), 0 4px 12px rgba(255,107,0,0.12) !important;
-            background: rgba(255,255,255,0.93) !important;
-            backdrop-filter: blur(8px) !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+            background: rgba(15,15,35,0.82) !important;
+            backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255,107,0,0.25) !important;
           }
+          .login-card h1, .login-card label, .login-card p { color: #fff !important; }
+          .login-card .login-subtitle { color: rgba(255,255,255,0.6) !important; }
+          .login-input { background: rgba(255,255,255,0.1) !important; border-color: rgba(255,255,255,0.15) !important; color: #fff !important; }
+          .login-input::placeholder { color: rgba(255,255,255,0.35) !important; }
+          .login-footer { border-top-color: rgba(255,255,255,0.1) !important; }
+          .login-footer span { color: rgba(255,255,255,0.4) !important; }
+          .eye-btn { color: rgba(255,255,255,0.5) !important; }
+        }
           .login-icon { display:none !important; }
           .login-title { font-size:13px !important; margin:0 0 2px !important; }
           .login-subtitle { font-size:10px !important; }
@@ -132,7 +142,7 @@ export default function Home() {
       {/* الصورة كـ layer ثابت */}
       <div style={{ position:'fixed', inset:0, zIndex:0 }}>
         <img src="/bg-login.jpeg" alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center', display:'block' }} />
-        <div style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, rgba(10,10,30,0.80) 0%, rgba(10,10,30,0.65) 50%, rgba(255,107,0,0.18) 100%)' }} />
+        <div className="bg-overlay" style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, rgba(10,10,30,0.75) 0%, rgba(10,10,30,0.60) 50%, rgba(255,107,0,0.15) 100%)' }} />
       </div>
       {/* شريط علوي */}
       <div style={{ position:'fixed', top:0, left:0, right:0, height:'4px', background:'linear-gradient(90deg,#1a1a2e,#ff6b00,#1a1a2e)', zIndex:3 }} />
