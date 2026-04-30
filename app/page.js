@@ -67,7 +67,7 @@ export default function Home() {
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f0f2f5', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'Cairo, sans-serif', direction:'rtl', position:'relative', overflow:'hidden' }}>
+    <div style={{ minHeight:'100vh', background:'#1a1a2e', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'Cairo, sans-serif', direction:'rtl', position:'relative', overflow:'hidden' }}>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
       <style>{`
         @keyframes slideUp    { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
@@ -87,14 +87,14 @@ export default function Home() {
         .eye-btn     { transition: color 0.2s; }
       `}</style>
 
-      {/* خلفية — دوائر وتفاصيل */}
+      {/* خلفية — صورة الأسطول */}
       <div style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none' }}>
-        <div style={{ position:'absolute', top:0, left:0, right:0, height:'5px', background:'linear-gradient(90deg,#1a1a2e,#ff6b00,#1a1a2e)', backgroundSize:'200% 200%', animation:'shimmerBg 4s ease infinite' }} />
-        <div style={{ position:'absolute', top:'-150px', right:'-150px', width:'550px', height:'550px', borderRadius:'50%', background:'radial-gradient(circle, rgba(255,107,0,0.07) 0%, transparent 65%)' }} />
-        <div style={{ position:'absolute', bottom:'-100px', left:'-100px', width:'420px', height:'420px', borderRadius:'50%', background:'radial-gradient(circle, rgba(26,26,46,0.06) 0%, transparent 65%)' }} />
-        {mounted && Array.from({length:10}).map((_,i)=>(
-          <div key={i} style={{ position:'absolute', top:`${12+(i*8)%80}%`, left:`${8+(i*17)%85}%`, width: i%3===0?'7px':'4px', height:i%3===0?'7px':'4px', borderRadius:'50%', background:i%2===0?'rgba(255,107,0,0.18)':'rgba(26,26,46,0.1)', animation:`float ${3+(i%3)}s ease-in-out ${i*0.35}s infinite` }} />
-        ))}
+        {/* الصورة */}
+        <img src="/bg-login.jpeg" alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center' }} />
+        {/* طبقة تعتيم متدرجة */}
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, rgba(10,10,30,0.82) 0%, rgba(10,10,30,0.65) 50%, rgba(255,107,0,0.25) 100%)' }} />
+        {/* شريط علوي برتقالي */}
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:'4px', background:'linear-gradient(90deg,#1a1a2e,#ff6b00,#1a1a2e)', backgroundSize:'200% 200%', animation:'shimmerBg 4s ease infinite' }} />
       </div>
 
       {/* هيدر رسمي */}
@@ -204,9 +204,10 @@ export default function Home() {
         </div>
       </div>
 
-      <div style={{ marginTop:'24px', color:'#aaa', fontSize:'11px', textAlign:'center', position:'relative', zIndex:5 }}>
+      <div style={{ marginTop:'24px', color:'rgba(255,255,255,0.5)', fontSize:'11px', textAlign:'center', position:'relative', zIndex:5 }}>
         جميع الحقوق محفوظة 2026 MAG
       </div>
     </div>
   )
 }
+                                                                                                                                                                                                                                                                                                                                                      
