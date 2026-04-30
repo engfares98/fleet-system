@@ -1,8 +1,33 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 import { translations } from './translations'
 import PrepReport from './PrepReport'
+
+// ── مكوّن الأرقام المتحركة (خارج الـ component الرئيسي لتجنب مشاكل React hooks)
+function CountUp({ target, duration = 1000 }) {
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    if (!target) { setCount(0); return }
+    let raf
+    const startTime = performance.now()
+    const tick = (now) => {
+      const progress = Math.min((now - startTime) / duration, 1)
+      const ease = 1 - Math.pow(1 - progress, 3)
+      setCount(Math.floor(ease * target))
+      if (progress < 1) raf = requestAnimationFrame(tick)
+      else setCount(target)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target, duration])
+  return <span>{count.toLocaleString('ar-SA')}</span>
+}
+
+// ── مكوّن Skeleton
+function Skeleton({ w = '100%', h = '18px', r = '8px' }) {
+  return <div className="skeleton" style={{ width: w, height: h, borderRadius: r }} />
+}
 
 export default function Dashboard() {
   const [lang, setLang] = useState('ar')
@@ -365,31 +390,6 @@ export default function Dashboard() {
   const thumb = { width: '34px', height: '34px', borderRadius: '6px', objectFit: 'cover', cursor: 'pointer', border: `1px solid ${C.border}` }
   const imgLink = { color: C.orange, fontSize: '11px', cursor: 'pointer', fontWeight: '600' }
 
-  // مكوّن الأرقام المتحركة
-  const CountUp = ({ target, suffix = '', duration = 1000 }) => {
-    const [count, setCount] = useState(0)
-    useEffect(() => {
-      if (!target) { setCount(0); return }
-      let start = 0; let raf
-      const startTime = performance.now()
-      const tick = (now) => {
-        const elapsed = now - startTime
-        const progress = Math.min(elapsed / duration, 1)
-        const ease = 1 - Math.pow(1 - progress, 3)
-        setCount(Math.floor(ease * target))
-        if (progress < 1) raf = requestAnimationFrame(tick)
-        else setCount(target)
-      }
-      raf = requestAnimationFrame(tick)
-      return () => cancelAnimationFrame(raf)
-    }, [target, duration])
-    return <span>{count.toLocaleString('ar-SA')}{suffix}</span>
-  }
-
-  // مكوّن Skeleton
-  const Skeleton = ({ w = '100%', h = '18px', r = '8px' }) => (
-    <div className="skeleton" style={{ width: w, height: h, borderRadius: r }} />
-  )
 
   return (
     <div style={{ minHeight: '100vh', background: '#f0f2f5', fontFamily: 'Cairo, sans-serif', direction: isRTL ? 'rtl' : 'ltr' }}>
@@ -1116,4 +1116,11 @@ export default function Dashboard() {
             <div key={id} onClick={() => setActiveTab(id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', cursor: 'pointer', color: activeTab === id ? C.orange : C.muted, fontSize: '9px', fontWeight: activeTab === id ? '700' : '400', minWidth: '36px', position: 'relative' }}>
               <span style={{ fontSize: '16px' }}>{icon}</span>
               <span>{label.split(' ')[0]}</span>
-              {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ position: 'absolute', top: '-2px', right: '2px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '13px', height: '13px', fontSize: '8px
+              {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ position: 'absolute', top: '-2px', right: '2px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '13px', height: '13px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
