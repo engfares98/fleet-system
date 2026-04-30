@@ -70,10 +70,16 @@ export default function Home() {
     <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'Cairo, sans-serif', direction:'rtl', position:'relative' }}>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
       <style>{`
+        body {
+          background-image: url('/bg-login.jpeg') !important;
+          background-size: cover !important;
+          background-position: center !important;
+          background-attachment: fixed !important;
+          background-color: #1a1a2e !important;
+        }
         @keyframes slideUp    { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
         @keyframes fadeIn     { from{opacity:0} to{opacity:1} }
         @keyframes slideDown  { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes float      { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
         @keyframes shimmerBg  { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
         @keyframes spin       { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         .login-card  { animation: slideUp 0.6s cubic-bezier(.16,1,.3,1) both; }
