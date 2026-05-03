@@ -367,8 +367,15 @@ export default function Dashboard() {
     if (vehicleAttachFilter !== 'all') {
       const cnt = countAttachments(v)
       if (vehicleAttachFilter === 'complete' && cnt !== ATTACHMENT_KEYS.length) return false
-      if (vehicleAttachFilter === 'partial' && (cnt === 0 || cnt === ATTACHMENT_KEYS.length)) return false
-      if (vehicleAttachFilter === 'empty' && cnt !== 0) return false
+      else if (vehicleAttachFilter === 'partial' && (cnt === 0 || cnt === ATTACHMENT_KEYS.length)) return false
+      else if (vehicleAttachFilter === 'empty' && cnt !== 0) return false
+      else if (vehicleAttachFilter.startsWith('has:')) {
+        const k = vehicleAttachFilter.slice(4)
+        if (!v[k]) return false
+      } else if (vehicleAttachFilter.startsWith('missing:')) {
+        const k = vehicleAttachFilter.slice(8)
+        if (v[k]) return false
+      }
     }
     if (vehicleSearch) {
       const q = vehicleSearch.toLowerCase()
@@ -765,6 +772,12 @@ export default function Dashboard() {
                   <option value="complete">✅ مكتملة</option>
                   <option value="partial">⚠️ ناقصة</option>
                   <option value="empty">❌ فارغة</option>
+                  {ATTACHMENT_TYPES.map(at => (
+                    <optgroup key={at.key} label={`📎 ${t[at.labelKey]}`}>
+                      <option value={`has:${at.key}`}>✅ {t[at.labelKey]} — موجودة</option>
+                      <option value={`missing:${at.key}`}>❌ {t[at.labelKey]} — مفقودة</option>
+                    </optgroup>
+                  ))}
                 </select>
               </div>
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
@@ -780,7 +793,16 @@ export default function Dashboard() {
                     </>}
                     <th style={st.th}>{t.status}<ColumnFilter type="select" value={vehicleStatusFilter} onChange={setVehicleStatusFilter} options={[['all','الكل'],['active',t.active],['pending',t.pending],['inactive',t.inactive]]} label={t.status} isRTL={isRTL} /></th>
                     <th style={st.th}>{t.preparationStatus}<ColumnFilter type="select" value={vehiclePrepFilter} onChange={setVehiclePrepFilter} options={[['all','الكل'],['ready','✅ جاهزة'],['in_progress','🔄 قيد التجهيز'],['not_ready','❌ غير جاهزة']]} label={t.preparationStatus} isRTL={isRTL} /></th>
-                    <th style={st.th}>{t.attachments}<ColumnFilter type="select" value={vehicleAttachFilter} onChange={setVehicleAttachFilter} options={[['all','الكل'],['complete','✅ مكتملة'],['partial','⚠️ ناقصة'],['empty','❌ فارغة']]} label={t.attachments} isRTL={isRTL} /></th>
+                    <th style={st.th}>{t.attachments}<ColumnFilter type="select" value={vehicleAttachFilter} onChange={setVehicleAttachFilter} options={[
+                      ['all','الكل'],
+                      ['complete','✅ مكتملة'],
+                      ['partial','⚠️ ناقصة'],
+                      ['empty','❌ فارغة'],
+                      ...ATTACHMENT_TYPES.flatMap(at => [
+                        [`has:${at.key}`, `✅ ${t[at.labelKey]} موجودة`],
+                        [`missing:${at.key}`, `❌ ${t[at.labelKey]} مفقودة`],
+                      ])
+                    ]} label={t.attachments} isRTL={isRTL} /></th>
                     {canEdit && <th style={st.th}>{t.edit}</th>}
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
