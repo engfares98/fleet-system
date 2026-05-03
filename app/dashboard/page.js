@@ -439,9 +439,16 @@ export default function Dashboard() {
 
       {previewImage && (
         <div style={{ ...st.modal, zIndex: 200 }} onClick={() => setPreviewImage(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: '14px', padding: '16px', maxWidth: '90vw' }}>
-            <img src={previewImage} style={{ maxWidth: '80vw', maxHeight: '80vh', borderRadius: '8px' }} alt="preview" />
-            <div style={{ textAlign: 'center', marginTop: '12px' }}><button style={st.btn('#888', true)} onClick={() => setPreviewImage(null)}>{t.close}</button></div>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: '14px', padding: '16px', maxWidth: '90vw', width: (previewImage || '').toLowerCase().includes('.pdf') ? '90vw' : 'auto' }}>
+            {(previewImage || '').toLowerCase().includes('.pdf') ? (
+              <iframe src={previewImage} style={{ width: '85vw', height: '80vh', border: 'none', borderRadius: '8px' }} title="pdf preview" />
+            ) : (
+              <img src={previewImage} style={{ maxWidth: '80vw', maxHeight: '80vh', borderRadius: '8px' }} alt="preview" />
+            )}
+            <div style={{ textAlign: 'center', marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <a href={previewImage} target="_blank" rel="noopener noreferrer" style={{ ...st.btn('#2563eb', true), textDecoration: 'none', display: 'inline-block' }}>↗️ فتح في تبويب جديد</a>
+              <button style={st.btn('#888', true)} onClick={() => setPreviewImage(null)}>{t.close}</button>
+            </div>
           </div>
         </div>
       )}

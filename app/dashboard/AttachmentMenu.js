@@ -74,7 +74,15 @@ export default function AttachmentMenu({ vehicle, t, isRTL, supabase, canEdit, o
 
             {currentUrl ? (
               <div>
-                <img src={currentUrl} alt="" style={{ width: '100%', maxHeight: '260px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #e8e8e8', cursor: 'pointer', background: '#fafafa' }} onClick={() => onPreview && onPreview(currentUrl)} />
+                {(currentUrl || '').toLowerCase().includes('.pdf') ? (
+                  <div onClick={() => onPreview && onPreview(currentUrl)} style={{ width: '100%', height: '180px', borderRadius: '8px', border: '1px solid #e8e8e8', background: '#fafafa', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', gap: '8px' }}>
+                    <div style={{ fontSize: '48px' }}>📄</div>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#555' }}>PDF</div>
+                    <div style={{ fontSize: '11px', color: '#888' }}>اضغط للعرض</div>
+                  </div>
+                ) : (
+                  <img src={currentUrl} alt="" style={{ width: '100%', maxHeight: '260px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #e8e8e8', cursor: 'pointer', background: '#fafafa' }} onClick={() => onPreview && onPreview(currentUrl)} />
+                )}
                 <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
                   <button onClick={() => onPreview && onPreview(currentUrl)} style={btn('#2563eb', true)}>👁️ {t.view}</button>
                   {canEdit && <button onClick={() => fileRef.current?.click()} disabled={uploading} style={btn('#ff6b00')}>{uploading ? t.uploading : `🔄 ${t.replace}`}</button>}
