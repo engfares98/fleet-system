@@ -447,6 +447,13 @@ export default function Dashboard() {
             )}
             <div style={{ textAlign: 'center', marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <a href={previewImage} target="_blank" rel="noopener noreferrer" style={{ ...st.btn('#2563eb', true), textDecoration: 'none', display: 'inline-block' }}>↗️ فتح في تبويب جديد</a>
+              <button style={st.btn('#16a34a', true)} onClick={async () => {
+                try {
+                  const r = await fetch(previewImage); const b = await r.blob(); const u = URL.createObjectURL(b);
+                  const a = document.createElement('a'); a.href = u; a.download = (previewImage.split('/').pop().split('?')[0]) || 'file';
+                  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 2000)
+                } catch (e) { window.open(previewImage, '_blank') }
+              }}>⬇️ تحميل</button>
               <button style={st.btn('#888', true)} onClick={() => setPreviewImage(null)}>{t.close}</button>
             </div>
           </div>

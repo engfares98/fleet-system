@@ -50,6 +50,26 @@ export default function AttachmentMenu({ vehicle, t, isRTL, supabase, canEdit, o
   const currentUrl = open ? vehicle[open] : null
   const currentLabel = open ? t[(ATTACHMENT_TYPES.find(a => a.key === open) || {}).labelKey] : ''
 
+  const handleDownload = async () => {
+    if (!currentUrl) return
+    const ext = (currentUrl.split('.').pop() || 'file').split('?')[0].toLowerCase()
+    const safeLabel = (currentLabel || 'attachment').replace(/[\\/:*?"<>|]/g, '')
+    const plate = (vehicle.plate_number || vehicle.vehicle_code || vehicle.id).toString().replace(/\s+/g, '_')
+    const fname = `${safeLabel}_${plate}.${ext}`
+    try {
+      const res = await fetch(currentUrl)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = fname
+      document.body.appendChild(a); a.click(); a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 2000)
+    } catch (e) {
+      // fallback: open in new tab
+      window.open(currentUrl, '_blank')
+    }
+  }
+
   const selectStyle = { padding: '4px 8px', fontSize: '11px', borderRadius: '6px', border: '1px solid #e8e8e8', background: '#fafafa', fontFamily: 'Cairo, sans-serif', cursor: 'pointer', maxWidth: '140px' }
   const btn = (color, outline) => ({ background: outline ? '#fff' : color, color: outline ? color : '#fff', border: `1.5px solid ${color}`, borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Cairo, sans-serif' })
 
@@ -85,6 +105,7 @@ export default function AttachmentMenu({ vehicle, t, isRTL, supabase, canEdit, o
                 )}
                 <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
                   <button onClick={() => onPreview && onPreview(currentUrl)} style={btn('#2563eb', true)}>👁️ {t.view}</button>
+                  <button onClick={handleDownload} style={btn('#16a34a', true)}>⬇️ تحميل</button>
                   {canEdit && <button onClick={() => fileRef.current?.click()} disabled={uploading} style={btn('#ff6b00')}>{uploading ? t.uploading : `🔄 ${t.replace}`}</button>}
                 </div>
               </div>
