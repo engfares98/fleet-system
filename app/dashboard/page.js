@@ -4,6 +4,7 @@ import { supabase } from '../supabase'
 import { translations } from './translations'
 import PrepReport from './PrepReport'
 import AttachmentMenu, { ATTACHMENT_TYPES } from './AttachmentMenu'
+import ColumnFilter from './ColumnFilter'
 
 // ── مكوّن الأرقام المتحركة (خارج الـ component الرئيسي لتجنب مشاكل React hooks)
 function CountUp({ target, duration = 1000 }) {
@@ -51,6 +52,36 @@ export default function Dashboard() {
   const [vehicleSearch, setVehicleSearch] = useState('')
   const [driverSearch, setDriverSearch] = useState('')
   const [regionFilter, setRegionFilter] = useState('all')
+  // Vehicle filters
+  const [vehicleStatusFilter, setVehicleStatusFilter] = useState('all')
+  const [vehiclePrepFilter, setVehiclePrepFilter] = useState('all')
+  const [vehicleBrandFilter, setVehicleBrandFilter] = useState('all')
+  const [vehicleAttachFilter, setVehicleAttachFilter] = useState('all')
+  // Driver filters
+  const [driverStatusFilter, setDriverStatusFilter] = useState('all')
+  const [driverLicenseFilter, setDriverLicenseFilter] = useState('all')
+  // Maintenance filters
+  const [maintenanceSearch, setMaintenanceSearch] = useState('')
+  const [maintenanceStatusFilter, setMaintenanceStatusFilter] = useState('all')
+  const [maintenanceVehicleFilter, setMaintenanceVehicleFilter] = useState('all')
+  const [maintenanceDateFrom, setMaintenanceDateFrom] = useState('')
+  const [maintenanceDateTo, setMaintenanceDateTo] = useState('')
+  // Fuel filters
+  const [fuelSearch, setFuelSearch] = useState('')
+  const [fuelVehicleFilter, setFuelVehicleFilter] = useState('all')
+  const [fuelDriverFilter, setFuelDriverFilter] = useState('all')
+  const [fuelDateFrom, setFuelDateFrom] = useState('')
+  const [fuelDateTo, setFuelDateTo] = useState('')
+  // Per-column filters
+  const [vehicleColFilters, setVehicleColFilters] = useState({ plate: '', code: '', brand: '', model: '', equipmentType: '' })
+  const [driverColFilters, setDriverColFilters] = useState({ name: '', nationalId: '', passport: '', phone: '', license: '' })
+  const [maintenanceColFilters, setMaintenanceColFilters] = useState({ type: '', description: '', cost: '' })
+  const [fuelColFilters, setFuelColFilters] = useState({ liters: '', cost: '' })
+  const setVCF = (k, v) => setVehicleColFilters(p => ({ ...p, [k]: v }))
+  const setDCF = (k, v) => setDriverColFilters(p => ({ ...p, [k]: v }))
+  const setMCF = (k, v) => setMaintenanceColFilters(p => ({ ...p, [k]: v }))
+  const setFCF = (k, v) => setFuelColFilters(p => ({ ...p, [k]: v }))
+  const matches = (val, q) => !q || (val || '').toString().toLowerCase().includes(q.toLowerCase())
 
   const [showVehicleForm, setShowVehicleForm] = useState(false)
   const [vehicleForm, setVehicleForm] = useState({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
@@ -324,8 +355,86 @@ export default function Dashboard() {
   const roleBg = (r) => r === 'admin' ? '#f5f3ff' : r === 'editor' ? '#fff7f2' : '#f0fdf4'
 
   const getRegion = (v) => { const code = v.vehicle_code || v.plate_number || ''; const firstChar = code.trim().toUpperCase()[0]; const map = { 'N': 'north', 'S': 'south', 'E': 'east', 'W': 'west' }; return map[firstChar] || 'unknown' }
-  const filteredVehicles = vehicles.filter(v => regionFilter === 'all' || getRegion(v) === regionFilter).filter(v => (v.plate_number || '').includes(vehicleSearch) || (v.vehicle_code || '').includes(vehicleSearch) || (v.brand || '').includes(vehicleSearch) || (v.model || '').includes(vehicleSearch))
-  const filteredDrivers = drivers.filter(d => (d.full_name || '').includes(driverSearch) || (d.national_id || '').includes(driverSearch) || (d.passport_number || '').includes(driverSearch) || (d.phone || '').includes(driverSearch))
+  const ATTACHMENT_KEYS = ['istimara_image', 'operation_card_image', 'periodic_inspection_image', 'barrier_seal_image', 'vehicle_image', 'handover_receipt_image']
+  const countAttachments = (v) => ATTACHMENT_KEYS.reduce((n, k) => n + (v[k] ? 1 : 0), 0)
+  const vehicleBrands = Array.from(new Set(vehicles.map(v => v.brand).filter(Boolean))).sort()
+
+  const filteredVehicles = vehicles.filter(v => {
+    if (regionFilter !== 'all' && getRegion(v) !== regionFilter) return false
+    if (vehicleStatusFilter !== 'all' && (v.status || '') !== vehicleStatusFilter) return false
+    if (vehiclePrepFilter !== 'all' && (v.preparation_status || 'not_ready') !== vehiclePrepFilter) return false
+    if (vehicleBrandFilter !== 'all' && v.brand !== vehicleBrandFilter) return false
+    if (vehicleAttachFilter !== 'all') {
+      const cnt = countAttachments(v)
+      if (vehicleAttachFilter === 'complete' && cnt !== ATTACHMENT_KEYS.length) return false
+      if (vehicleAttachFilter === 'partial' && (cnt === 0 || cnt === ATTACHMENT_KEYS.length)) return false
+      if (vehicleAttachFilter === 'empty' && cnt !== 0) return false
+    }
+    if (vehicleSearch) {
+      const q = vehicleSearch.toLowerCase()
+      const hay = [v.plate_number, v.vehicle_code, v.brand, v.model, v.type, v.color, v.year].filter(Boolean).join(' ').toLowerCase()
+      if (!hay.includes(q)) return false
+    }
+    // Per-column filters
+    if (!matches(v.plate_number, vehicleColFilters.plate)) return false
+    if (!matches(v.vehicle_code, vehicleColFilters.code)) return false
+    if (!matches(v.brand, vehicleColFilters.brand)) return false
+    if (!matches(v.model, vehicleColFilters.model)) return false
+    if (!matches(v.year, vehicleColFilters.equipmentType)) return false
+    return true
+  })
+
+  const filteredDrivers = drivers.filter(d => {
+    if (driverStatusFilter !== 'all' && (d.status || '') !== driverStatusFilter) return false
+    if (driverLicenseFilter !== 'all') {
+      const days = daysUntil(d.license_expiry)
+      if (driverLicenseFilter === 'valid' && (days === null || days <= 30)) return false
+      if (driverLicenseFilter === 'expiring' && (days === null || days < 0 || days > 30)) return false
+      if (driverLicenseFilter === 'expired' && (days === null || days >= 0)) return false
+    }
+    if (driverSearch) {
+      const q = driverSearch.toLowerCase()
+      const hay = [d.full_name, d.national_id, d.passport_number, d.phone, d.license_number, d.file_number].filter(Boolean).join(' ').toLowerCase()
+      if (!hay.includes(q)) return false
+    }
+    if (!matches(d.full_name, driverColFilters.name)) return false
+    if (!matches(d.national_id, driverColFilters.nationalId)) return false
+    if (!matches(d.passport_number, driverColFilters.passport)) return false
+    if (!matches(d.phone, driverColFilters.phone)) return false
+    if (!matches(d.license_number, driverColFilters.license)) return false
+    return true
+  })
+
+  const filteredMaintenance = maintenance.filter(m => {
+    if (maintenanceStatusFilter !== 'all' && (m.status || '') !== maintenanceStatusFilter) return false
+    if (maintenanceVehicleFilter !== 'all' && m.vehicle_id !== maintenanceVehicleFilter) return false
+    if (maintenanceDateFrom && (!m.date || m.date < maintenanceDateFrom)) return false
+    if (maintenanceDateTo && (!m.date || m.date > maintenanceDateTo)) return false
+    if (maintenanceSearch) {
+      const q = maintenanceSearch.toLowerCase()
+      const hay = [m.type, m.description, m.vehicles?.plate_number].filter(Boolean).join(' ').toLowerCase()
+      if (!hay.includes(q)) return false
+    }
+    if (!matches(m.type, maintenanceColFilters.type)) return false
+    if (!matches(m.description, maintenanceColFilters.description)) return false
+    if (maintenanceColFilters.cost && !(m.cost || '').toString().includes(maintenanceColFilters.cost)) return false
+    return true
+  })
+
+  const filteredFuel = fuelLogs.filter(f => {
+    if (fuelVehicleFilter !== 'all' && f.vehicle_id !== fuelVehicleFilter) return false
+    if (fuelDriverFilter !== 'all' && f.driver_id !== fuelDriverFilter) return false
+    if (fuelDateFrom && (!f.date || f.date < fuelDateFrom)) return false
+    if (fuelDateTo && (!f.date || f.date > fuelDateTo)) return false
+    if (fuelSearch) {
+      const q = fuelSearch.toLowerCase()
+      const hay = [f.vehicles?.plate_number, f.drivers?.full_name].filter(Boolean).join(' ').toLowerCase()
+      if (!hay.includes(q)) return false
+    }
+    if (fuelColFilters.liters && !(f.liters || '').toString().includes(fuelColFilters.liters)) return false
+    if (fuelColFilters.cost && !(f.total_cost || '').toString().includes(fuelColFilters.cost)) return false
+    return true
+  })
 
   const vehicleTypes = vehicles.reduce((acc, v) => { const key = v.preparation_status || 'not_ready'; acc[key] = (acc[key] || 0) + 1; return acc }, {})
   const fuelByVehicle = fuelLogs.reduce((acc, f) => { const key = f.vehicles?.plate_number || '?'; acc[key] = (acc[key] || 0) + (Number(f.total_cost) || 0); return acc }, {})
@@ -627,21 +736,51 @@ export default function Dashboard() {
                 </div>
               </div>
               <input style={{ ...st.input, marginBottom: '16px' }} placeholder={t.searchVehicles} value={vehicleSearch} onChange={e => setVehicleSearch(e.target.value)} />
-              <div style={{ display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
                 {[["all","🗺️ الكل"],["north","⬆️ شمال"],["south","⬇️ جنوب"],["east","➡️ شرق"],["west","⬅️ غرب"]].map(([r, label]) => (
                   <button key={r} onClick={() => setRegionFilter(r)} style={{ padding: "7px 16px", borderRadius: "20px", border: `2px solid ${regionFilter === r ? "#ff6b00" : "#e8e8e8"}`, background: regionFilter === r ? "#ff6b00" : "#fff", color: regionFilter === r ? "#fff" : "#888", fontWeight: "700", fontSize: "12px", cursor: "pointer", fontFamily: "Cairo, sans-serif" }}>
                     {label} {r !== "all" && `(${vehicles.filter(v => getRegion(v) === r).length})`}
                   </button>
                 ))}
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
+                <select style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={vehiclePrepFilter} onChange={e => setVehiclePrepFilter(e.target.value)}>
+                  <option value="all">🔧 حالة التجهيز: الكل</option>
+                  <option value="ready">✅ جاهزة</option>
+                  <option value="in_progress">🔄 قيد التجهيز</option>
+                  <option value="not_ready">❌ غير جاهزة</option>
+                </select>
+                <select style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={vehicleStatusFilter} onChange={e => setVehicleStatusFilter(e.target.value)}>
+                  <option value="all">📌 الحالة: الكل</option>
+                  <option value="active">{t.active}</option>
+                  <option value="pending">{t.pending}</option>
+                  <option value="inactive">{t.inactive}</option>
+                </select>
+                <select style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={vehicleBrandFilter} onChange={e => setVehicleBrandFilter(e.target.value)}>
+                  <option value="all">🏭 الماركة: الكل</option>
+                  {vehicleBrands.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+                <select style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={vehicleAttachFilter} onChange={e => setVehicleAttachFilter(e.target.value)}>
+                  <option value="all">📎 المرفقات: الكل</option>
+                  <option value="complete">✅ مكتملة</option>
+                  <option value="partial">⚠️ ناقصة</option>
+                  <option value="empty">❌ فارغة</option>
+                </select>
+              </div>
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                   <thead><tr>
                     <th style={{ ...st.th, width: '40px' }}>#</th>
-                    <th style={st.th}>{t.plateNumber}</th><th style={st.th}>{t.code}</th>
-                    {!isMobile && <><th style={st.th}>{t.brand}</th><th style={st.th}>{t.model}</th><th style={st.th}>{t.equipmentType}</th></>}
-                    <th style={st.th}>{t.status}</th><th style={st.th}>{t.preparationStatus}</th>
-                    <th style={st.th}>{t.attachments}</th>
+                    <th style={st.th}>{t.plateNumber}<ColumnFilter type="text" value={vehicleColFilters.plate} onChange={v => setVCF('plate', v)} label={t.plateNumber} isRTL={isRTL} /></th>
+                    <th style={st.th}>{t.code}<ColumnFilter type="text" value={vehicleColFilters.code} onChange={v => setVCF('code', v)} label={t.code} isRTL={isRTL} /></th>
+                    {!isMobile && <>
+                      <th style={st.th}>{t.brand}<ColumnFilter type="select" value={vehicleBrandFilter} onChange={setVehicleBrandFilter} options={[['all','الكل'], ...vehicleBrands.map(b=>[b,b])]} label={t.brand} isRTL={isRTL} /></th>
+                      <th style={st.th}>{t.model}<ColumnFilter type="text" value={vehicleColFilters.model} onChange={v => setVCF('model', v)} label={t.model} isRTL={isRTL} /></th>
+                      <th style={st.th}>{t.equipmentType}<ColumnFilter type="text" value={vehicleColFilters.equipmentType} onChange={v => setVCF('equipmentType', v)} label={t.equipmentType} isRTL={isRTL} /></th>
+                    </>}
+                    <th style={st.th}>{t.status}<ColumnFilter type="select" value={vehicleStatusFilter} onChange={setVehicleStatusFilter} options={[['all','الكل'],['active',t.active],['pending',t.pending],['inactive',t.inactive]]} label={t.status} isRTL={isRTL} /></th>
+                    <th style={st.th}>{t.preparationStatus}<ColumnFilter type="select" value={vehiclePrepFilter} onChange={setVehiclePrepFilter} options={[['all','الكل'],['ready','✅ جاهزة'],['in_progress','🔄 قيد التجهيز'],['not_ready','❌ غير جاهزة']]} label={t.preparationStatus} isRTL={isRTL} /></th>
+                    <th style={st.th}>{t.attachments}<ColumnFilter type="select" value={vehicleAttachFilter} onChange={setVehicleAttachFilter} options={[['all','الكل'],['complete','✅ مكتملة'],['partial','⚠️ ناقصة'],['empty','❌ فارغة']]} label={t.attachments} isRTL={isRTL} /></th>
                     {canEdit && <th style={st.th}>{t.edit}</th>}
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
@@ -689,16 +828,35 @@ export default function Dashboard() {
                 <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>👤 {t.driversTitle} ({filteredDrivers.length})</div>
                 {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowDriverForm(true)}>{t.addDriver}</button>}
               </div>
-              <input style={{ ...st.input, marginBottom: '16px' }} placeholder={t.searchDrivers} value={driverSearch} onChange={e => setDriverSearch(e.target.value)} />
+              <input style={{ ...st.input, marginBottom: '12px' }} placeholder={t.searchDrivers} value={driverSearch} onChange={e => setDriverSearch(e.target.value)} />
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(2, 1fr)', gap: '8px', marginBottom: '16px' }}>
+                <select style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={driverStatusFilter} onChange={e => setDriverStatusFilter(e.target.value)}>
+                  <option value="all">📌 الحالة: الكل</option>
+                  <option value="active">{t.active}</option>
+                  <option value="inactive">{t.inactive}</option>
+                </select>
+                <select style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={driverLicenseFilter} onChange={e => setDriverLicenseFilter(e.target.value)}>
+                  <option value="all">🪪 الرخصة: الكل</option>
+                  <option value="valid">✅ سارية</option>
+                  <option value="expiring">⚠️ تنتهي خلال 30 يوم</option>
+                  <option value="expired">❌ منتهية</option>
+                </select>
+              </div>
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
                   <thead><tr>
                     <th style={{ ...st.th, width: '40px' }}>#</th>
                     <th style={st.th}>رقم الملف</th>
-                    <th style={st.th}>{t.fullName}</th><th style={st.th}>{t.nationalId}</th>
-                    {!isMobile && <><th style={st.th}>{t.passport}</th><th style={st.th}>{t.phone}</th><th style={st.th}>{t.license}</th><th style={st.th}>{t.expiry}</th></>}
+                    <th style={st.th}>{t.fullName}<ColumnFilter type="text" value={driverColFilters.name} onChange={v => setDCF('name', v)} label={t.fullName} isRTL={isRTL} /></th>
+                    <th style={st.th}>{t.nationalId}<ColumnFilter type="text" value={driverColFilters.nationalId} onChange={v => setDCF('nationalId', v)} label={t.nationalId} isRTL={isRTL} /></th>
+                    {!isMobile && <>
+                      <th style={st.th}>{t.passport}<ColumnFilter type="text" value={driverColFilters.passport} onChange={v => setDCF('passport', v)} label={t.passport} isRTL={isRTL} /></th>
+                      <th style={st.th}>{t.phone}<ColumnFilter type="text" value={driverColFilters.phone} onChange={v => setDCF('phone', v)} label={t.phone} isRTL={isRTL} /></th>
+                      <th style={st.th}>{t.license}<ColumnFilter type="text" value={driverColFilters.license} onChange={v => setDCF('license', v)} label={t.license} isRTL={isRTL} /></th>
+                      <th style={st.th}>{t.expiry}<ColumnFilter type="select" value={driverLicenseFilter} onChange={setDriverLicenseFilter} options={[['all','الكل'],['valid','✅ سارية'],['expiring','⚠️ تنتهي خلال 30 يوم'],['expired','❌ منتهية']]} label={t.expiry} isRTL={isRTL} /></th>
+                    </>}
                     <th style={st.th}>{t.iqama}</th><th style={st.th}>{t.license}</th>
-                    <th style={st.th}>{t.status}</th>
+                    <th style={st.th}>{t.status}<ColumnFilter type="select" value={driverStatusFilter} onChange={setDriverStatusFilter} options={[['all','الكل'],['active',t.active],['inactive',t.inactive]]} label={t.status} isRTL={isRTL} /></th>
                     {canEdit && <th style={st.th}>{t.edit}</th>}
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
@@ -733,22 +891,42 @@ export default function Dashboard() {
           {activeTab === 'maintenance' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🔧 {t.maintenanceTitle}</div>
+                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🔧 {t.maintenanceTitle} ({filteredMaintenance.length})</div>
                 {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowMaintenanceForm(true)}>{t.addMaintenance}</button>}
+              </div>
+              <input style={{ ...st.input, marginBottom: '8px' }} placeholder="🔍 بحث في الوصف، النوع، رقم اللوحة..." value={maintenanceSearch} onChange={e => setMaintenanceSearch(e.target.value)} />
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
+                <select style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={maintenanceStatusFilter} onChange={e => setMaintenanceStatusFilter(e.target.value)}>
+                  <option value="all">📌 الحالة: الكل</option>
+                  <option value="active">{t.completedLabel}</option>
+                  <option value="pending">{t.pendingLabel}</option>
+                  <option value="inactive">{t.cancelledLabel}</option>
+                </select>
+                <select style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={maintenanceVehicleFilter} onChange={e => setMaintenanceVehicleFilter(e.target.value)}>
+                  <option value="all">🚛 المركبة: الكل</option>
+                  {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}
+                </select>
+                <input type="date" style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={maintenanceDateFrom} onChange={e => setMaintenanceDateFrom(e.target.value)} placeholder="من" />
+                <input type="date" style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={maintenanceDateTo} onChange={e => setMaintenanceDateTo(e.target.value)} placeholder="إلى" />
               </div>
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
                   <thead><tr>
                     <th style={{ ...st.th, width: '40px' }}>#</th>
-                    <th style={st.th}>{t.vehicle}</th><th style={st.th}>{t.type}</th>
-                    {!isMobile && <><th style={st.th}>{t.description}</th><th style={st.th}>{t.date}</th></>}
-                    <th style={st.th}>{t.cost}</th><th style={st.th}>{t.nextDate}</th>
-                    <th style={st.th}>{t.status}</th>
+                    <th style={st.th}>{t.vehicle}<ColumnFilter type="select" value={maintenanceVehicleFilter} onChange={setMaintenanceVehicleFilter} options={[['all','الكل'], ...vehicles.map(v=>[v.id, v.plate_number])]} label={t.vehicle} isRTL={isRTL} /></th>
+                    <th style={st.th}>{t.type}<ColumnFilter type="text" value={maintenanceColFilters.type} onChange={v => setMCF('type', v)} label={t.type} isRTL={isRTL} /></th>
+                    {!isMobile && <>
+                      <th style={st.th}>{t.description}<ColumnFilter type="text" value={maintenanceColFilters.description} onChange={v => setMCF('description', v)} label={t.description} isRTL={isRTL} /></th>
+                      <th style={st.th}>{t.date}<ColumnFilter type="date-range" value={{ from: maintenanceDateFrom, to: maintenanceDateTo }} onChange={(r) => { setMaintenanceDateFrom(r.from || ''); setMaintenanceDateTo(r.to || '') }} label={t.date} isRTL={isRTL} /></th>
+                    </>}
+                    <th style={st.th}>{t.cost}<ColumnFilter type="text" value={maintenanceColFilters.cost} onChange={v => setMCF('cost', v)} label={t.cost} isRTL={isRTL} /></th>
+                    <th style={st.th}>{t.nextDate}</th>
+                    <th style={st.th}>{t.status}<ColumnFilter type="select" value={maintenanceStatusFilter} onChange={setMaintenanceStatusFilter} options={[['all','الكل'],['active',t.completedLabel],['pending',t.pendingLabel],['inactive',t.cancelledLabel]]} label={t.status} isRTL={isRTL} /></th>
                     {canEdit && <th style={st.th}>{t.edit}</th>}
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
-                    {maintenance.map((m, idx) => {
+                    {filteredMaintenance.map((m, idx) => {
                       const days = daysUntil(m.next_date)
                       const expiring = days !== null && days <= 7
                       return (
@@ -776,8 +954,21 @@ export default function Dashboard() {
           {activeTab === 'fuel' && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>⛽ {t.fuelTitle}</div>
+                <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>⛽ {t.fuelTitle} ({filteredFuel.length})</div>
                 {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowFuelForm(true)}>{t.addFuel}</button>}
+              </div>
+              <input style={{ ...st.input, marginBottom: '8px' }} placeholder="🔍 بحث برقم اللوحة أو اسم السائق..." value={fuelSearch} onChange={e => setFuelSearch(e.target.value)} />
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
+                <select style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={fuelVehicleFilter} onChange={e => setFuelVehicleFilter(e.target.value)}>
+                  <option value="all">🚛 المركبة: الكل</option>
+                  {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}
+                </select>
+                <select style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={fuelDriverFilter} onChange={e => setFuelDriverFilter(e.target.value)}>
+                  <option value="all">👤 السائق: الكل</option>
+                  {drivers.map(d => <option key={d.id} value={d.id}>{d.full_name}</option>)}
+                </select>
+                <input type="date" style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={fuelDateFrom} onChange={e => setFuelDateFrom(e.target.value)} placeholder="من" />
+                <input type="date" style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={fuelDateTo} onChange={e => setFuelDateTo(e.target.value)} placeholder="إلى" />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px', borderTop: '4px solid #ff6b00' }}>
@@ -793,14 +984,18 @@ export default function Dashboard() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
                   <thead><tr>
                     <th style={{ ...st.th, width: '40px' }}>#</th>
-                    <th style={st.th}>{t.vehicle}</th><th style={st.th}>{t.driver}</th>
-                    {!isMobile && <><th style={st.th}>{t.date}</th><th style={st.th}>{t.liters}</th></>}
-                    <th style={st.th}>{t.total}</th>
+                    <th style={st.th}>{t.vehicle}<ColumnFilter type="select" value={fuelVehicleFilter} onChange={setFuelVehicleFilter} options={[['all','الكل'], ...vehicles.map(v=>[v.id, v.plate_number])]} label={t.vehicle} isRTL={isRTL} /></th>
+                    <th style={st.th}>{t.driver}<ColumnFilter type="select" value={fuelDriverFilter} onChange={setFuelDriverFilter} options={[['all','الكل'], ...drivers.map(d=>[d.id, d.full_name])]} label={t.driver} isRTL={isRTL} /></th>
+                    {!isMobile && <>
+                      <th style={st.th}>{t.date}<ColumnFilter type="date-range" value={{ from: fuelDateFrom, to: fuelDateTo }} onChange={(r) => { setFuelDateFrom(r.from || ''); setFuelDateTo(r.to || '') }} label={t.date} isRTL={isRTL} /></th>
+                      <th style={st.th}>{t.liters}<ColumnFilter type="text" value={fuelColFilters.liters} onChange={v => setFCF('liters', v)} label={t.liters} isRTL={isRTL} /></th>
+                    </>}
+                    <th style={st.th}>{t.total}<ColumnFilter type="text" value={fuelColFilters.cost} onChange={v => setFCF('cost', v)} label={t.total} isRTL={isRTL} /></th>
                     {canEdit && <th style={st.th}>{t.edit}</th>}
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
                   <tbody>
-                    {fuelLogs.map((f, idx) => (
+                    {filteredFuel.map((f, idx) => (
                       <tr key={f.id} onMouseEnter={e => e.currentTarget.style.background='#fff7f2'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                         <td style={{ ...st.td, color: C.muted, fontWeight: '700', textAlign: 'center' }}>{idx + 1}</td>
                         <td style={{ ...st.td, fontWeight: '700' }}>{f.vehicles?.plate_number}</td>
