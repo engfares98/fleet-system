@@ -4,19 +4,13 @@ import { useState, useRef } from 'react'
 const C = { orange: '#ff6b00', white: '#fff', text: '#1a1a1a', muted: '#888', border: '#e8e8e8' }
 
 const initialData = {
-  // Driver
   driverName: '', driverPosition: '', employeeNumber: '', iqamaNumber: '', iqamaExpiry: '',
-  licenseNumber: '', licenseExpiry: '', dob: '', recipientSignature: '',
-  // Work site
+  licenseNumber: '', licenseExpiry: '', dob: '', mobile: '', recipientSignature: '',
   company: '', sector: '', project: '', city: '', directManager: '', contactNumber: '',
-  // Vehicle
   vehicleType: '', vehicleModel: '', color: '', year: '', plateNumber: '', vehicleExpiry: '',
   accessories: '', odometer: '',
-  // Notes
   note1: '', note2: '', note3: '', note4: '', note5: '',
-  // Issuer
   issuerName: '', issuerFile: '', issuerSignature: '',
-  // Approvals
   areaManagerName: '', areaManagerSig: '',
   movementOfficerName: '', movementOfficerSig: '',
   centralDate: '',
@@ -29,7 +23,7 @@ export default function HandoverForm({ isMobile }) {
   const [toast, setToast] = useState('')
   const previewRef = useRef(null)
 
-  const set = (k, v) => setData(p => ({ ...p, [k]: v }))
+  const set = (k) => (e) => setData(p => ({ ...p, [k]: e.target.value }))
   const reset = () => setData(initialData)
   const showToast = (m) => { setToast(m); setTimeout(() => setToast(''), 3000) }
 
@@ -83,7 +77,6 @@ export default function HandoverForm({ isMobile }) {
       const plate = (data.plateNumber || 'vehicle').replace(/\s+/g, '_')
       const fileName = `Vehicle_Handover - ${plate} - ${new Date().toISOString().slice(0, 10)}.pdf`.replace(/[\\/:*?"<>|]/g, '')
       const blob = pdf.output('blob')
-
       if (action === 'print') {
         const url = URL.createObjectURL(blob)
         const w = window.open(url, '_blank')
@@ -107,26 +100,21 @@ export default function HandoverForm({ isMobile }) {
     }
   }
 
-  const inputStyle = { width: '100%', padding: '8px 10px', background: '#fafafa', border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box' }
-  const labelStyle = { color: '#555', fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '4px' }
+  const inp = { width: '100%', padding: '8px 10px', background: '#fafafa', border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box' }
+  const lbl = { color: '#555', fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '4px' }
   const card = { background: C.white, border: `1px solid ${C.border}`, borderRadius: '14px', padding: isMobile ? '14px' : '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: '14px' }
   const btn = (c, outline) => ({ background: outline ? C.white : (c || C.orange), color: outline ? (c || C.orange) : C.white, border: `2px solid ${c || C.orange}`, borderRadius: '9px', padding: '10px 16px', fontSize: '13px', fontWeight: '700', fontFamily: 'Cairo, sans-serif', cursor: 'pointer' })
-  const sectionTitle = { fontWeight: '800', fontSize: '14px', color: C.orange, marginBottom: '12px', borderBottom: `2px solid ${C.orange}`, paddingBottom: '4px' }
+  const secT = { fontWeight: '800', fontSize: '14px', color: C.orange, marginBottom: '12px', borderBottom: `2px solid ${C.orange}`, paddingBottom: '4px' }
+  const grid3 = { display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '10px' }
 
-  const Field = ({ label, k, type = 'text' }) => (
-    <div>
-      <label style={labelStyle}>{label}</label>
-      <input type={type} style={inputStyle} value={data[k]} onChange={e => set(k, e.target.value)} />
-    </div>
-  )
-
-  // Print styles
-  const tCell = { border: '1.5px solid #333', padding: '5px 8px', fontSize: '11px', verticalAlign: 'middle' }
-  const tValue = { ...tCell, height: '22px', fontWeight: '700' }
-  const tLabelAr = { ...tCell, background: '#fef3c7', fontWeight: '700', textAlign: 'right', whiteSpace: 'nowrap' }
-  const tLabelEn = { ...tCell, background: '#fef3c7', fontWeight: '700', textAlign: 'left', fontSize: '10px', color: '#555', whiteSpace: 'nowrap' }
-  const tSide = { ...tCell, background: C.orange, color: '#fff', fontWeight: '900', writingMode: 'vertical-rl', textAlign: 'center', whiteSpace: 'nowrap', width: '36px' }
-  const tSection = { background: C.orange, color: '#fff', fontWeight: '900', textAlign: 'center', padding: '6px 8px', fontSize: '12px', border: '1.5px solid #333' }
+  // Print styles - matches the original template (monochrome: black on white/gray)
+  const tCell = { border: '1px solid #000', padding: '5px 8px', fontSize: '11px', verticalAlign: 'middle', color: '#000' }
+  const tVal = { ...tCell, background: '#fff', height: '22px', fontWeight: '700' }
+  const tLabAr = { ...tCell, background: '#F2F2F2', fontWeight: '700', textAlign: 'right', whiteSpace: 'nowrap' }
+  const tLabEn = { ...tCell, background: '#F2F2F2', fontWeight: '700', textAlign: 'left', fontSize: '10px', whiteSpace: 'nowrap' }
+  const tSideAr = { border: '1px solid #000', background: '#F2F2F2', color: '#000', fontWeight: '900', textAlign: 'center', whiteSpace: 'nowrap', width: '32px', writingMode: 'vertical-rl', padding: '6px 4px' }
+  const tSideEn = { border: '1px solid #000', background: '#F2F2F2', color: '#000', fontWeight: '900', textAlign: 'center', whiteSpace: 'nowrap', width: '32px', writingMode: 'vertical-rl', padding: '6px 4px', fontSize: '10px' }
+  const tSec = { background: '#F2F2F2', color: '#000', fontWeight: '900', textAlign: 'center', padding: '6px 8px', fontSize: '12px', border: '1px solid #000' }
 
   return (
     <div>
@@ -146,83 +134,85 @@ export default function HandoverForm({ isMobile }) {
 
       {/* Driver section */}
       <div style={card}>
-        <div style={sectionTitle}>👤 بيانات السائق</div>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '10px' }}>
-          <Field label="الاسم" k="driverName" />
-          <Field label="الوظيفة" k="driverPosition" />
-          <Field label="الرقم الوظيفي" k="employeeNumber" />
-          <Field label="رقم البطاقة / الإقامة" k="iqamaNumber" />
-          <Field label="تاريخ انتهاء الإقامة" k="iqamaExpiry" />
-          <Field label="رقم رخصة القيادة" k="licenseNumber" />
-          <Field label="تاريخ انتهاء الرخصة" k="licenseExpiry" />
-          <Field label="تاريخ الميلاد" k="dob" />
-          <Field label="توقيع المستلم" k="recipientSignature" />
+        <div style={secT}>👤 بيانات السائق</div>
+        <div style={grid3}>
+          <div><label style={lbl}>الاسم</label><input style={inp} value={data.driverName} onChange={set('driverName')} /></div>
+          <div><label style={lbl}>الوظيفة</label><input style={inp} value={data.driverPosition} onChange={set('driverPosition')} /></div>
+          <div><label style={lbl}>الرقم الوظيفي</label><input style={inp} value={data.employeeNumber} onChange={set('employeeNumber')} /></div>
+          <div><label style={lbl}>رقم البطاقة / الإقامة</label><input style={inp} value={data.iqamaNumber} onChange={set('iqamaNumber')} /></div>
+          <div><label style={lbl}>تاريخ انتهاء الإقامة</label><input style={inp} value={data.iqamaExpiry} onChange={set('iqamaExpiry')} /></div>
+          <div><label style={lbl}>رقم رخصة القيادة</label><input style={inp} value={data.licenseNumber} onChange={set('licenseNumber')} /></div>
+          <div><label style={lbl}>تاريخ انتهاء الرخصة</label><input style={inp} value={data.licenseExpiry} onChange={set('licenseExpiry')} /></div>
+          <div><label style={lbl}>تاريخ الميلاد</label><input style={inp} value={data.dob} onChange={set('dob')} /></div>
+          <div><label style={lbl}>رقم الجوال</label><input style={inp} value={data.mobile} onChange={set('mobile')} /></div>
         </div>
       </div>
 
       {/* Work site */}
       <div style={card}>
-        <div style={sectionTitle}>🏢 بيانات موقع العمل</div>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '10px' }}>
-          <Field label="الشركة" k="company" />
-          <Field label="القطاع" k="sector" />
-          <Field label="المشروع" k="project" />
-          <Field label="المدينة" k="city" />
-          <Field label="المدير المباشر" k="directManager" />
-          <Field label="رقم الاتصال" k="contactNumber" />
+        <div style={secT}>🏢 بيانات موقع العمل</div>
+        <div style={grid3}>
+          <div><label style={lbl}>الشركة</label><input style={inp} value={data.company} onChange={set('company')} /></div>
+          <div><label style={lbl}>القطاع</label><input style={inp} value={data.sector} onChange={set('sector')} /></div>
+          <div><label style={lbl}>المشروع</label><input style={inp} value={data.project} onChange={set('project')} /></div>
+          <div><label style={lbl}>المدينة</label><input style={inp} value={data.city} onChange={set('city')} /></div>
+          <div><label style={lbl}>المدير المباشر</label><input style={inp} value={data.directManager} onChange={set('directManager')} /></div>
+          <div><label style={lbl}>رقم الاتصال</label><input style={inp} value={data.contactNumber} onChange={set('contactNumber')} /></div>
         </div>
       </div>
 
       {/* Vehicle */}
       <div style={card}>
-        <div style={sectionTitle}>🚛 بيانات المركبة</div>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '10px' }}>
-          <Field label="نوع المركبة" k="vehicleType" />
-          <Field label="طراز المركبة" k="vehicleModel" />
-          <Field label="اللون" k="color" />
-          <Field label="الموديل" k="year" />
-          <Field label="رقم اللوحة" k="plateNumber" />
-          <Field label="تاريخ انتهاء الاستمارة" k="vehicleExpiry" />
-          <Field label="الملحقات" k="accessories" />
-          <Field label="عداد السيارة" k="odometer" />
+        <div style={secT}>🚛 بيانات المركبة</div>
+        <div style={grid3}>
+          <div><label style={lbl}>نوع المركبة</label><input style={inp} value={data.vehicleType} onChange={set('vehicleType')} /></div>
+          <div><label style={lbl}>طراز المركبة</label><input style={inp} value={data.vehicleModel} onChange={set('vehicleModel')} /></div>
+          <div><label style={lbl}>اللون</label><input style={inp} value={data.color} onChange={set('color')} /></div>
+          <div><label style={lbl}>الموديل</label><input style={inp} value={data.year} onChange={set('year')} /></div>
+          <div><label style={lbl}>رقم اللوحة</label><input style={inp} value={data.plateNumber} onChange={set('plateNumber')} /></div>
+          <div><label style={lbl}>تاريخ انتهاء الاستمارة</label><input style={inp} value={data.vehicleExpiry} onChange={set('vehicleExpiry')} /></div>
+          <div><label style={lbl}>الملحقات</label><input style={inp} value={data.accessories} onChange={set('accessories')} /></div>
+          <div><label style={lbl}>عداد السيارة</label><input style={inp} value={data.odometer} onChange={set('odometer')} /></div>
         </div>
       </div>
 
       {/* Notes */}
       <div style={card}>
-        <div style={sectionTitle}>📝 ملاحظات المركبة</div>
+        <div style={secT}>📝 ملاحظات المركبة</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
-          {[1, 2, 3, 4, 5].map(n => <Field key={n} label={`ملاحظة ${n}`} k={`note${n}`} />)}
+          {[1, 2, 3, 4, 5].map(n => (
+            <div key={n}><label style={lbl}>ملاحظة {n}</label><input style={inp} value={data['note' + n]} onChange={set('note' + n)} /></div>
+          ))}
         </div>
       </div>
 
       {/* Issuer */}
       <div style={card}>
-        <div style={sectionTitle}>🖋️ بيانات المسلم</div>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '10px' }}>
-          <Field label="اسم المسلم" k="issuerName" />
-          <Field label="رقم الملف" k="issuerFile" />
-          <Field label="التوقيع" k="issuerSignature" />
+        <div style={secT}>🖋️ بيانات المسلم</div>
+        <div style={grid3}>
+          <div><label style={lbl}>اسم المسلم</label><input style={inp} value={data.issuerName} onChange={set('issuerName')} /></div>
+          <div><label style={lbl}>رقم الملف</label><input style={inp} value={data.issuerFile} onChange={set('issuerFile')} /></div>
+          <div><label style={lbl}>التوقيع</label><input style={inp} value={data.issuerSignature} onChange={set('issuerSignature')} /></div>
         </div>
       </div>
 
       {/* Approvals */}
       <div style={card}>
-        <div style={sectionTitle}>✍️ التوقيعات</div>
+        <div style={secT}>✍️ التوقيعات</div>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(2, 1fr)', gap: '14px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ fontWeight: '700', fontSize: '12px', color: '#555' }}>مدير المنطقة</div>
-            <Field label="الاسم" k="areaManagerName" />
-            <Field label="التوقيع" k="areaManagerSig" />
+            <div><label style={lbl}>الاسم</label><input style={inp} value={data.areaManagerName} onChange={set('areaManagerName')} /></div>
+            <div><label style={lbl}>التوقيع</label><input style={inp} value={data.areaManagerSig} onChange={set('areaManagerSig')} /></div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ fontWeight: '700', fontSize: '12px', color: '#555' }}>مسؤول الحركة</div>
-            <Field label="الاسم" k="movementOfficerName" />
-            <Field label="التوقيع" k="movementOfficerSig" />
+            <div><label style={lbl}>الاسم</label><input style={inp} value={data.movementOfficerName} onChange={set('movementOfficerName')} /></div>
+            <div><label style={lbl}>التوقيع</label><input style={inp} value={data.movementOfficerSig} onChange={set('movementOfficerSig')} /></div>
           </div>
         </div>
         <div style={{ marginTop: '12px' }}>
-          <Field label="تاريخ الحركة المركزية" k="centralDate" />
+          <label style={lbl}>تاريخ الحركة المركزية</label><input style={inp} value={data.centralDate} onChange={set('centralDate')} />
         </div>
       </div>
 
@@ -241,52 +231,55 @@ export default function HandoverForm({ isMobile }) {
               </div>
             </div>
             <div style={{ overflow: 'auto', padding: '20px', background: '#f1f3f5' }}>
-              <div ref={previewRef} dir="rtl" style={{ width: '794px', minHeight: '1123px', margin: '0 auto', background: '#fff', padding: '20px 24px', fontFamily: 'Cairo, sans-serif', color: '#1a1a1a', fontSize: '11px', lineHeight: '1.4', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
-                {/* Header — MAG logo only */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px' }}>
+              <div ref={previewRef} dir="rtl" style={{ width: '794px', minHeight: '1123px', margin: '0 auto', background: '#fff', padding: '18px 22px', fontFamily: 'Cairo, sans-serif', color: '#1a1a1a', fontSize: '11px', lineHeight: '1.4', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
+                {/* Title */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
                   <tbody>
                     <tr>
-                      <td style={{ ...tSection, fontSize: '15px', padding: '14px 8px', width: 'auto' }}>
+                      <td style={{ ...tSec, fontSize: '14px', padding: '8px' }}>
                         نموذج استلام وتسليم مركبة
-                        <div style={{ fontSize: '11px', fontWeight: '700', marginTop: '4px' }}>Receiving and Issuing Vehicle Form</div>
                       </td>
-                      <td style={{ width: '100px', textAlign: 'center', border: '1.5px solid #333', padding: '4px' }}>
-                        <img src="/logo-mag.jpeg" alt="" crossOrigin="anonymous" style={{ width: '80px', height: '80px', objectFit: 'contain' }} />
+                      <td style={{ width: '85px', textAlign: 'center', border: '1.2px solid #333', padding: '4px', background: '#fff' }}>
+                        <img src="/logo-mag.jpeg" alt="" crossOrigin="anonymous" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
+                      </td>
+                      <td style={{ ...tSec, fontSize: '11px', padding: '8px', width: '180px' }}>
+                        Receiving and Issuing Vehicle Form
                       </td>
                     </tr>
                   </tbody>
                 </table>
 
-                {/* Driver Information */}
+                {/* Driver Information — mirrors the original template structure with two side headers */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
                   <tbody>
                     <tr>
-                      <td rowSpan={9} style={tSide}>بيانات السائق<br/>DRIVER&apos;S<br/>INFORMATION</td>
-                      <td style={tLabelAr}>الاسم</td><td style={tValue}>{data.driverName}</td><td style={tLabelEn}>NAME</td>
+                      <td rowSpan={9} style={tSideAr}>بيانات السائق</td>
+                      <td style={tLabAr}>الاسم</td><td style={tVal}>{data.driverName}</td><td style={tLabEn}>NAME</td>
+                      <td rowSpan={9} style={tSideEn}>DRIVER&apos;S INFORMATION</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>الوظيفة</td><td style={tValue}>{data.driverPosition}</td><td style={tLabelEn}>POSITION</td>
+                      <td style={tLabAr}>الوظيفة</td><td style={tVal}>{data.driverPosition}</td><td style={tLabEn}>POSITION</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>الرقم الوظيفي</td><td style={tValue}>{data.employeeNumber}</td><td style={tLabelEn}>EMPLOYMENT #</td>
+                      <td style={tLabAr}>الرقم الوظيفي</td><td style={tVal}>{data.employeeNumber}</td><td style={tLabEn}>EMPLOYMENT #</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>رقم البطاقة / الإقامة</td><td style={tValue}>{data.iqamaNumber}</td><td style={tLabelEn}>ID / IQAMA #</td>
+                      <td style={tLabAr}>رقم البطاقة / الإقامة</td><td style={tVal}>{data.iqamaNumber}</td><td style={tLabEn}>ID / IQAMA #</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>تاريخ الانتهاء</td><td style={tValue}>{data.iqamaExpiry}</td><td style={tLabelEn}>EXPIRY DATE</td>
+                      <td style={tLabAr}>تاريخ الانتهاء</td><td style={tVal}>{data.iqamaExpiry}</td><td style={tLabEn}>EXPIRY DATE</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>رقم رخصة القيادة</td><td style={tValue}>{data.licenseNumber}</td><td style={tLabelEn}>DRIVING LICENSE #</td>
+                      <td style={tLabAr}>رقم رخصة القيادة</td><td style={tVal}>{data.licenseNumber}</td><td style={tLabEn}>DRIVING LICENSE #</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>تاريخ الانتهاء</td><td style={tValue}>{data.licenseExpiry}</td><td style={tLabelEn}>EXPIRY DATE</td>
+                      <td style={tLabAr}>تاريخ الانتهاء</td><td style={tVal}>{data.licenseExpiry}</td><td style={tLabEn}>EXPIRY DATE</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>تاريخ الميلاد</td><td style={tValue}>{data.dob}</td><td style={tLabelEn}>DATE OF BIRTH</td>
+                      <td style={tLabAr}>تاريخ الميلاد</td><td style={tVal}>{data.dob}</td><td style={tLabEn}>DATE OF BIRTH</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>توقيع المستلم</td><td style={tValue}>{data.recipientSignature}</td><td style={tLabelEn}>SIGNATURE</td>
+                      <td style={tLabAr}>رقم الجوال</td><td style={tVal}>{data.mobile}</td><td style={tLabEn}>MOBILE NUMBER</td>
                     </tr>
                   </tbody>
                 </table>
@@ -294,20 +287,20 @@ export default function HandoverForm({ isMobile }) {
                 {/* Work site */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
                   <tbody>
-                    <tr><td colSpan={4} style={tSection}>بيانات موقع العمل</td></tr>
+                    <tr><td colSpan={4} style={tSec}>بيانات موقع العمل</td></tr>
                     <tr>
-                      <td style={{ ...tLabelAr, width: '20%' }}>الشركة</td>
-                      <td style={{ ...tValue, width: '30%' }}>{data.company}</td>
-                      <td style={{ ...tLabelAr, width: '20%' }}>القطاع</td>
-                      <td style={{ ...tValue, width: '30%' }}>{data.sector}</td>
+                      <td style={{ ...tLabAr, width: '20%' }}>الشركة</td>
+                      <td style={{ ...tVal, width: '30%' }}>{data.company}</td>
+                      <td style={{ ...tLabAr, width: '20%' }}>القطاع</td>
+                      <td style={{ ...tVal, width: '30%' }}>{data.sector}</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>المشروع</td><td style={tValue}>{data.project}</td>
-                      <td style={tLabelAr}>المدينة</td><td style={tValue}>{data.city}</td>
+                      <td style={tLabAr}>المشروع</td><td style={tVal}>{data.project}</td>
+                      <td style={tLabAr}>المدينة</td><td style={tVal}>{data.city}</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>المدير المباشر</td><td style={tValue}>{data.directManager}</td>
-                      <td style={tLabelAr}>رقم الاتصال</td><td style={tValue}>{data.contactNumber}</td>
+                      <td style={tLabAr}>المدير المباشر</td><td style={tVal}>{data.directManager}</td>
+                      <td style={tLabAr}>رقم الاتصال</td><td style={tVal}>{data.contactNumber}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -315,46 +308,44 @@ export default function HandoverForm({ isMobile }) {
                 {/* Vehicle Information */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
                   <tbody>
-                    <tr><td colSpan={4} style={tSection}>بيانات المركبة</td></tr>
+                    <tr><td colSpan={4} style={tSec}>بيانات المركبة</td></tr>
                     <tr>
-                      <td style={{ ...tLabelAr, width: '20%' }}>نوع المركبة</td>
-                      <td style={{ ...tValue, width: '30%' }}>{data.vehicleType}</td>
-                      <td style={{ ...tLabelAr, width: '20%' }}>طراز المركبة</td>
-                      <td style={{ ...tValue, width: '30%' }}>{data.vehicleModel}</td>
+                      <td style={{ ...tLabAr, width: '20%' }}>نوع المركبة</td>
+                      <td style={{ ...tVal, width: '30%' }}>{data.vehicleType}</td>
+                      <td style={{ ...tLabAr, width: '20%' }}>طراز المركبة</td>
+                      <td style={{ ...tVal, width: '30%' }}>{data.vehicleModel}</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>اللون</td><td style={tValue}>{data.color}</td>
-                      <td style={tLabelAr}>الموديل</td><td style={tValue}>{data.year}</td>
+                      <td style={tLabAr}>اللون</td><td style={tVal}>{data.color}</td>
+                      <td style={tLabAr}>الموديل</td><td style={tVal}>{data.year}</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>رقم اللوحة</td><td style={tValue}>{data.plateNumber}</td>
-                      <td style={tLabelAr}>تاريخ الانتهاء</td><td style={tValue}>{data.vehicleExpiry}</td>
+                      <td style={tLabAr}>رقم اللوحة</td><td style={tVal}>{data.plateNumber}</td>
+                      <td style={tLabAr}>تاريخ الانتهاء</td><td style={tVal}>{data.vehicleExpiry}</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>الملحقات</td><td style={tValue}>{data.accessories}</td>
-                      <td style={tLabelAr}>الملحقات</td><td style={tValue}>{data.accessories}</td>
-                      <td style={tLabelAr}>عداد السيارة</td><td style={tValue}>{data.odometer}</td>
+                      <td style={tLabAr}>الملحقات</td><td style={tVal}>{data.accessories}</td>
+                      <td style={tLabAr}>عداد السيارة</td><td style={tVal}>{data.odometer}</td>
                     </tr>
                   </tbody>
                 </table>
 
-                {/* Photos */}
+                {/* Photos - matches original: 4 photos only */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
                   <tbody>
-                    <tr><td colSpan={5} style={tSection}>صور السيارة</td></tr>
                     <tr>
-                      <td style={{ ...tLabelAr, textAlign: 'center', width: '20%' }}>الصورة الأمامية</td>
-                      <td style={{ ...tLabelAr, textAlign: 'center', width: '20%' }}>الصورة الخلفية</td>
-                      <td style={{ ...tLabelAr, textAlign: 'center', width: '20%' }}>صورة الجانب الأيمن</td>
-                      <td style={{ ...tLabelAr, textAlign: 'center', width: '20%' }}>صورة الجانب الأيسر</td>
-                      <td style={{ ...tLabelAr, textAlign: 'center', width: '20%' }}>صورة العداد</td>
+                      <td style={{ ...tLabAr, textAlign: 'center', width: '20%' }}>صور السيارة</td>
+                      <td style={{ ...tLabAr, textAlign: 'center', width: '20%' }}>الصورة الأمامية</td>
+                      <td style={{ ...tLabAr, textAlign: 'center', width: '20%' }}>الصورة الخلفية</td>
+                      <td style={{ ...tLabAr, textAlign: 'center', width: '20%' }}>صورة الجانب الأيمن</td>
+                      <td style={{ ...tLabAr, textAlign: 'center', width: '20%' }}>صورة الجانب الأيسر</td>
                     </tr>
                     <tr>
-                      <td style={{ ...tCell, height: '90px' }}></td>
-                      <td style={{ ...tCell, height: '90px' }}></td>
-                      <td style={{ ...tCell, height: '90px' }}></td>
-                      <td style={{ ...tCell, height: '90px' }}></td>
-                      <td style={{ ...tCell, height: '90px' }}></td>
+                      <td style={{ ...tCell, height: '90px', background: '#F2F2F2' }}></td>
+                      <td style={{ ...tCell, height: '90px', background: '#fff' }}></td>
+                      <td style={{ ...tCell, height: '90px', background: '#fff' }}></td>
+                      <td style={{ ...tCell, height: '90px', background: '#fff' }}></td>
+                      <td style={{ ...tCell, height: '90px', background: '#fff' }}></td>
                     </tr>
                   </tbody>
                 </table>
@@ -362,12 +353,11 @@ export default function HandoverForm({ isMobile }) {
                 {/* Notes */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
                   <tbody>
-                    <tr><td colSpan={3} style={tSection}>ملاحظات المركبة</td></tr>
                     {[1, 2, 3, 4, 5].map((n, idx) => (
                       <tr key={n}>
-                        {idx === 0 && <td rowSpan={5} style={tSide}>ملاحظات</td>}
-                        <td style={{ ...tLabelAr, textAlign: 'center', width: '36px' }}>{n}</td>
-                        <td style={{ ...tValue, height: '24px' }}>{data['note' + n]}</td>
+                        {idx === 0 && <td rowSpan={5} style={tSideAr}>ملاحظات المركبة</td>}
+                        <td style={{ ...tLabAr, textAlign: 'center', width: '36px' }}>{n}</td>
+                        <td style={{ ...tVal, height: '24px' }}>{data['note' + n]}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -377,12 +367,12 @@ export default function HandoverForm({ isMobile }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
                   <tbody>
                     <tr>
-                      <td style={{ ...tLabelAr, width: '15%' }}>اسم المسلم</td>
-                      <td style={{ ...tValue, width: '30%' }}>{data.issuerName}</td>
-                      <td style={{ ...tLabelAr, width: '15%' }}>رقم الملف</td>
-                      <td style={{ ...tValue, width: '20%' }}>{data.issuerFile}</td>
-                      <td style={{ ...tLabelAr, width: '10%' }}>التوقيع</td>
-                      <td style={{ ...tValue, width: '10%' }}>{data.issuerSignature}</td>
+                      <td style={{ ...tLabAr, width: '15%' }}>اسم المسلم</td>
+                      <td style={{ ...tVal, width: '30%' }}>{data.issuerName}</td>
+                      <td style={{ ...tLabAr, width: '15%' }}>رقم الملف</td>
+                      <td style={{ ...tVal, width: '20%' }}>{data.issuerFile}</td>
+                      <td style={{ ...tLabAr, width: '10%' }}>التوقيع</td>
+                      <td style={{ ...tVal, width: '10%' }}>{data.issuerSignature}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -391,20 +381,21 @@ export default function HandoverForm({ isMobile }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
                   <tbody>
                     <tr>
-                      <td colSpan={2} style={tSection}>مدير المنطقة</td>
-                      <td colSpan={2} style={tSection}>مسؤول الحركة</td>
+                      <td colSpan={2} style={tSec}>مدير المنطقة</td>
+                      <td colSpan={2} style={tSec}>مدير المنطقة</td>
+                      <td colSpan={2} style={tSec}>مسؤول الحركة</td>
                     </tr>
                     <tr>
-                      <td style={{ ...tLabelAr, width: '15%' }}>الاسم</td>
-                      <td style={{ ...tValue, width: '35%' }}>{data.areaManagerName}</td>
-                      <td style={{ ...tLabelAr, width: '15%' }}>الاسم</td>
-                      <td style={{ ...tValue, width: '35%' }}>{data.movementOfficerName}</td>
+                      <td style={{ ...tLabAr, width: '15%' }}>الاسم</td>
+                      <td style={{ ...tVal, width: '35%' }}>{data.areaManagerName}</td>
+                      <td style={{ ...tLabAr, width: '15%' }}>الاسم</td>
+                      <td style={{ ...tVal, width: '35%' }}>{data.movementOfficerName}</td>
                     </tr>
                     <tr>
-                      <td style={tLabelAr}>التوقيع</td>
-                      <td style={{ ...tValue, height: '40px' }}>{data.areaManagerSig}</td>
-                      <td style={tLabelAr}>التوقيع</td>
-                      <td style={{ ...tValue, height: '40px' }}>{data.movementOfficerSig}</td>
+                      <td style={tLabAr}>التوقيع</td>
+                      <td style={{ ...tVal, height: '40px' }}>{data.areaManagerSig}</td>
+                      <td style={tLabAr}>التوقيع</td>
+                      <td style={{ ...tVal, height: '40px' }}>{data.movementOfficerSig}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -412,10 +403,10 @@ export default function HandoverForm({ isMobile }) {
                 {/* Central Movement */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
                   <tbody>
-                    <tr><td colSpan={2} style={tSection}>لاستخدام قسم الحركة المركزية</td></tr>
+                    <tr><td colSpan={2} style={tSec}>لاستخدام قسم الحركة المركزية</td></tr>
                     <tr>
-                      <td style={{ ...tLabelAr, width: '20%' }}>التاريخ</td>
-                      <td style={tValue}>{data.centralDate}</td>
+                      <td style={{ ...tLabAr, width: '20%' }}>التاريخ</td>
+                      <td style={tVal}>{data.centralDate}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -424,9 +415,9 @@ export default function HandoverForm({ isMobile }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '4px' }}>
                   <tbody>
                     <tr>
-                      <td style={{ ...tSection, width: '34%', fontSize: '11px' }}>الأصل لقسم الحركة المركزية</td>
-                      <td style={{ ...tSection, width: '33%', fontSize: '11px' }}>صورة للحسابات المركزية</td>
-                      <td style={{ ...tSection, width: '33%', fontSize: '11px' }}>صورة لمالية القطاع</td>
+                      <td style={{ ...tSec, width: '34%', fontSize: '11px' }}>الأصل لقسم الحركة المركزية</td>
+                      <td style={{ ...tSec, width: '33%', fontSize: '11px' }}>صورة للحسابات المركزية</td>
+                      <td style={{ ...tSec, width: '33%', fontSize: '11px' }}>صورة لمالية القطاع</td>
                     </tr>
                   </tbody>
                 </table>
