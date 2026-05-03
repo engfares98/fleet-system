@@ -4,6 +4,10 @@ import { useState, useRef } from 'react'
 const C = { orange: '#ff6b00', white: '#fff', text: '#1a1a1a', muted: '#888', border: '#e8e8e8' }
 
 const initialData = {
+  // Header
+  department: 'إدارة الخدمات المساندة – قسم الحركة',
+  formNumber: '', formDate: '',
+  // Driver
   driverName: '', driverPosition: '', employeeNumber: '', iqamaNumber: '', iqamaExpiry: '',
   licenseNumber: '', licenseExpiry: '', dob: '', mobile: '', recipientSignature: '',
   company: '', sector: '', project: '', city: '', directManager: '', contactNumber: '',
@@ -132,6 +136,16 @@ export default function HandoverForm({ isMobile }) {
         </div>
       </div>
 
+      {/* Header fields */}
+      <div style={card}>
+        <div style={secT}>📌 بيانات الترويسة</div>
+        <div style={grid3}>
+          <div><label style={lbl}>القسم / الإدارة</label><input style={inp} value={data.department} onChange={set('department')} /></div>
+          <div><label style={lbl}>رقم النموذج</label><input style={inp} value={data.formNumber} onChange={set('formNumber')} /></div>
+          <div><label style={lbl}>التاريخ</label><input style={inp} value={data.formDate} onChange={set('formDate')} /></div>
+        </div>
+      </div>
+
       {/* Driver section */}
       <div style={card}>
         <div style={secT}>👤 بيانات السائق</div>
@@ -231,20 +245,45 @@ export default function HandoverForm({ isMobile }) {
               </div>
             </div>
             <div style={{ overflow: 'auto', padding: '20px', background: '#f1f3f5' }}>
-              <div ref={previewRef} dir="rtl" style={{ width: '794px', minHeight: '1123px', margin: '0 auto', background: '#fff', padding: '18px 22px', fontFamily: 'Cairo, sans-serif', color: '#1a1a1a', fontSize: '11px', lineHeight: '1.4', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
-                {/* Title */}
+              <div ref={previewRef} dir="rtl" style={{ width: '794px', minHeight: '1123px', margin: '0 auto', background: '#fff', padding: '20px 28px', fontFamily: 'Cairo, sans-serif', color: '#000', fontSize: '11px', lineHeight: '1.4', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
+                {/* Top header — admin info on right, MAG logo on left */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px', border: 'none' }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ verticalAlign: 'top', width: '180px', padding: '4px', border: 'none' }}>
+                        <img src="/logo-mag.jpeg" alt="" crossOrigin="anonymous" style={{ width: '120px', objectFit: 'contain' }} />
+                      </td>
+                      <td style={{ textAlign: 'center', verticalAlign: 'middle', border: 'none', padding: '0 12px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '700' }}>إدارة الخدمات المساندة – قسم الحركة</div>
+                      </td>
+                      <td style={{ verticalAlign: 'top', width: '230px', border: 'none', padding: '0' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <tbody>
+                            <tr>
+                              <td style={{ padding: '3px 6px', fontWeight: '700', whiteSpace: 'nowrap', border: 'none' }}>القسم/الإدارة:</td>
+                              <td style={{ borderBottom: '1px solid #000', padding: '2px 6px', width: '100%' }}>{data.department}</td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '3px 6px', fontWeight: '700', whiteSpace: 'nowrap', border: 'none' }}>رقم النموذج:</td>
+                              <td style={{ borderBottom: '1px solid #000', padding: '2px 6px' }}>{data.formNumber}</td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '3px 6px', fontWeight: '700', whiteSpace: 'nowrap', border: 'none' }}>التاريخ:</td>
+                              <td style={{ borderBottom: '1px solid #000', padding: '2px 6px' }}>{data.formDate}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Title row — Arabic right, English left, no colored bg */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
                   <tbody>
                     <tr>
-                      <td style={{ ...tSec, fontSize: '14px', padding: '8px' }}>
-                        نموذج استلام وتسليم مركبة
-                      </td>
-                      <td style={{ width: '85px', textAlign: 'center', border: '1.2px solid #333', padding: '4px', background: '#fff' }}>
-                        <img src="/logo-mag.jpeg" alt="" crossOrigin="anonymous" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
-                      </td>
-                      <td style={{ ...tSec, fontSize: '11px', padding: '8px', width: '180px' }}>
-                        Receiving and Issuing Vehicle Form
-                      </td>
+                      <td style={{ textAlign: 'right', fontSize: '15px', fontWeight: '900', padding: '6px 4px', border: 'none' }}>نموذج استلام وتسليم مركبة</td>
+                      <td style={{ textAlign: 'left', fontSize: '15px', fontWeight: '900', padding: '6px 4px', border: 'none' }}>Receiving and issuing vehicle Form</td>
                     </tr>
                   </tbody>
                 </table>
@@ -330,34 +369,44 @@ export default function HandoverForm({ isMobile }) {
                   </tbody>
                 </table>
 
-                {/* Photos - matches original: 4 photos only */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
+                {/* Photos checkboxes row — matches original layout */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '0' }}>
                   <tbody>
                     <tr>
+                      <td style={{ ...tCell, textAlign: 'center', fontWeight: '700', width: '20%', padding: '6px' }}>☐ صورة الجانب الأيسر</td>
+                      <td style={{ ...tCell, textAlign: 'center', fontWeight: '700', width: '20%', padding: '6px' }}>☐ صورة الجانب الأيمن</td>
+                      <td style={{ ...tCell, textAlign: 'center', fontWeight: '700', width: '20%', padding: '6px' }}>☐ الصورة الخلفية</td>
+                      <td style={{ ...tCell, textAlign: 'center', fontWeight: '700', width: '20%', padding: '6px' }}>☐ الصورة الأمامية</td>
                       <td style={{ ...tLabAr, textAlign: 'center', width: '20%' }}>صور السيارة</td>
-                      <td style={{ ...tLabAr, textAlign: 'center', width: '20%' }}>الصورة الأمامية</td>
-                      <td style={{ ...tLabAr, textAlign: 'center', width: '20%' }}>الصورة الخلفية</td>
-                      <td style={{ ...tLabAr, textAlign: 'center', width: '20%' }}>صورة الجانب الأيمن</td>
-                      <td style={{ ...tLabAr, textAlign: 'center', width: '20%' }}>صورة الجانب الأيسر</td>
-                    </tr>
-                    <tr>
-                      <td style={{ ...tCell, height: '90px', background: '#F2F2F2' }}></td>
-                      <td style={{ ...tCell, height: '90px', background: '#fff' }}></td>
-                      <td style={{ ...tCell, height: '90px', background: '#fff' }}></td>
-                      <td style={{ ...tCell, height: '90px', background: '#fff' }}></td>
-                      <td style={{ ...tCell, height: '90px', background: '#fff' }}></td>
                     </tr>
                   </tbody>
                 </table>
 
-                {/* Notes */}
+                {/* Car diagram + numbered notes (1-5) */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
                   <tbody>
-                    {[1, 2, 3, 4, 5].map((n, idx) => (
+                    <tr>
+                      <td rowSpan={5} style={{ ...tCell, padding: '8px', textAlign: 'center', verticalAlign: 'middle', height: '170px', width: '70%' }}>
+                        <div style={{ fontSize: '40px', color: '#888', lineHeight: '1' }}>🚗</div>
+                        <div style={{ fontSize: '10px', color: '#666', marginTop: '6px' }}>(يُرسم على المخطط مكان أي ضرر أو خدش)</div>
+                      </td>
+                      <td style={{ ...tLabAr, textAlign: 'center', width: '36px', height: '34px' }}>1</td>
+                      <td rowSpan={5} style={tSideAr}>ملاحظات المركبة</td>
+                    </tr>
+                    <tr><td style={{ ...tLabAr, textAlign: 'center', height: '34px' }}>2</td></tr>
+                    <tr><td style={{ ...tLabAr, textAlign: 'center', height: '34px' }}>3</td></tr>
+                    <tr><td style={{ ...tLabAr, textAlign: 'center', height: '34px' }}>4</td></tr>
+                    <tr><td style={{ ...tLabAr, textAlign: 'center', height: '34px' }}>5</td></tr>
+                  </tbody>
+                </table>
+
+                {/* Inline notes values (compact) */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
+                  <tbody>
+                    {[1, 2, 3, 4, 5].map(n => (
                       <tr key={n}>
-                        {idx === 0 && <td rowSpan={5} style={tSideAr}>ملاحظات المركبة</td>}
                         <td style={{ ...tLabAr, textAlign: 'center', width: '36px' }}>{n}</td>
-                        <td style={{ ...tVal, height: '24px' }}>{data['note' + n]}</td>
+                        <td style={{ ...tVal, height: '20px' }}>{data['note' + n]}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -381,7 +430,6 @@ export default function HandoverForm({ isMobile }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px' }}>
                   <tbody>
                     <tr>
-                      <td colSpan={2} style={tSec}>مدير المنطقة</td>
                       <td colSpan={2} style={tSec}>مدير المنطقة</td>
                       <td colSpan={2} style={tSec}>مسؤول الحركة</td>
                     </tr>
@@ -411,16 +459,12 @@ export default function HandoverForm({ isMobile }) {
                   </tbody>
                 </table>
 
-                {/* Footer */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '4px' }}>
-                  <tbody>
-                    <tr>
-                      <td style={{ ...tSec, width: '34%', fontSize: '11px' }}>الأصل لقسم الحركة المركزية</td>
-                      <td style={{ ...tSec, width: '33%', fontSize: '11px' }}>صورة للحسابات المركزية</td>
-                      <td style={{ ...tSec, width: '33%', fontSize: '11px' }}>صورة لمالية القطاع</td>
-                    </tr>
-                  </tbody>
-                </table>
+                {/* Footer — bullets */}
+                <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', marginTop: '10px', borderTop: '1px solid #000', paddingTop: '6px', fontSize: '11px', fontWeight: '700' }}>
+                  <span>● الأصل لقسم الحركة المركزية</span>
+                  <span>● صورة للحسابات المركزية</span>
+                  <span>● صورة لمالية القطاع</span>
+                </div>
               </div>
             </div>
           </div>
