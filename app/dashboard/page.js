@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 import { translations } from './translations'
 import PrepReport from './PrepReport'
-import AttachmentMenu from './AttachmentMenu'
+import AttachmentMenu, { ATTACHMENT_TYPES } from './AttachmentMenu'
 
 // ── مكوّن الأرقام المتحركة (خارج الـ component الرئيسي لتجنب مشاكل React hooks)
 function CountUp({ target, duration = 1000 }) {
@@ -77,6 +77,8 @@ export default function Dashboard() {
   const [editLicenseImage, setEditLicenseImage] = useState(null)
   const [previewImage, setPreviewImage] = useState(null)
   const [showBulkUpload, setShowBulkUpload] = useState(false)
+  const [bulkAttachmentType, setBulkAttachmentType] = useState('istimara_image')
+  const [bulkMenuOpen, setBulkMenuOpen] = useState(false)
   const [bulkFiles, setBulkFiles] = useState([])
   const [bulkResults, setBulkResults] = useState([])
   const [bulkUploading, setBulkUploading] = useState(false)
@@ -184,8 +186,10 @@ export default function Dashboard() {
     return data.publicUrl
   }
 
-  const bulkUploadIstamara = async () => {
+  const bulkUploadAttachments = async () => {
     if (!bulkFiles.length) return
+    const conf = ATTACHMENT_TYPES.find(a => a.key === bulkAttachmentType)
+    if (!conf) return
     setBulkUploading(true)
     const results = []
     for (const file of bulkFiles) {
@@ -197,11 +201,11 @@ export default function Dashboard() {
       const matched = vehicles.find(v => (v.plate_number || '').replace(/\s/g, '').includes(fileNum))
       if (!matched) { results.push({ file: file.name, status: 'notfound', msg: `لم يتم العثور على مركبة: ${fileNum}` }); continue }
       const ext = file.name.split('.').pop()
-      const fileName = `istimara/${matched.id}_${Date.now()}.${ext}`
+      const fileName = `${conf.folder}/${matched.id}_${Date.now()}.${ext}`
       const { error } = await supabase.storage.from('fleet-files').upload(fileName, file)
       if (error) { results.push({ file: file.name, status: 'error', msg: 'فشل الرفع' }); continue }
       const { data } = supabase.storage.from('fleet-files').getPublicUrl(fileName)
-      await supabase.from('vehicles').update({ istimara_image: data.publicUrl }).eq('id', matched.id)
+      await supabase.from('vehicles').update({ [bulkAttachmentType]: data.publicUrl }).eq('id', matched.id)
       results.push({ file: file.name, status: 'success', msg: `✅ ${matched.plate_number}` })
     }
     setBulkResults(results)
@@ -577,7 +581,34 @@ export default function Dashboard() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🚛 {t.vehiclesTitle} ({filteredVehicles.length})</div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  {canEdit && <button style={{ ...st.btn('#16a34a'), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => { setShowBulkUpload(true); setBulkFiles([]); setBulkResults([]) }}>📂 رفع استمارات</button>}
+                  {canEdit && (
+                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                      <button
+                        style={{ ...st.btn('#16a34a'), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }}
+                        onClick={() => setBulkMenuOpen(o => !o)}
+                      >
+                        📂 رفع المرفقات ▾
+                      </button>
+                      {bulkMenuOpen && (
+                        <>
+                          <div onClick={() => setBulkMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 60 }} />
+                          <div style={{ position: 'absolute', top: '100%', [isRTL ? 'right' : 'left']: 0, marginTop: '4px', background: '#fff', border: `1px solid ${C.border}`, borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', minWidth: '220px', zIndex: 70, padding: '6px', fontFamily: 'Cairo, sans-serif' }}>
+                            {ATTACHMENT_TYPES.map(at => (
+                              <div
+                                key={at.key}
+                                onClick={() => { setBulkAttachmentType(at.key); setShowBulkUpload(true); setBulkFiles([]); setBulkResults([]); setBulkMenuOpen(false) }}
+                                style={{ padding: '9px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#fff7f2'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                              >
+                                📎 {t[at.labelKey]}
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                   {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowVehicleForm(true)}>{t.addVehicle}</button>}
                 </div>
               </div>
@@ -1001,24 +1032,24 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Bulk Upload Istamara Modal */}
+      {/* Bulk Upload Attachments Modal */}
       {showBulkUpload && (
         <div style={st.modal}>
           <div style={{ ...st.modalBox, maxWidth: '620px' }}>
-            <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>📂 رفع استمارات جماعي</div>
+            <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>📂 رفع جماعي — {t[(ATTACHMENT_TYPES.find(a => a.key === bulkAttachmentType) || {}).labelKey] || ''}</div>
             <div style={{ fontSize: '12px', color: '#888', marginBottom: '14px', background: '#f8f9fa', padding: '10px 14px', borderRadius: '8px' }}>
-              ⚠️ يجب أن يكون اسم كل صورة يحتوي على رقم اللوحة فقط — مثال: <strong>2122.jpg</strong>
+              ⚠️ يجب أن يحتوي اسم كل ملف على رقم اللوحة — مثال: <strong>2122.jpg</strong> أو <strong>2122.pdf</strong>
             </div>
             <label style={{ width: '100%', padding: '20px', background: bulkFiles.length ? '#fff7f2' : '#fafafa', border: `2px dashed ${bulkFiles.length ? '#ff6b00' : '#e8e8e8'}`, borderRadius: '10px', color: bulkFiles.length ? '#ff6b00' : '#888', fontSize: '13px', cursor: 'pointer', textAlign: 'center', display: 'block', boxSizing: 'border-box', fontWeight: '600', marginBottom: '16px' }}>
-              {bulkFiles.length ? `✅ تم اختيار ${bulkFiles.length} صورة` : '🖼️ اضغط هنا لاختيار الصور (متعدد)'}
-              <input type="file" accept="image/*,.pdf" multiple style={{ display: 'none' }} onChange={e => { setBulkFiles(Array.from(e.target.files)); setBulkResults([]) }} />
+              {bulkFiles.length ? `✅ تم اختيار ${bulkFiles.length} ملف` : '📎 اضغط هنا لاختيار الملفات (صور أو PDF)'}
+              <input type="file" accept="image/*,application/pdf,.pdf" multiple style={{ display: 'none' }} onChange={e => { setBulkFiles(Array.from(e.target.files)); setBulkResults([]) }} />
             </label>
 
             {bulkFiles.length > 0 && !bulkResults.length && (
               <div style={{ maxHeight: '180px', overflowY: 'auto', marginBottom: '16px', border: `1px solid #e8e8e8`, borderRadius: '8px' }}>
                 {bulkFiles.map((f, i) => (
                   <div key={i} style={{ padding: '8px 14px', borderBottom: '1px solid #f1f1f1', fontSize: '12px', color: '#444' }}>
-                    🖼️ {f.name}
+                    {(f.type || '').includes('pdf') || f.name.toLowerCase().endsWith('.pdf') ? '📄' : '🖼️'} {f.name}
                   </div>
                 ))}
               </div>
@@ -1040,7 +1071,7 @@ export default function Dashboard() {
             )}
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button style={st.btn()} onClick={bulkUploadIstamara} disabled={bulkUploading || !bulkFiles.length}>
+              <button style={st.btn()} onClick={bulkUploadAttachments} disabled={bulkUploading || !bulkFiles.length}>
                 {bulkUploading ? '⏳ جاري الرفع...' : '🚀 ابدأ الرفع'}
               </button>
               <button style={st.btn('#888', true)} onClick={() => { setShowBulkUpload(false); setBulkFiles([]); setBulkResults([]) }}>إغلاق</button>
