@@ -5,7 +5,6 @@ import { translations } from './translations'
 import PrepReport from './PrepReport'
 import AttachmentMenu, { ATTACHMENT_TYPES } from './AttachmentMenu'
 import ColumnFilter from './ColumnFilter'
-import HandoverForm from './HandoverForm'
 
 // ── مكوّن الأرقام المتحركة (خارج الـ component الرئيسي لتجنب مشاكل React hooks)
 function CountUp({ target, duration = 1000 }) {
@@ -449,7 +448,7 @@ export default function Dashboard() {
   const topFuelVehicles = Object.entries(fuelByVehicle).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   const C = { orange: '#ff6b00', orangeLight: '#fff7f2', white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8', navy: '#1a1a2e', navyDark: '#12122a', navyLight: '#f0f0f8' }
-  const navItems = [['dashboard','📊',t.dashboard],['vehicles','🚛',t.vehicles],['drivers','👤',t.drivers],['maintenance','🔧',t.maintenance],['fuel','⛽',t.fuel],['handover','📋','استلام مركبة'],['reports','📈',t.reports],['alerts','🔔',t.alerts],['users','👥',t.users]]
+  const navItems = [['dashboard','📊',t.dashboard],['vehicles','🚛',t.vehicles],['drivers','👤',t.drivers],['maintenance','🔧',t.maintenance],['fuel','⛽',t.fuel],['reports','📈',t.reports],['alerts','🔔',t.alerts],['users','👥',t.users]]
 
   const st = {
     input: { width: '100%', padding: '10px 14px', background: '#fafafa', border: `1.5px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s, box-shadow 0.2s' },
@@ -1034,11 +1033,6 @@ export default function Dashboard() {
                 {fuelLogs.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: '40px' }}>{t.noFuel}</div>}
               </div>
             </div>
-          )}
-
-          {/* Vehicle Handover Form */}
-          {activeTab === 'handover' && (
-            <HandoverForm isMobile={isMobile} />
           )}
 
           {/* Reports */}
