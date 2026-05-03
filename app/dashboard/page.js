@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 import { translations } from './translations'
 import PrepReport from './PrepReport'
+import AttachmentMenu from './AttachmentMenu'
 
 // ── مكوّن الأرقام المتحركة (خارج الـ component الرئيسي لتجنب مشاكل React hooks)
 function CountUp({ target, duration = 1000 }) {
@@ -595,7 +596,7 @@ export default function Dashboard() {
                     <th style={st.th}>{t.plateNumber}</th><th style={st.th}>{t.code}</th>
                     {!isMobile && <><th style={st.th}>{t.brand}</th><th style={st.th}>{t.model}</th><th style={st.th}>{t.equipmentType}</th></>}
                     <th style={st.th}>{t.status}</th><th style={st.th}>{t.preparationStatus}</th>
-                    <th style={st.th}>{t.istimara}</th>
+                    <th style={st.th}>{t.attachments}</th>
                     {canEdit && <th style={st.th}>{t.edit}</th>}
                     {canDelete && <th style={st.th}>🗑️</th>}
                   </tr></thead>
@@ -614,7 +615,17 @@ export default function Dashboard() {
                             </select>
                           ) : <span>{v.preparation_status === 'ready' ? '✅' : v.preparation_status === 'in_progress' ? '🔄' : '❌'}</span>}
                         </td>
-                        <td style={st.td}>{v.istimara_image ? <span style={imgLink} onClick={() => setPreviewImage(v.istimara_image)}>{t.view}</span> : '—'}</td>
+                        <td style={st.td}>
+                          <AttachmentMenu
+                            vehicle={v}
+                            t={t}
+                            isRTL={isRTL}
+                            supabase={supabase}
+                            canEdit={canEdit}
+                            onUpdate={fetchData}
+                            onPreview={setPreviewImage}
+                          />
+                        </td>
                         {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('vehicle', v)}>✏️</button></td>}
                         {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteVehicle(v.id)}>🗑️</button></td>}
                       </tr>
