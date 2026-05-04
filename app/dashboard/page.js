@@ -448,7 +448,19 @@ export default function Dashboard() {
   const topFuelVehicles = Object.entries(fuelByVehicle).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   const C = { orange: '#ff6b00', orangeLight: '#fff7f2', white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8', navy: '#1a1a2e', navyDark: '#12122a', navyLight: '#f0f0f8' }
-  const navItems = [['dashboard','📊',t.dashboard],['vehicles','🚛',t.vehicles],['drivers','👤',t.drivers],['maintenance','🔧',t.maintenance],['fuel','⛽',t.fuel],['reports','📈',t.reports],['alerts','🔔',t.alerts],['users','👥',t.users]]
+  const navItems = [['dashboard','dashboard',t.dashboard],['vehicles','vehicles',t.vehicles],['drivers','drivers',t.drivers],['maintenance','maintenance',t.maintenance],['fuel','fuel',t.fuel],['reports','reports',t.reports],['alerts','alerts',t.alerts],['users','users',t.users]]
+  const NavIcon = ({ name }) => {
+    const p = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }
+    if (name === 'dashboard') return <svg {...p}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+    if (name === 'vehicles') return <svg {...p}><path d="M16 16H8m13 0h2v-3.15a1 1 0 00-.84-.99L17 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
+    if (name === 'drivers') return <svg {...p}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    if (name === 'maintenance') return <svg {...p}><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+    if (name === 'fuel') return <svg {...p}><line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 00-2-2H6a2 2 0 00-2 2v18"/><path d="M14 13h2a2 2 0 012 2v2a2 2 0 002 2v-7l-3-3"/></svg>
+    if (name === 'reports') return <svg {...p}><path d="M3 3v18h18"/><polyline points="18,9 13,14 11,12 7,16"/></svg>
+    if (name === 'alerts') return <svg {...p}><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+    if (name === 'users') return <svg {...p}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+    return null
+  }
 
   const st = {
     input: { width: '100%', padding: '10px 14px', background: '#fafafa', border: `1.5px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px', fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s, box-shadow 0.2s' },
@@ -619,7 +631,7 @@ export default function Dashboard() {
               (!['users'].includes(id) || currentRole === 'admin') && (
                 <div key={id} className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '11px', padding: '11px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === id ? '700' : '500', color: activeTab === id ? '#fff' : 'rgba(255,255,255,0.55)', background: activeTab === id ? `rgba(255,107,0,0.2)` : 'transparent', borderRadius: '10px', marginBottom: '3px', borderRight: isRTL && activeTab === id ? `3px solid ${C.orange}` : isRTL ? '3px solid transparent' : 'none', borderLeft: !isRTL && activeTab === id ? `3px solid ${C.orange}` : !isRTL ? '3px solid transparent' : 'none', position: 'relative', transition: 'all 0.2s' }}
                   onClick={() => { setActiveTab(id); if (id === 'dashboard') setStatsKey(k=>k+1); if (isMobile) setSidebarOpen(false) }}>
-                  <span style={{ fontSize: '17px', filter: activeTab === id ? 'none' : 'grayscale(0.3)' }}>{icon}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px' }}><NavIcon name={icon} /></span>
                   <span>{label}</span>
                   {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ marginRight: isRTL ? 'auto' : 0, marginLeft: isRTL ? 0 : 'auto', background: '#dc2626', color: '#fff', borderRadius: '20px', padding: '2px 8px', fontSize: '10px', fontWeight: '700' }}>{criticalAlerts.length}</span>}
                 </div>
@@ -1388,7 +1400,7 @@ export default function Dashboard() {
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: C.white, borderTop: `2px solid ${C.border}`, display: 'flex', justifyContent: 'space-around', padding: '6px 0', zIndex: 15 }}>
           {navItems.filter(([id]) => id !== 'users' || currentRole === 'admin').map(([id, icon, label]) => (
             <div key={id} onClick={() => setActiveTab(id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', cursor: 'pointer', color: activeTab === id ? C.orange : C.muted, fontSize: '9px', fontWeight: activeTab === id ? '700' : '400', minWidth: '36px', position: 'relative' }}>
-              <span style={{ fontSize: '16px' }}>{icon}</span>
+              <NavIcon name={icon} />
               <span>{label.split(' ')[0]}</span>
               {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ position: 'absolute', top: '-2px', right: '2px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '13px', height: '13px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>}
             </div>
