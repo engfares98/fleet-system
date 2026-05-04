@@ -195,9 +195,9 @@ export const translations = {
 
     // Users
     usersTitle: 'إدارة المستخدمين',
-    adminRole: '👑 مدير',
-    editorRole: '✏️ محرر',
-    viewerRole: '👁️ مشاهد',
+    adminRole: '🛡️ مدير',
+    editorRole: '📝 محرر',
+    viewerRole: '🔍 مشاهد',
     adminDesc: 'صلاحيات كاملة',
     editorDesc: 'إضافة وتعديل فقط',
     viewerDesc: 'مشاهدة فقط',
@@ -633,9 +633,9 @@ export const translations = {
 
     // Users
     usersTitle: 'User Management',
-    adminRole: '👑 Admin',
-    editorRole: '✏️ Editor',
-    viewerRole: '👁️ Viewer',
+    adminRole: '🛡️ Admin',
+    editorRole: '📝 Editor',
+    viewerRole: '🔍 Viewer',
     adminDesc: 'Full access',
     editorDesc: 'Add & edit only',
     viewerDesc: 'View only',
