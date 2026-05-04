@@ -84,7 +84,7 @@ export default function Dashboard() {
   const matches = (val, q) => !q || (val || '').toString().toLowerCase().includes(q.toLowerCase())
 
   const [showVehicleForm, setShowVehicleForm] = useState(false)
-  const [vehicleForm, setVehicleForm] = useState({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
+  const [vehicleForm, setVehicleForm] = useState({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', chassis_number: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
   const [vehicleImage, setVehicleImage] = useState(null)
   const [istamaraImage, setIstamaraImage] = useState(null)
 
@@ -202,7 +202,7 @@ export default function Dashboard() {
     URL.revokeObjectURL(url)
   }
 
-  const exportVehicles = () => exportToCSV(vehicles.map(v => ({ [t.plateNumber]: v.plate_number || '', [t.vehicleCode]: v.vehicle_code || '', [t.type]: v.type || '', [t.brand]: v.brand || '', [t.model]: v.model || '', [t.year]: v.year || '', [t.color]: v.color || '', [t.fuelType]: v.fuel_type || '', [t.status]: v.status === 'active' ? t.active : t.inactive })), t.vehicles)
+  const exportVehicles = () => exportToCSV(vehicles.map(v => ({ [t.plateNumber]: v.plate_number || '', [t.vehicleCode]: v.vehicle_code || '', [t.type]: v.type || '', [t.brand]: v.brand || '', [t.model]: v.model || '', [t.year]: v.year || '', [t.chassisNumber]: v.chassis_number || '', [t.color]: v.color || '', [t.fuelType]: v.fuel_type || '', [t.status]: v.status === 'active' ? t.active : t.inactive })), t.vehicles)
   const exportDrivers = () => exportToCSV(drivers.map(d => ({ [t.fullName]: d.full_name || '', [t.nationalId]: d.national_id || '', [t.passportNumber]: d.passport_number || '', [t.phone]: d.phone || '', [t.licenseNumber]: d.license_number || '', [t.licenseExpiry]: d.license_expiry || '', [t.status]: d.status === 'active' ? t.active : t.inactive })), t.drivers)
   const exportMaintenance = () => exportToCSV(maintenance.map(m => ({ [t.vehicle]: m.vehicles?.plate_number || '', [t.type]: m.type || '', [t.description]: m.description || '', [t.date]: m.date || '', [t.cost]: m.cost || '', [t.nextDate]: m.next_date || '' })), t.maintenance)
   const exportFuel = () => exportToCSV(fuelLogs.map(f => ({ [t.vehicle]: f.vehicles?.plate_number || '', [t.driver]: f.drivers?.full_name || '', [t.date]: f.date || '', [t.liters]: f.liters || '', [t.pricePerLiter]: f.cost_per_liter || '', [t.total]: f.total_cost || '' })), t.fuel)
@@ -274,7 +274,7 @@ export default function Dashboard() {
     const istimara_image = await uploadFile(istamaraImage, 'istimara')
     await supabase.from('vehicles').insert([{ ...vehicleForm, vehicle_image, istimara_image }])
     setShowVehicleForm(false)
-    setVehicleForm({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
+    setVehicleForm({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', chassis_number: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
     setVehicleImage(null); setIstamaraImage(null); setUploading(false); fetchData()
     showToast('✅ تم إضافة المركبة بنجاح')
   }
@@ -379,7 +379,7 @@ export default function Dashboard() {
     }
     if (vehicleSearch) {
       const q = vehicleSearch.toLowerCase()
-      const hay = [v.plate_number, v.vehicle_code, v.brand, v.model, v.type, v.color, v.year].filter(Boolean).join(' ').toLowerCase()
+      const hay = [v.plate_number, v.vehicle_code, v.brand, v.model, v.type, v.color, v.year, v.chassis_number].filter(Boolean).join(' ').toLowerCase()
       if (!hay.includes(q)) return false
     }
     // Per-column filters
@@ -1219,6 +1219,7 @@ export default function Dashboard() {
               <div><label style={st.label}>{t.brand}</label><input style={st.input} value={editForm.brand||''} onChange={e=>setEditForm({...editForm,brand:e.target.value})} /></div>
               <div><label style={st.label}>{t.model}</label><input style={st.input} value={editForm.model||''} onChange={e=>setEditForm({...editForm,model:e.target.value})} /></div>
               <div><label style={st.label}>{t.year}</label><input style={st.input} value={editForm.year||''} onChange={e=>setEditForm({...editForm,year:e.target.value})} /></div>
+              <div><label style={st.label}>{t.chassisNumber}</label><input style={st.input} value={editForm.chassis_number||''} onChange={e=>setEditForm({...editForm,chassis_number:e.target.value})} /></div>
               <div><label style={st.label}>{t.color}</label><input style={st.input} value={editForm.color||''} onChange={e=>setEditForm({...editForm,color:e.target.value})} /></div>
               <div><label style={st.label}>{t.fuelType}</label><input style={st.input} value={editForm.fuel_type||''} onChange={e=>setEditForm({...editForm,fuel_type:e.target.value})} /></div>
               <div><label style={st.label}>{t.status}</label><select style={st.input} value={editForm.status||''} onChange={e=>setEditForm({...editForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option><option value="pending">{t.pending}</option></select></div>
@@ -1315,7 +1316,7 @@ export default function Dashboard() {
       {showVehicleForm && (<div style={st.modal}><div style={st.modalBox}>
         <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>🚛 {t.addVehicleTitle}</div>
         <div style={st.formGrid}>
-          {[[`plate_number`,t.plateNumber],[`vehicle_code`,t.vehicleCode],[`type`,t.type],[`brand`,t.brand],[`model`,t.model],[`year`,t.year],[`color`,t.color],[`fuel_type`,t.fuelType]].map(([key,label]) => (
+          {[[`plate_number`,t.plateNumber],[`vehicle_code`,t.vehicleCode],[`type`,t.type],[`brand`,t.brand],[`model`,t.model],[`year`,t.year],[`chassis_number`,t.chassisNumber],[`color`,t.color],[`fuel_type`,t.fuelType]].map(([key,label]) => (
             <div key={key}><label style={st.label}>{label}</label><input style={st.input} value={vehicleForm[key]} onChange={e => setVehicleForm({...vehicleForm,[key]:e.target.value})} /></div>
           ))}
           <div><label style={st.label}>{t.status}</label><select style={st.input} value={vehicleForm.status} onChange={e => setVehicleForm({...vehicleForm,status:e.target.value})}><option value="active">{t.active}</option><option value="inactive">{t.inactive}</option><option value="pending">{t.pending}</option></select></div>
