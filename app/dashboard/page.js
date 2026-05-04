@@ -138,7 +138,7 @@ export default function Dashboard() {
     if (!data.session) { window.location.href = '/'; return }
     setCurrentUser(data.session.user)
     const { data: roleData } = await supabase.from('user_roles').select('*').eq('user_id', data.session.user.id).single()
-    setCurrentRole(roleData?.role || 'admin')
+    setCurrentRole(roleData?.role || 'viewer')
   }
 
   const fetchData = async () => {
