@@ -73,7 +73,7 @@ export default function Dashboard() {
   const [fuelDateFrom, setFuelDateFrom] = useState('')
   const [fuelDateTo, setFuelDateTo] = useState('')
   // Per-column filters
-  const [vehicleColFilters, setVehicleColFilters] = useState({ plate: '', code: '', brand: '', model: '', equipmentType: '' })
+  const [vehicleColFilters, setVehicleColFilters] = useState({ plate: '', code: '', brand: '', model: '', equipmentType: '', chassisNumber: '' })
   const [driverColFilters, setDriverColFilters] = useState({ name: '', nationalId: '', passport: '', phone: '', license: '' })
   const [maintenanceColFilters, setMaintenanceColFilters] = useState({ type: '', description: '', cost: '' })
   const [fuelColFilters, setFuelColFilters] = useState({ liters: '', cost: '' })
@@ -388,6 +388,7 @@ export default function Dashboard() {
     if (!matches(v.brand, vehicleColFilters.brand)) return false
     if (!matches(v.model, vehicleColFilters.model)) return false
     if (!matches(v.year, vehicleColFilters.equipmentType)) return false
+    if (!matches(v.chassis_number, vehicleColFilters.chassisNumber)) return false
     return true
   })
 
@@ -802,6 +803,7 @@ export default function Dashboard() {
                       <th style={st.th}>{t.brand}<ColumnFilter type="select" value={vehicleBrandFilter} onChange={setVehicleBrandFilter} options={[['all','الكل'], ...vehicleBrands.map(b=>[b,b])]} label={t.brand} isRTL={isRTL} /></th>
                       <th style={st.th}>{t.model}<ColumnFilter type="text" value={vehicleColFilters.model} onChange={v => setVCF('model', v)} label={t.model} isRTL={isRTL} /></th>
                       <th style={st.th}>{t.equipmentType}<ColumnFilter type="text" value={vehicleColFilters.equipmentType} onChange={v => setVCF('equipmentType', v)} label={t.equipmentType} isRTL={isRTL} /></th>
+                      <th style={st.th}>{t.chassisNumber}<ColumnFilter type="text" value={vehicleColFilters.chassisNumber || ''} onChange={v => setVCF('chassisNumber', v)} label={t.chassisNumber} isRTL={isRTL} /></th>
                     </>}
                     <th style={st.th}>{t.status}<ColumnFilter type="select" value={vehicleStatusFilter} onChange={setVehicleStatusFilter} options={[['all','الكل'],['active',t.active],['pending',t.pending],['inactive',t.inactive]]} label={t.status} isRTL={isRTL} /></th>
                     <th style={st.th}>{t.preparationStatus}<ColumnFilter type="select" value={vehiclePrepFilter} onChange={setVehiclePrepFilter} options={[['all','الكل'],['ready','✅ جاهزة'],['in_progress','🔄 قيد التجهيز'],['not_ready','❌ غير جاهزة']]} label={t.preparationStatus} isRTL={isRTL} /></th>
@@ -824,7 +826,7 @@ export default function Dashboard() {
                         <td style={{ ...st.td, color: C.muted, fontWeight: '700', textAlign: 'center' }}>{idx + 1}</td>
                         <td style={{ ...st.td, fontWeight: '700' }}>{v.plate_number}</td>
                         <td style={st.td}>{v.vehicle_code || '—'}</td>
-                        {!isMobile && <><td style={st.td}>{v.brand}</td><td style={st.td}>{v.model}</td><td style={st.td}>{v.year || '—'}</td></>}
+                        {!isMobile && <><td style={st.td}>{v.brand}</td><td style={st.td}>{v.model}</td><td style={st.td}>{v.year || '—'}</td><td style={st.td}>{v.chassis_number || '—'}</td></>}
                         <td style={st.td}><span style={st.badge(v.status)}>{statusLabel(v.status)}</span></td>
                         <td style={st.td}>
                           {canEdit ? (
