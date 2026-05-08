@@ -5,6 +5,8 @@ import { translations } from './translations'
 import PrepReport from './PrepReport'
 import AttachmentMenu, { ATTACHMENT_TYPES } from './AttachmentMenu'
 import ColumnFilter from './ColumnFilter'
+import KeyboardShortcuts from './KeyboardShortcuts'
+import OnboardingTour from './OnboardingTour'
 
 // ── مكوّن الأرقام المتحركة (خارج الـ component الرئيسي لتجنب مشاكل React hooks)
 function CountUp({ target, duration = 1000 }) {
@@ -1414,6 +1416,18 @@ export default function Dashboard() {
           <button style={st.btn('#888', true)} onClick={() => setShowFuelForm(false)}>{t.cancel}</button>
         </div>
       </div></div>)}
+
+      {/* Keyboard Shortcuts Handler */}
+      <KeyboardShortcuts
+        onSearch={() => setActiveTab('vehicles')}
+        onNewVehicle={() => { setActiveTab('vehicles'); setShowVehicleForm(true) }}
+        onSwitchTab={(tab) => setActiveTab(tab)}
+        onToggleLang={switchLang}
+        onToggleTheme={toggleTheme}
+      />
+
+      {/* Onboarding Tour (first visit) */}
+      <OnboardingTour />
 
       {/* Floating Scroll Buttons */}
       <div style={{ position: 'fixed', [isRTL ? 'left' : 'right']: '16px', bottom: isMobile ? '80px' : '24px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 50 }}>
