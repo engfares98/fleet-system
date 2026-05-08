@@ -116,16 +116,27 @@ export default function Dashboard() {
   const [toasts, setToasts] = useState([])
   const [dataLoading, setDataLoading] = useState(true)
   const [statsKey, setStatsKey] = useState(0)
+  const [theme, setTheme] = useState('dark')
 
   useEffect(() => {
     const savedLang = localStorage.getItem('lang') || 'ar'
     setLang(savedLang)
+    const savedTheme = localStorage.getItem('theme') || 'dark'
+    setTheme(savedTheme)
+    document.documentElement.setAttribute('data-theme', savedTheme)
     checkAuth(); fetchData()
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark'
+    setTheme(newTheme)
+    document.documentElement.setAttribute('data-theme', newTheme)
+    localStorage.setItem('theme', newTheme)
+  }
 
   const switchLang = () => {
     const newLang = lang === 'ar' ? 'en' : lang === 'en' ? 'bn' : 'ar'
@@ -448,7 +459,7 @@ export default function Dashboard() {
   const fuelByVehicle = fuelLogs.reduce((acc, f) => { const key = f.vehicles?.plate_number || '?'; acc[key] = (acc[key] || 0) + (Number(f.total_cost) || 0); return acc }, {})
   const topFuelVehicles = Object.entries(fuelByVehicle).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
-  const C = { orange: '#ff6b00', orangeLight: '#fff7f2', white: '#fff', gray: '#f8f9fa', text: '#1a1a1a', muted: '#888', border: '#e8e8e8', navy: '#1a1a2e', navyDark: '#12122a', navyLight: '#f0f0f8' }
+  const C = { orange: 'var(--accent)', orangeLight: 'var(--accent-soft)', white: 'var(--surface)', gray: 'var(--bg)', text: 'var(--text)', muted: 'var(--text-muted)', border: 'var(--border)', navy: 'var(--sidebar-bg)', navyDark: 'var(--sidebar-bg)', navyLight: 'var(--surface-2)' }
   const navItems = [['dashboard','dashboard',t.dashboard],['vehicles','vehicles',t.vehicles],['drivers','drivers',t.drivers],['maintenance','maintenance',t.maintenance],['fuel','fuel',t.fuel],['reports','reports',t.reports],['alerts','alerts',t.alerts],['users','users',t.users]]
   const NavIcon = ({ name }) => {
     const p = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }
@@ -604,6 +615,13 @@ export default function Dashboard() {
           {!isMobile && <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>{t.yourPermission}: <span style={{ color: C.orange, fontWeight: '700' }}>{roleLabel(currentRole)}</span></div>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button onClick={toggleTheme} title={theme === 'dark' ? 'فاتح' : 'داكن'} aria-label="toggle theme" style={{ background: 'rgba(255,107,0,0.15)', border: `1px solid rgba(255,107,0,0.3)`, borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', color: C.orange, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,107,0,0.25)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(255,107,0,0.15)'}>
+            {theme === 'dark' ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            )}
+          </button>
           <button onClick={switchLang} style={{ background: 'rgba(255,107,0,0.15)', border: `1px solid rgba(255,107,0,0.3)`, borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: C.orange, fontFamily: 'Cairo, sans-serif', transition: 'all 0.2s' }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,107,0,0.25)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(255,107,0,0.15)'}>
             {lang === 'ar' ? '🇬🇧 EN' : lang === 'en' ? '🇧🇩 বাং' : '🇸🇦 ع'}
           </button>
