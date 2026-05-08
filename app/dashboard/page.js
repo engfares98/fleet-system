@@ -7,6 +7,7 @@ import AttachmentMenu, { ATTACHMENT_TYPES } from './AttachmentMenu'
 import ColumnFilter from './ColumnFilter'
 import KeyboardShortcuts from './KeyboardShortcuts'
 import OnboardingTour from './OnboardingTour'
+import GlobalSearch from './GlobalSearch'
 
 // ── مكوّن الأرقام المتحركة (خارج الـ component الرئيسي لتجنب مشاكل React hooks)
 function CountUp({ target, duration = 1000 }) {
@@ -119,6 +120,7 @@ export default function Dashboard() {
   const [dataLoading, setDataLoading] = useState(true)
   const [statsKey, setStatsKey] = useState(0)
   const [theme, setTheme] = useState('dark')
+  const [searchOpen, setSearchOpen] = useState(false)
 
   useEffect(() => {
     const savedLang = localStorage.getItem('lang') || 'ar'
@@ -617,6 +619,10 @@ export default function Dashboard() {
           {!isMobile && <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>{t.yourPermission}: <span style={{ color: C.orange, fontWeight: '700' }}>{roleLabel(currentRole)}</span></div>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button onClick={() => setSearchOpen(true)} title="بحث عام (Ctrl+K)" aria-label="search" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontFamily: 'Cairo, sans-serif', minWidth: isMobile ? 'auto' : '140px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = '#fff' }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            {!isMobile && <><span style={{ flex: 1, textAlign: 'right' }}>بحث...</span><kbd style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '3px', padding: '1px 6px', fontSize: '10px', fontFamily: 'monospace' }}>⌘K</kbd></>}
+          </button>
           <button onClick={toggleTheme} title={theme === 'dark' ? 'فاتح' : 'داكن'} aria-label="toggle theme" style={{ background: 'rgba(255,107,0,0.15)', border: `1px solid rgba(255,107,0,0.3)`, borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', color: C.orange, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,107,0,0.25)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(255,107,0,0.15)'}>
             {theme === 'dark' ? (
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
@@ -1419,11 +1425,22 @@ export default function Dashboard() {
 
       {/* Keyboard Shortcuts Handler */}
       <KeyboardShortcuts
-        onSearch={() => setActiveTab('vehicles')}
+        onSearch={() => setSearchOpen(true)}
         onNewVehicle={() => { setActiveTab('vehicles'); setShowVehicleForm(true) }}
         onSwitchTab={(tab) => setActiveTab(tab)}
         onToggleLang={switchLang}
         onToggleTheme={toggleTheme}
+      />
+
+      {/* Global Search */}
+      <GlobalSearch
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        vehicles={vehicles}
+        drivers={drivers}
+        maintenance={maintenance}
+        fuelLogs={fuelLogs}
+        onNavigate={(tab) => setActiveTab(tab)}
       />
 
       {/* Onboarding Tour (first visit) */}
