@@ -8,6 +8,7 @@ import ColumnFilter from './ColumnFilter'
 import KeyboardShortcuts from './KeyboardShortcuts'
 import OnboardingTour from './OnboardingTour'
 import GlobalSearch from './GlobalSearch'
+import InteractiveDashboard from './InteractiveDashboard'
 
 // ── مكوّن الأرقام المتحركة (خارج الـ component الرئيسي لتجنب مشاكل React hooks)
 function CountUp({ target, duration = 1000 }) {
@@ -680,17 +681,28 @@ export default function Dashboard() {
           {/* Dashboard */}
           {activeTab === 'dashboard' && (
             <div>
-              <div style={{ marginBottom: '24px', animation: 'fadeIn 0.4s ease' }}>
-                <div style={{ fontSize: isMobile ? '17px' : '22px', fontWeight: '900', color: C.navy }}>{t.dashboardTitle}</div>
-                <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>آخر تحديث: {new Date().toLocaleDateString('ar-SA', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</div>
+              <div style={{ marginBottom: '20px', animation: 'fadeIn 0.4s ease' }}>
+                <div style={{ fontSize: isMobile ? '17px' : '22px', fontWeight: '900', color: 'var(--text)' }}>{t.dashboardTitle}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>آخر تحديث: {new Date().toLocaleDateString('ar-SA', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</div>
               </div>
               {criticalAlerts.length > 0 && (
-                <div onClick={() => setActiveTab('alerts')} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div onClick={() => setActiveTab('alerts')} style={{ background: 'var(--danger-soft)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontSize: '24px' }}>🚨</span>
-                  <div><div style={{ fontWeight: '700', color: '#dc2626', fontSize: '14px' }}>{t.criticalAlert.replace('{n}', criticalAlerts.length)}</div><div style={{ color: '#888', fontSize: '12px' }}>{t.clickToView}</div></div>
+                  <div><div style={{ fontWeight: '700', color: '#dc2626', fontSize: '14px' }}>{t.criticalAlert.replace('{n}', criticalAlerts.length)}</div><div style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{t.clickToView}</div></div>
                   <div style={{ marginRight: isRTL ? 'auto' : 0, marginLeft: isRTL ? 0 : 'auto', color: '#dc2626', fontSize: '20px' }}>{isRTL ? '←' : '→'}</div>
                 </div>
               )}
+              {/* New Interactive Dashboard with charts */}
+              <InteractiveDashboard
+                vehicles={vehicles}
+                drivers={drivers}
+                maintenance={maintenance}
+                fuelLogs={fuelLogs}
+                alerts={alerts}
+                t={t}
+                isMobile={isMobile}
+              />
+              <div style={{ display: 'none' }}>{/* hide old stats section below */}
               {/* بطاقات الإحصائيات المتحركة */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '14px', marginBottom: '24px' }}>
                 {[
@@ -740,6 +752,7 @@ export default function Dashboard() {
                   ))}
                   {alerts.length === 0 && <div style={{ color: '#16a34a', textAlign: 'center', padding: '20px', fontSize: '13px', fontWeight: '600' }}>✅ {t.noAlerts}</div>}
                 </div>
+              </div>
               </div>
             </div>
           )}
