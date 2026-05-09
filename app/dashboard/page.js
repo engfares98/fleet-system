@@ -12,6 +12,8 @@ import InteractiveDashboard from './InteractiveDashboard'
 import AuditLogView from './AuditLogView'
 import LoginHistoryView from './LoginHistoryView'
 import { setAuditUser, logAction, logLogin, diffChanges } from './auditLog'
+import TiltCard from './TiltCard'
+import AnimatedBackground from './AnimatedBackground'
 
 // ── مكوّن الأرقام المتحركة (خارج الـ component الرئيسي لتجنب مشاكل React hooks)
 function CountUp({ target, duration = 1000 }) {
@@ -561,7 +563,8 @@ export default function Dashboard() {
 
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0f2f5', fontFamily: 'Cairo, sans-serif', direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: 'Cairo, sans-serif', direction: isRTL ? 'rtl' : 'ltr', position: 'relative' }}>
+      <AnimatedBackground variant="mesh" intensity={0.7} fixed={true} />
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
       <style>{`
         @keyframes toastSlideIn { from{opacity:0;transform:translateX(80px)} to{opacity:1;transform:translateX(0)} }

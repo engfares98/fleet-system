@@ -6,6 +6,7 @@ import {
   BarChart, Bar,
   LineChart, Line,
 } from 'recharts'
+import TiltCard from './TiltCard'
 
 const monthLabel = (d) => {
   const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر']
@@ -14,20 +15,20 @@ const monthLabel = (d) => {
 
 function StatCard({ icon, label, value, trend, color = '#ff6b00', subtitle }) {
   return (
-    <div className="hover-lift" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '18px 20px', borderTop: `3px solid ${color}` }}>
+    <TiltCard intensity={6} scale={1.03} glow={true} className="stat-3d" style={{ borderTop: `3px solid ${color}` }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>{icon}</div>
+        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: `linear-gradient(135deg, ${color}30, ${color}15)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: `0 4px 12px ${color}30`, transform: 'translateZ(20px)' }}>{icon}</div>
         {trend !== undefined && trend !== null && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: '700', color: trend >= 0 ? '#16a34a' : '#dc2626', background: trend >= 0 ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)', padding: '3px 8px', borderRadius: '20px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: '700', color: trend >= 0 ? '#16a34a' : '#dc2626', background: trend >= 0 ? 'rgba(22,163,74,0.12)' : 'rgba(220,38,38,0.12)', padding: '4px 10px', borderRadius: '20px', transform: 'translateZ(15px)' }}>
             <span>{trend >= 0 ? '▲' : '▼'}</span>
             <span>{Math.abs(trend)}%</span>
           </div>
         )}
       </div>
-      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', marginBottom: '4px' }}>{label}</div>
-      <div style={{ fontSize: '26px', fontWeight: '900', color }}>{value}</div>
-      {subtitle && <div style={{ fontSize: '10px', color: 'var(--text-subtle)', marginTop: '4px' }}>{subtitle}</div>}
-    </div>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', marginBottom: '4px', transform: 'translateZ(10px)' }}>{label}</div>
+      <div style={{ fontSize: '28px', fontWeight: '900', color, transform: 'translateZ(25px)', textShadow: `0 4px 12px ${color}30` }}>{value}</div>
+      {subtitle && <div style={{ fontSize: '10px', color: 'var(--text-subtle)', marginTop: '4px', transform: 'translateZ(5px)' }}>{subtitle}</div>}
+    </TiltCard>
   )
 }
 
