@@ -9,6 +9,9 @@ import KeyboardShortcuts from './KeyboardShortcuts'
 import OnboardingTour from './OnboardingTour'
 import GlobalSearch from './GlobalSearch'
 import InteractiveDashboard from './InteractiveDashboard'
+import AuditLogView from './AuditLogView'
+import LoginHistoryView from './LoginHistoryView'
+import { setAuditUser, logAction, logLogin, diffChanges } from './auditLog'
 
 // ── مكوّن الأرقام المتحركة (خارج الـ component الرئيسي لتجنب مشاكل React hooks)
 function CountUp({ target, duration = 1000 }) {
@@ -154,7 +157,15 @@ export default function Dashboard() {
     if (!data.session) { window.location.href = '/'; return }
     setCurrentUser(data.session.user)
     const { data: roleData } = await supabase.from('user_roles').select('*').eq('user_id', data.session.user.id).single()
-    setCurrentRole(roleData?.role || 'viewer')
+    const role = roleData?.role || 'viewer'
+    setCurrentRole(role)
+    setAuditUser(data.session.user, role)
+    // Log this login (once per session)
+    if (!sessionStorage.getItem('loginLogged')) {
+      sessionStorage.setItem('loginLogged', '1')
+      logLogin(supabase, data.session.user, true)
+      logAction(supabase, { action: 'login', entity_type: 'user', entity_id: data.session.user.id, entity_label: data.session.user.email })
+    }
   }
 
   const fetchData = async () => {
@@ -280,6 +291,8 @@ export default function Dashboard() {
       if (editLicenseImage) updateData.license_image = await uploadFile(editLicenseImage, 'licenses')
     }
     await supabase.from(table).update(updateData).eq('id', editItem.id)
+    const changes = diffChanges(editItem, updateData)
+    logAction(supabase, { action: 'update', entity_type: editType, entity_id: editItem.id, entity_label: editItem.plate_number || editItem.full_name || editItem.type || '', changes })
     setEditItem(null); setEditType(null); setUploading(false); fetchData()
     showToast('✅ تم الحفظ بنجاح')
   }
@@ -288,7 +301,8 @@ export default function Dashboard() {
     setUploading(true)
     const vehicle_image = await uploadFile(vehicleImage, 'vehicles')
     const istimara_image = await uploadFile(istamaraImage, 'istimara')
-    await supabase.from('vehicles').insert([{ ...vehicleForm, vehicle_image, istimara_image }])
+    const { data: inserted } = await supabase.from('vehicles').insert([{ ...vehicleForm, vehicle_image, istimara_image }]).select().single()
+    logAction(supabase, { action: 'create', entity_type: 'vehicle', entity_id: inserted?.id, entity_label: vehicleForm.plate_number })
     setShowVehicleForm(false)
     setVehicleForm({ plate_number: '', vehicle_code: '', type: '', brand: '', model: '', year: '', chassis_number: '', color: '', status: 'active', fuel_type: '', preparation_status: 'not_ready' })
     setVehicleImage(null); setIstamaraImage(null); setUploading(false); fetchData()
@@ -299,7 +313,8 @@ export default function Dashboard() {
     setUploading(true)
     const iqama_image = await uploadFile(iqamaImage, 'iqama')
     const license_image = await uploadFile(licenseImage, 'licenses')
-    await supabase.from('drivers').insert([{ ...driverForm, iqama_image, license_image }])
+    const { data: inserted } = await supabase.from('drivers').insert([{ ...driverForm, iqama_image, license_image }]).select().single()
+    logAction(supabase, { action: 'create', entity_type: 'driver', entity_id: inserted?.id, entity_label: driverForm.full_name })
     setShowDriverForm(false)
     setDriverForm({ file_number: '', full_name: '', national_id: '', passport_number: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
     setIqamaImage(null); setLicenseImage(null); setUploading(false); fetchData()
@@ -307,7 +322,8 @@ export default function Dashboard() {
   }
 
   const addMaintenance = async () => {
-    await supabase.from('maintenance').insert([maintenanceForm])
+    const { data: inserted } = await supabase.from('maintenance').insert([maintenanceForm]).select().single()
+    logAction(supabase, { action: 'create', entity_type: 'maintenance', entity_id: inserted?.id, entity_label: maintenanceForm.type })
     setShowMaintenanceForm(false)
     setMaintenanceForm({ vehicle_id: '', type: '', description: '', date: '', cost: '', next_date: '', status: 'pending' })
     fetchData()
@@ -316,7 +332,8 @@ export default function Dashboard() {
 
   const addFuel = async () => {
     const total_cost = fuelForm.liters * fuelForm.cost_per_liter
-    await supabase.from('fuel_logs').insert([{ ...fuelForm, total_cost }])
+    const { data: inserted } = await supabase.from('fuel_logs').insert([{ ...fuelForm, total_cost }]).select().single()
+    logAction(supabase, { action: 'create', entity_type: 'fuel', entity_id: inserted?.id, entity_label: `${total_cost} ر.س` })
     setShowFuelForm(false)
     setFuelForm({ vehicle_id: '', driver_id: '', date: '', liters: '', cost_per_liter: '', odometer: '' })
     fetchData()
@@ -339,10 +356,10 @@ export default function Dashboard() {
   const canEdit = currentRole === 'admin' || currentRole === 'editor'
   const canDelete = currentRole === 'admin'
 
-  const deleteVehicle = async (id) => { if (!canDelete) return; await supabase.from('vehicles').delete().eq('id', id); fetchData(); showToast('🗑️ تم حذف المركبة', 'warning') }
-  const deleteDriver = async (id) => { if (!canDelete) return; await supabase.from('drivers').delete().eq('id', id); fetchData(); showToast('🗑️ تم حذف السائق', 'warning') }
-  const deleteMaintenance = async (id) => { if (!canDelete) return; await supabase.from('maintenance').delete().eq('id', id); fetchData(); showToast('🗑️ تم حذف سجل الصيانة', 'warning') }
-  const deleteFuel = async (id) => { if (!canDelete) return; await supabase.from('fuel_logs').delete().eq('id', id); fetchData(); showToast('🗑️ تم حذف سجل الوقود', 'warning') }
+  const deleteVehicle = async (id) => { if (!canDelete) return; const v = vehicles.find(x => x.id === id); await supabase.from('vehicles').delete().eq('id', id); logAction(supabase, { action: 'delete', entity_type: 'vehicle', entity_id: id, entity_label: v?.plate_number }); fetchData(); showToast('🗑️ تم حذف المركبة', 'warning') }
+  const deleteDriver = async (id) => { if (!canDelete) return; const d = drivers.find(x => x.id === id); await supabase.from('drivers').delete().eq('id', id); logAction(supabase, { action: 'delete', entity_type: 'driver', entity_id: id, entity_label: d?.full_name }); fetchData(); showToast('🗑️ تم حذف السائق', 'warning') }
+  const deleteMaintenance = async (id) => { if (!canDelete) return; const m = maintenance.find(x => x.id === id); await supabase.from('maintenance').delete().eq('id', id); logAction(supabase, { action: 'delete', entity_type: 'maintenance', entity_id: id, entity_label: m?.type }); fetchData(); showToast('🗑️ تم حذف سجل الصيانة', 'warning') }
+  const deleteFuel = async (id) => { if (!canDelete) return; const f = fuelLogs.find(x => x.id === id); await supabase.from('fuel_logs').delete().eq('id', id); logAction(supabase, { action: 'delete', entity_type: 'fuel', entity_id: id, entity_label: f?.vehicles?.plate_number }); fetchData(); showToast('🗑️ تم حذف سجل الوقود', 'warning') }
   const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/' }
 
   const showToast = (msg, type = 'success') => {
@@ -465,7 +482,7 @@ export default function Dashboard() {
   const topFuelVehicles = Object.entries(fuelByVehicle).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   const C = { orange: 'var(--accent)', orangeLight: 'var(--accent-soft)', white: 'var(--surface)', gray: 'var(--bg)', text: 'var(--text)', muted: 'var(--text-muted)', border: 'var(--border)', navy: 'var(--sidebar-bg)', navyDark: 'var(--sidebar-bg)', navyLight: 'var(--surface-2)' }
-  const navItems = [['dashboard','dashboard',t.dashboard],['vehicles','vehicles',t.vehicles],['drivers','drivers',t.drivers],['maintenance','maintenance',t.maintenance],['fuel','fuel',t.fuel],['reports','reports',t.reports],['alerts','alerts',t.alerts],['users','users',t.users]]
+  const navItems = [['dashboard','dashboard',t.dashboard],['vehicles','vehicles',t.vehicles],['drivers','drivers',t.drivers],['maintenance','maintenance',t.maintenance],['fuel','fuel',t.fuel],['reports','reports',t.reports],['alerts','alerts',t.alerts],['users','users',t.users],['audit','audit','سجل النشاط'],['logins','logins','سجل الدخول']]
   const NavIcon = ({ name }) => {
     const p = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }
     if (name === 'dashboard') return <svg {...p}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
@@ -476,6 +493,8 @@ export default function Dashboard() {
     if (name === 'reports') return <svg {...p}><path d="M3 3v18h18"/><polyline points="18,9 13,14 11,12 7,16"/></svg>
     if (name === 'alerts') return <svg {...p}><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
     if (name === 'users') return <svg {...p}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+    if (name === 'audit') return <svg {...p}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    if (name === 'logins') return <svg {...p}><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
     return null
   }
 
@@ -656,7 +675,7 @@ export default function Dashboard() {
           )}
           <div style={{ padding: '8px 12px', marginBottom: '8px' }}>
             {navItems.map(([id, icon, label]) => (
-              (!['users'].includes(id) || currentRole === 'admin') && (
+              (!['users','audit','logins'].includes(id) || currentRole === 'admin') && (
                 <div key={id} className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '11px', padding: '11px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === id ? '700' : '500', color: activeTab === id ? '#fff' : 'rgba(255,255,255,0.55)', background: activeTab === id ? `rgba(255,107,0,0.2)` : 'transparent', borderRadius: '10px', marginBottom: '3px', borderRight: isRTL && activeTab === id ? `3px solid ${C.orange}` : isRTL ? '3px solid transparent' : 'none', borderLeft: !isRTL && activeTab === id ? `3px solid ${C.orange}` : !isRTL ? '3px solid transparent' : 'none', position: 'relative', transition: 'all 0.2s' }}
                   onClick={() => { setActiveTab(id); if (id === 'dashboard') setStatsKey(k=>k+1); if (isMobile) setSidebarOpen(false) }}>
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px' }}><NavIcon name={icon} /></span>
@@ -1203,6 +1222,14 @@ export default function Dashboard() {
           )}
 
           {/* Users */}
+          {activeTab === 'audit' && currentRole === 'admin' && (
+            <AuditLogView supabase={supabase} isMobile={isMobile} />
+          )}
+
+          {activeTab === 'logins' && currentRole === 'admin' && (
+            <LoginHistoryView supabase={supabase} isMobile={isMobile} isAdmin={true} />
+          )}
+
           {activeTab === 'users' && currentRole === 'admin' && (
             <div>
               <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>👥 {t.usersTitle}</div>
@@ -1472,7 +1499,7 @@ export default function Dashboard() {
       {/* Mobile bottom nav */}
       {isMobile && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: C.white, borderTop: `2px solid ${C.border}`, display: 'flex', justifyContent: 'space-around', padding: '6px 0', zIndex: 15 }}>
-          {navItems.filter(([id]) => id !== 'users' || currentRole === 'admin').map(([id, icon, label]) => (
+          {navItems.filter(([id]) => !['users','audit','logins'].includes(id) || currentRole === 'admin').map(([id, icon, label]) => (
             <div key={id} onClick={() => setActiveTab(id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', cursor: 'pointer', color: activeTab === id ? C.orange : C.muted, fontSize: '9px', fontWeight: activeTab === id ? '700' : '400', minWidth: '36px', position: 'relative' }}>
               <NavIcon name={icon} />
               <span>{label.split(' ')[0]}</span>
