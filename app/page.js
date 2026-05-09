@@ -139,11 +139,39 @@ export default function Home() {
         }
       `}</style>
 
-      {/* الصورة كـ layer ثابت */}
-      <div style={{ position:'fixed', inset:0, zIndex:0 }}>
+      {/* الصورة كـ layer ثابت + Aurora متحرك */}
+      <div style={{ position:'fixed', inset:0, zIndex:0, overflow:'hidden' }}>
         <img src="/bg-login.jpeg" alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center', display:'block' }} />
         <div className="bg-overlay" style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, rgba(10,10,30,0.75) 0%, rgba(10,10,30,0.60) 50%, rgba(255,107,0,0.15) 100%)' }} />
+        {/* Aurora orbs */}
+        <div style={{ position:'absolute', top:'-10%', left:'-10%', width:'40%', height:'40%', background:'radial-gradient(circle, rgba(255,107,0,0.5), transparent 70%)', filter:'blur(80px)', animation:'auroraA 18s ease-in-out infinite' }} />
+        <div style={{ position:'absolute', bottom:'-15%', right:'-10%', width:'45%', height:'45%', background:'radial-gradient(circle, rgba(124,58,237,0.4), transparent 70%)', filter:'blur(90px)', animation:'auroraB 22s ease-in-out infinite' }} />
+        <div style={{ position:'absolute', top:'30%', right:'10%', width:'35%', height:'35%', background:'radial-gradient(circle, rgba(37,99,235,0.35), transparent 70%)', filter:'blur(80px)', animation:'auroraC 26s ease-in-out infinite' }} />
+        {/* Floating particles */}
+        {[...Array(20)].map((_,i)=>(
+          <span key={i} aria-hidden style={{
+            position:'absolute',
+            left: `${(i*47)%100}%`,
+            top: `${(i*73)%100}%`,
+            width: `${2 + (i%3)}px`,
+            height: `${2 + (i%3)}px`,
+            background: i%3===0 ? '#ff6b00' : i%3===1 ? '#7c3aed' : '#fff',
+            borderRadius:'50%',
+            opacity:0.5,
+            boxShadow:`0 0 ${8+(i%4)*4}px currentColor`,
+            animation:`floatP${i%4} ${15+(i%5)*3}s ${(i%7)}s ease-in-out infinite`
+          }} />
+        ))}
       </div>
+      <style jsx global>{`
+        @keyframes auroraA { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(20%,30%) scale(1.3)} }
+        @keyframes auroraB { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-25%,-20%) scale(1.4)} }
+        @keyframes auroraC { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(15%,-30%) scale(1.2)} }
+        @keyframes floatP0 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,-60px)} }
+        @keyframes floatP1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-50px,80px)} }
+        @keyframes floatP2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(60px,40px)} }
+        @keyframes floatP3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-70px,-90px)} }
+      `}</style>
       {/* شريط علوي */}
       <div style={{ position:'fixed', top:0, left:0, right:0, height:'4px', background:'linear-gradient(90deg,#1a1a2e,#ff6b00,#1a1a2e)', zIndex:3 }} />
 
@@ -158,7 +186,7 @@ export default function Home() {
       </div>
 
       {/* بطاقة الدخول */}
-      <div className="login-card" style={{ background:'#fff', borderRadius:'24px', padding:'48px 44px 40px', width:'100%', maxWidth:'430px', boxShadow:'0 24px 80px rgba(0,0,0,0.12), 0 8px 24px rgba(255,107,0,0.08)', border:'1px solid rgba(255,107,0,0.1)', marginTop:'90px', marginBottom:'16px', position:'relative', zIndex:5 }}>
+      <div className="login-card" style={{ background:'rgba(255,255,255,0.92)', backdropFilter:'blur(20px) saturate(180%)', WebkitBackdropFilter:'blur(20px) saturate(180%)', borderRadius:'24px', padding:'48px 44px 40px', width:'100%', maxWidth:'430px', boxShadow:'0 32px 80px rgba(0,0,0,0.35), 0 16px 40px rgba(255,107,0,0.18), inset 0 1px 0 rgba(255,255,255,0.6)', border:'1px solid rgba(255,255,255,0.3)', marginTop:'90px', marginBottom:'16px', position:'relative', zIndex:5, animation:'scaleIn 0.5s cubic-bezier(.2,.9,.3,1.2)' }}>
         <div style={{ position:'absolute', top:0, left:'20px', right:'20px', height:'3px', background:'linear-gradient(90deg,transparent,#ff6b00,transparent)', borderRadius:'0 0 3px 3px' }} />
 
         {/* أيقونة + عنوان */}
