@@ -7,6 +7,7 @@ import {
   LineChart, Line,
 } from 'recharts'
 import TiltCard from './TiltCard'
+import Vehicle3D from './Vehicle3D'
 
 const monthLabel = (d) => {
   const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر']
@@ -155,6 +156,39 @@ export default function InteractiveDashboard({ vehicles, drivers, maintenance, f
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      {/* Hero — 3D Fleet Showcase */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr', gap: '16px', alignItems: 'stretch' }}>
+        <div className="aurora" style={{ background: 'linear-gradient(135deg, var(--surface), var(--surface-2))', border: '1px solid var(--border)', borderRadius: '18px', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', overflow: 'hidden', boxShadow: 'var(--shadow-md)' }}>
+          <div style={{ position: 'relative', zIndex: 2 }}>
+            <div style={{ display: 'inline-block', background: 'var(--accent-soft)', color: 'var(--accent)', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', marginBottom: '12px' }}>🚀 نظام إدارة الأسطول</div>
+            <div style={{ fontSize: isMobile ? '20px' : '28px', fontWeight: '900', color: 'var(--text)', marginBottom: '8px', letterSpacing: '-0.02em' }}>
+              أهلاً بك في <span className="number-3d">أسطولك الذكي</span>
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.7', marginBottom: '20px' }}>
+              {stats.totalVehicles.toLocaleString('ar')} مركبة · {stats.totalDrivers.toLocaleString('ar')} سائق · {stats.alertsCount.toLocaleString('ar')} تنبيه نشط
+            </div>
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>حالة الأسطول</div>
+                <div style={{ fontSize: '20px', fontWeight: '900', color: '#16a34a' }}>{Math.round((stats.readyVehicles / Math.max(stats.totalVehicles, 1)) * 100)}% جاهز</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>تكلفة الشهر</div>
+                <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--accent)' }}>{(stats.lastMonth || 0).toLocaleString('ar')} ر.س</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '18px', padding: '14px', boxShadow: 'var(--shadow-md)', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'var(--accent-soft)', color: 'var(--accent)', padding: '4px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', zIndex: 2 }}>3D Live</div>
+          <Vehicle3D color="#ff6b00" height={isMobile ? 220 : 260} autoRotate />
+          <div style={{ position: 'absolute', bottom: '12px', left: '12px', right: '12px', textAlign: 'center', fontSize: '10px', color: 'var(--text-subtle)', pointerEvents: 'none' }}>
+            🖱️ حرّك الفأرة لتفاعل مع المركبة
+          </div>
+        </div>
+      </div>
+
       {/* Insights bar */}
       <div style={{ background: 'linear-gradient(135deg, var(--accent-soft), var(--surface))', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px 20px', display: 'flex', flexWrap: 'wrap', gap: '14px', alignItems: 'center' }}>
         <div style={{ fontSize: '20px' }}>💡</div>
