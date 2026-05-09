@@ -20,8 +20,9 @@ export default function Vehicle3D({ color = '#ff6b00', height = 280, autoRotate 
       const container = containerRef.current
 
       const scene = new THREE.Scene()
-      const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000)
-      camera.position.set(0, 2.5, 6)
+      const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000)
+      camera.position.set(4, 3, 6)
+      camera.lookAt(0, 0.5, 0)
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -29,92 +30,126 @@ export default function Vehicle3D({ color = '#ff6b00', height = 280, autoRotate 
       renderer.setClearColor(0x000000, 0)
       container.appendChild(renderer.domElement)
 
-      // Lights
-      scene.add(new THREE.AmbientLight(0xffffff, 0.5))
-      const dir = new THREE.DirectionalLight(0xffffff, 1)
-      dir.position.set(5, 5, 5)
+      // Lights — strong setup so model is clearly visible
+      scene.add(new THREE.AmbientLight(0xffffff, 0.8))
+      const dir = new THREE.DirectionalLight(0xffffff, 1.4)
+      dir.position.set(5, 8, 5)
       scene.add(dir)
-      const dir2 = new THREE.DirectionalLight(0xff6b00, 0.6)
-      dir2.position.set(-3, 2, -3)
+      const dir2 = new THREE.DirectionalLight(0xff6b00, 0.8)
+      dir2.position.set(-5, 4, -3)
       scene.add(dir2)
+      const fill = new THREE.DirectionalLight(0xffffff, 0.5)
+      fill.position.set(0, -3, 5)
+      scene.add(fill)
 
       // Ground (transparent grid)
-      const grid = new THREE.GridHelper(20, 30, 0xff6b00, 0x444444)
-      grid.material.opacity = 0.18
+      const grid = new THREE.GridHelper(16, 20, 0xff6b00, 0x666666)
+      grid.material.opacity = 0.22
       grid.material.transparent = true
-      grid.position.y = -0.6
+      grid.position.y = -0.7
       scene.add(grid)
 
       // Truck group
       const truck = new THREE.Group()
 
-      const matBody = new THREE.MeshStandardMaterial({ color, metalness: 0.4, roughness: 0.4 })
-      const matCab = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.6, roughness: 0.3 })
-      const matWheel = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 })
-      const matRim = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.9, roughness: 0.2 })
-      const matWindow = new THREE.MeshStandardMaterial({ color: 0x4488cc, transparent: true, opacity: 0.55, metalness: 0.9, roughness: 0.1 })
+      const matBody = new THREE.MeshStandardMaterial({ color, metalness: 0.5, roughness: 0.35 })
+      const matCab = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, metalness: 0.7, roughness: 0.25 })
+      const matWheel = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.85 })
+      const matRim = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.95, roughness: 0.15 })
+      const matWindow = new THREE.MeshStandardMaterial({ color: 0x88aacc, transparent: true, opacity: 0.5, metalness: 0.95, roughness: 0.05 })
+      const matChrome = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, metalness: 0.6, roughness: 0.5 })
 
-      // Cargo body
-      const cargo = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.5, 1.4), matBody)
-      cargo.position.set(0.5, 0.5, 0)
+      // Cargo box (back) — bigger and centered
+      const cargo = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.6, 1.5), matBody)
+      cargo.position.set(0.7, 0.3, 0)
       truck.add(cargo)
 
-      // Cab
-      const cab = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 1.3), matCab)
-      cab.position.set(-0.9, 0.4, 0)
+      // Cab (front) — clearly distinct
+      const cab = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.3, 1.5), matCab)
+      cab.position.set(-1.1, 0.15, 0)
       truck.add(cab)
 
-      // Cab roof
-      const roof = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.15, 1.32), matCab)
-      roof.position.set(-0.9, 1.05, 0)
+      // Hood (sloped front)
+      const hood = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 1.45), matCab)
+      hood.position.set(-1.85, -0.15, 0)
+      truck.add(hood)
+
+      // Cab roof (slightly larger for shadow)
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.1, 1.55), matCab)
+      roof.position.set(-1.1, 0.85, 0)
       truck.add(roof)
 
-      // Windshield
-      const winShield = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.6, 1.1), matWindow)
-      winShield.position.set(-1.4, 0.6, 0)
-      winShield.rotation.z = 0.15
+      // Windshield (slanted)
+      const winShield = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.55, 1.3), matWindow)
+      winShield.position.set(-1.65, 0.4, 0)
+      winShield.rotation.z = 0.4
       truck.add(winShield)
 
       // Side windows
-      const sideWin = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.45, 0.05), matWindow)
-      sideWin.position.set(-0.9, 0.7, 0.66)
+      const sideWin = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.5, 0.04), matWindow)
+      sideWin.position.set(-1.1, 0.45, 0.77)
       truck.add(sideWin)
       const sideWin2 = sideWin.clone()
-      sideWin2.position.z = -0.66
+      sideWin2.position.z = -0.77
       truck.add(sideWin2)
 
-      // Wheels (4)
+      // Cargo back door (slight inset)
+      const cargoBack = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.4, 1.4), matChrome)
+      cargoBack.position.set(1.92, 0.3, 0)
+      truck.add(cargoBack)
+
+      // Side accent stripe on cargo
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.42, 0.2, 1.52), matChrome)
+      stripe.position.set(0.7, -0.3, 0)
+      truck.add(stripe)
+
+      // Wheels (6 wheels — 2 front + 4 rear dual)
       const wheelPositions = [
-        [-1.4, -0.35, 0.7], [-1.4, -0.35, -0.7],
-        [0.6, -0.35, 0.7], [0.6, -0.35, -0.7],
-        [1.5, -0.35, 0.7], [1.5, -0.35, -0.7],
+        [-1.5, -0.5, 0.85], [-1.5, -0.5, -0.85],   // front
+        [0.4, -0.5, 0.85], [0.4, -0.5, -0.85],     // rear 1
+        [1.4, -0.5, 0.85], [1.4, -0.5, -0.85],     // rear 2
       ]
       const wheels = []
       wheelPositions.forEach(p => {
-        const tireGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.22, 24)
+        const tireGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.28, 28)
         const tire = new THREE.Mesh(tireGeo, matWheel)
         tire.rotation.z = Math.PI / 2
         tire.position.set(...p)
         truck.add(tire)
-        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.24, 16), matRim)
+        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.3, 18), matRim)
         rim.rotation.z = Math.PI / 2
         rim.position.set(...p)
         truck.add(rim)
-        wheels.push(tire, rim)
+        // Hub
+        const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.32, 12), new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.7 }))
+        hub.rotation.z = Math.PI / 2
+        hub.position.set(...p)
+        truck.add(hub)
+        wheels.push(tire, rim, hub)
       })
 
-      // Headlights
-      const headL = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffffaa, emissive: 0xffff00, emissiveIntensity: 0.6 }))
-      headL.position.set(-1.5, 0.1, 0.5)
+      // Headlights (bright)
+      const headLightMat = new THREE.MeshStandardMaterial({ color: 0xfffacd, emissive: 0xffff66, emissiveIntensity: 1.2 })
+      const headL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.2), headLightMat)
+      headL.position.set(-2.2, -0.1, 0.55)
       truck.add(headL)
       const headR = headL.clone()
-      headR.position.z = -0.5
+      headR.position.z = -0.55
       truck.add(headR)
 
-      // Logo accent on cargo (front-facing strip)
-      const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.21, 0.18, 1.41), new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.5, roughness: 0.6 }))
-      stripe.position.set(0.5, 0.0, 0)
-      truck.add(stripe)
+      // Front grille
+      const grille = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.4, 1.2), new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.4 }))
+      grille.position.set(-2.2, -0.15, 0)
+      truck.add(grille)
+
+      // Bumper
+      const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.18, 1.55), matChrome)
+      bumper.position.set(-2.22, -0.42, 0)
+      truck.add(bumper)
+
+      // Center the truck
+      truck.position.y = 0
+      truck.scale.set(0.85, 0.85, 0.85)
 
       scene.add(truck)
       stateRef.current.truck = truck
@@ -143,14 +178,14 @@ export default function Vehicle3D({ color = '#ff6b00', height = 280, autoRotate 
       let t = 0
       const animate = () => {
         animId = requestAnimationFrame(animate)
-        t += 0.01
-        if (autoRotate) targetRotY = t * 0.4
-        targetRotY += (mouseX * 0.5 - (targetRotY - (autoRotate ? t * 0.4 : 0))) * 0.05
-        targetRotX += (-mouseY * 0.2 - targetRotX) * 0.05
-        truck.rotation.y = targetRotY
-        truck.rotation.x = targetRotX * 0.3
-        truck.position.y = Math.sin(t * 1.2) * 0.05
-        wheels.forEach(w => { w.rotation.x = t * 4 })
+        t += 0.008
+        if (autoRotate) targetRotY = t * 0.5
+        const mouseInfluence = mouseX * 0.4
+        truck.rotation.y = (autoRotate ? t * 0.5 : 0) + mouseInfluence
+        truck.rotation.x = -mouseY * 0.1
+        truck.position.y = Math.sin(t * 1.5) * 0.06
+        wheels.forEach(w => { w.rotation.x = t * 5 })
+        camera.lookAt(0, 0.3, 0)
         renderer.render(scene, camera)
       }
       animate()
