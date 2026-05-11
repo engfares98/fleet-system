@@ -1621,8 +1621,17 @@ export default function Dashboard() {
                     <input value={newUser.full_name} onChange={e => setNewUser({ ...newUser, full_name: e.target.value })} placeholder="مثل: محمد أحمد" style={{ width: '100%', padding: '10px 14px', fontSize: '13px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontFamily: 'Cairo, sans-serif' }} />
                   </div>
                   <div style={{ marginBottom: '14px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>📧 الإيميل *</label>
-                    <input type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} placeholder="user@example.com" style={{ width: '100%', padding: '10px 14px', fontSize: '13px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontFamily: 'Cairo, sans-serif' }} />
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>🆔 الرقم الوظيفي *</label>
+                    <div style={{ display: 'flex', alignItems: 'stretch', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface-2)' }}>
+                      <input type="text" inputMode="numeric" value={newUser.email.split('@')[0]} onChange={e => setNewUser({ ...newUser, email: e.target.value.trim() + '@fleet.mag.sa' })} placeholder="153001" style={{ flex: 1, padding: '10px 14px', fontSize: '13px', border: 'none', background: 'transparent', color: 'var(--text)', fontFamily: 'Cairo, sans-serif', outline: 'none' }} />
+                      <div style={{ padding: '10px 14px', background: 'var(--surface-3)', color: 'var(--text-muted)', fontSize: '12px', fontFamily: 'monospace', borderInlineStart: '1px solid var(--border)', display: 'flex', alignItems: 'center' }}>@fleet.mag.sa</div>
+                    </div>
+                    {newUser.email && newUser.email.split('@')[0] && (
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>📧 سيتم إنشاء الحساب بـ:</span>
+                        <strong style={{ color: 'var(--accent)', fontFamily: 'monospace' }}>{newUser.email}</strong>
+                      </div>
+                    )}
                   </div>
                   <div style={{ marginBottom: '14px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>🔑 كلمة المرور *</label>
