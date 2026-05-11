@@ -14,6 +14,8 @@ import LoginHistoryView from './LoginHistoryView'
 import { setAuditUser, logAction, logLogin, diffChanges } from './auditLog'
 import TiltCard from './TiltCard'
 import AnimatedBackground from './AnimatedBackground'
+import PermissionsManager from './PermissionsManager'
+import { ROLE_TEMPLATES } from './permissions'
 
 // ── مكوّن الأرقام المتحركة (خارج الـ component الرئيسي لتجنب مشاكل React hooks)
 function CountUp({ target, duration = 1000 }) {
@@ -128,9 +130,11 @@ export default function Dashboard() {
   const [theme, setTheme] = useState('dark')
   const [searchOpen, setSearchOpen] = useState(false)
   const [showAddUser, setShowAddUser] = useState(false)
-  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'viewer', full_name: '' })
+  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'viewer', full_name: '', permissions: null })
   const [addingUser, setAddingUser] = useState(false)
   const [addUserResult, setAddUserResult] = useState(null)
+  const [showAdvancedPerms, setShowAdvancedPerms] = useState(false)
+  const [editPermsFor, setEditPermsFor] = useState(null)
 
   const generatePassword = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%'
@@ -155,7 +159,7 @@ export default function Dashboard() {
       })
       if (error) throw error
 
-      // Insert role
+      // Insert role + permissions
       const newUserId = data?.user?.id
       if (newUserId) {
         await supabase.from('user_roles').insert({
@@ -163,6 +167,7 @@ export default function Dashboard() {
           role: newUser.role,
           full_name: newUser.full_name || null,
           is_active: true,
+          permissions: newUser.permissions || {},
         })
       }
 
@@ -188,8 +193,21 @@ export default function Dashboard() {
 
   const closeAddUser = () => {
     setShowAddUser(false)
-    setNewUser({ email: '', password: '', role: 'viewer', full_name: '' })
+    setNewUser({ email: '', password: '', role: 'viewer', full_name: '', permissions: null })
     setAddUserResult(null)
+    setShowAdvancedPerms(false)
+  }
+
+  const saveUserPermissions = async (userId, payload) => {
+    try {
+      await supabase.from('user_roles').update({ role: payload.role, permissions: payload.permissions }).eq('user_id', userId)
+      logAction(supabase, { action: 'update', entity_type: 'user', entity_id: userId, entity_label: 'permissions update', changes: { role: { from: null, to: payload.role } } })
+      showToast('✅ تم حفظ الصلاحيات')
+      setEditPermsFor(null)
+      fetchData()
+    } catch (e) {
+      showToast('❌ ' + (e.message || 'فشل الحفظ'), 'error')
+    }
   }
 
   useEffect(() => {
@@ -1347,7 +1365,12 @@ export default function Dashboard() {
                           ) : <span style={{ color: C.muted, fontSize: '12px' }}>—</span>}
                         </td>
                         <td style={st.td}>
-                          {u.user_id !== currentUser?.id && currentUser?.email === 'eng.fares98@gmail.com' ? <button onClick={() => deleteUserRole(u.user_id)} style={st.deleteBtn}>🗑️</button> : '—'}
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <button onClick={() => setEditPermsFor(u)} title="تعديل الصلاحيات التفصيلية" style={{ background: 'var(--accent-soft)', border: '1px solid var(--accent)', color: 'var(--accent)', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700' }}>⚙️</button>
+                            {u.user_id !== currentUser?.id && currentUser?.email === 'eng.fares98@gmail.com' && (
+                              <button onClick={() => deleteUserRole(u.user_id)} style={st.deleteBtn}>🗑️</button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1537,6 +1560,29 @@ export default function Dashboard() {
       </div></div>)}
 
       {/* Keyboard Shortcuts Handler */}
+      {/* Edit User Permissions Modal */}
+      {editPermsFor && (
+        <div onClick={() => setEditPermsFor(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 350, padding: '16px', backdropFilter: 'blur(8px)' }}>
+          <div onClick={e => e.stopPropagation()} dir="rtl" style={{ background: 'var(--surface)', borderRadius: '18px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflow: 'auto', boxShadow: 'var(--shadow-xl)', fontFamily: 'Cairo, sans-serif', animation: 'scaleIn 0.25s' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
+              <div>
+                <div style={{ fontWeight: '900', fontSize: '16px', color: 'var(--text)' }}>⚙️ صلاحيات المستخدم</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{editPermsFor.email || editPermsFor.user_id?.substring(0,8)}</div>
+              </div>
+              <button onClick={() => setEditPermsFor(null)} style={{ background: 'var(--surface-2)', border: 'none', width: '30px', height: '30px', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              <PermissionsManager
+                user={editPermsFor}
+                onSave={(p) => saveUserPermissions(editPermsFor.user_id, p)}
+                onClose={() => setEditPermsFor(null)}
+                isMobile={isMobile}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add User Modal */}
       {showAddUser && (
         <div onClick={!addingUser ? closeAddUser : undefined} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 350, padding: '16px', backdropFilter: 'blur(8px)' }}>
@@ -1585,13 +1631,36 @@ export default function Dashboard() {
                       <button onClick={() => setNewUser({ ...newUser, password: generatePassword() })} type="button" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', padding: '0 14px', borderRadius: '8px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700', fontSize: '12px', color: 'var(--text)', whiteSpace: 'nowrap' }}>🎲 توليد</button>
                     </div>
                   </div>
-                  <div style={{ marginBottom: '20px' }}>
+                  <div style={{ marginBottom: '14px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>🛡️ الصلاحية *</label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
                       {[['admin', '🛡️ مدير', '#7c3aed'], ['editor', '📝 محرر', '#ff6b00'], ['viewer', '🔍 مشاهد', '#16a34a']].map(([r, label, c]) => (
-                        <button key={r} type="button" onClick={() => setNewUser({ ...newUser, role: r })} style={{ padding: '12px 8px', borderRadius: '10px', border: `2px solid ${newUser.role === r ? c : 'var(--border)'}`, background: newUser.role === r ? `${c}15` : 'var(--surface)', color: newUser.role === r ? c : 'var(--text)', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700', fontSize: '12px' }}>{label}</button>
+                        <button key={r} type="button" onClick={() => setNewUser({ ...newUser, role: r, permissions: showAdvancedPerms ? (ROLE_TEMPLATES[r] || {}) : null })} style={{ padding: '12px 8px', borderRadius: '10px', border: `2px solid ${newUser.role === r ? c : 'var(--border)'}`, background: newUser.role === r ? `${c}15` : 'var(--surface)', color: newUser.role === r ? c : 'var(--text)', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700', fontSize: '12px' }}>{label}</button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Advanced permissions toggle */}
+                  <div style={{ marginBottom: '16px', background: showAdvancedPerms ? 'var(--accent-soft)' : 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', transition: 'all 0.2s' }}>
+                    <button type="button" onClick={() => { setShowAdvancedPerms(s => { const newS = !s; setNewUser(u => ({ ...u, permissions: newS ? (ROLE_TEMPLATES[u.role] || {}) : null })); return newS }) }} style={{ width: '100%', background: 'transparent', border: 'none', padding: '12px 14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'Cairo, sans-serif', color: 'var(--text)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '16px' }}>⚙️</span>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: '700', fontSize: '13px' }}>تخصيص متقدم للصلاحيات</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>تحديد دقيق لكل قسم وإجراء (40 صلاحية)</div>
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '14px', color: 'var(--text-muted)', transition: 'transform 0.2s', transform: showAdvancedPerms ? 'rotate(180deg)' : '' }}>▼</span>
+                    </button>
+                    {showAdvancedPerms && (
+                      <div style={{ padding: '12px', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
+                        <PermissionsManager
+                          user={{ role: newUser.role, permissions: newUser.permissions || ROLE_TEMPLATES[newUser.role] || {} }}
+                          onSave={(p) => { setNewUser({ ...newUser, role: p.role, permissions: p.permissions }); showToast('✅ تم تطبيق الصلاحيات على النموذج') }}
+                          isMobile={isMobile}
+                        />
+                      </div>
+                    )}
                   </div>
                   {addUserResult?.error && (
                     <div style={{ background: 'var(--danger-soft)', border: '1px solid var(--danger)', borderRadius: '8px', padding: '10px', marginBottom: '14px', fontSize: '12px', color: 'var(--danger)' }}>❌ {addUserResult.error}</div>
