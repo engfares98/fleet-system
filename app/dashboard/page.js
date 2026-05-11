@@ -127,6 +127,70 @@ export default function Dashboard() {
   const [statsKey, setStatsKey] = useState(0)
   const [theme, setTheme] = useState('dark')
   const [searchOpen, setSearchOpen] = useState(false)
+  const [showAddUser, setShowAddUser] = useState(false)
+  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'viewer', full_name: '' })
+  const [addingUser, setAddingUser] = useState(false)
+  const [addUserResult, setAddUserResult] = useState(null)
+
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%'
+    let p = ''
+    for (let i = 0; i < 12; i++) p += chars[Math.floor(Math.random() * chars.length)]
+    return p
+  }
+
+  const handleAddUser = async () => {
+    if (!newUser.email || !newUser.password) return
+    setAddingUser(true)
+    setAddUserResult(null)
+    try {
+      // Save current admin session
+      const { data: { session: adminSession } } = await supabase.auth.getSession()
+
+      // Sign up the new user
+      const { data, error } = await supabase.auth.signUp({
+        email: newUser.email.trim(),
+        password: newUser.password,
+        options: { data: { full_name: newUser.full_name } }
+      })
+      if (error) throw error
+
+      // Insert role
+      const newUserId = data?.user?.id
+      if (newUserId) {
+        await supabase.from('user_roles').insert({
+          user_id: newUserId,
+          role: newUser.role,
+          full_name: newUser.full_name || null,
+          is_active: true,
+        })
+      }
+
+      // Restore admin session if it was switched
+      if (adminSession) {
+        await supabase.auth.setSession({
+          access_token: adminSession.access_token,
+          refresh_token: adminSession.refresh_token,
+        })
+      }
+
+      logAction(supabase, { action: 'create', entity_type: 'user', entity_id: newUserId, entity_label: newUser.email })
+      setAddUserResult({ success: true, email: newUser.email, password: newUser.password, role: newUser.role })
+      showToast('✅ تم إضافة المستخدم بنجاح')
+      fetchData()
+    } catch (e) {
+      setAddUserResult({ success: false, error: e.message || 'حدث خطأ' })
+      showToast('❌ ' + (e.message || 'فشل الإضافة'), 'error')
+    } finally {
+      setAddingUser(false)
+    }
+  }
+
+  const closeAddUser = () => {
+    setShowAddUser(false)
+    setNewUser({ email: '', password: '', role: 'viewer', full_name: '' })
+    setAddUserResult(null)
+  }
 
   useEffect(() => {
     const savedLang = localStorage.getItem('lang') || 'ar'
@@ -1245,9 +1309,15 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
-                <div style={{ fontWeight: '700', color: '#1d4ed8', marginBottom: '8px' }}>{t.howToAdd}</div>
-                <div style={{ fontSize: '13px', color: '#1e40af' }}>{t.howToAddDesc}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontWeight: '700', color: 'var(--text)', fontSize: '14px' }}>قائمة المستخدمين</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>أضف مستخدمين جدد مع تحديد صلاحياتهم</div>
+                </div>
+                <button onClick={() => setShowAddUser(true)} style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700', fontSize: '13px', boxShadow: 'var(--shadow-accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                  إضافة مستخدم جديد
+                </button>
               </div>
               <div style={{ ...st.card, padding: 0, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -1467,6 +1537,78 @@ export default function Dashboard() {
       </div></div>)}
 
       {/* Keyboard Shortcuts Handler */}
+      {/* Add User Modal */}
+      {showAddUser && (
+        <div onClick={!addingUser ? closeAddUser : undefined} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 350, padding: '16px', backdropFilter: 'blur(8px)' }}>
+          <div onClick={e => e.stopPropagation()} dir="rtl" style={{ background: 'var(--surface)', borderRadius: '18px', maxWidth: '500px', width: '100%', boxShadow: 'var(--shadow-xl)', overflow: 'hidden', fontFamily: 'Cairo, sans-serif', animation: 'scaleIn 0.25s' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontWeight: '900', fontSize: '16px', color: 'var(--text)' }}>➕ إضافة مستخدم جديد</div>
+              <button onClick={closeAddUser} disabled={addingUser} style={{ background: 'var(--surface-2)', border: 'none', width: '30px', height: '30px', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              {addUserResult?.success ? (
+                <div>
+                  <div style={{ background: 'var(--success-soft)', border: '1px solid var(--success)', borderRadius: '12px', padding: '16px', marginBottom: '16px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
+                    <div style={{ fontWeight: '800', color: 'var(--success)', fontSize: '14px' }}>تم إنشاء الحساب بنجاح</div>
+                  </div>
+                  <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>📧 الإيميل</div>
+                    <div style={{ fontWeight: '700', color: 'var(--text)', fontSize: '14px' }}>{addUserResult.email}</div>
+                  </div>
+                  <div style={{ background: 'var(--accent-soft)', border: '1px solid var(--accent)', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>🔑 كلمة المرور المؤقتة</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ fontFamily: 'monospace', fontWeight: '700', color: 'var(--accent)', fontSize: '15px' }}>{addUserResult.password}</div>
+                      <button onClick={() => { navigator.clipboard.writeText(addUserResult.password); showToast('📋 تم نسخ كلمة المرور') }} style={{ background: 'var(--accent)', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}>نسخ</button>
+                    </div>
+                  </div>
+                  <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '10px', padding: '12px', fontSize: '12px', color: '#92400e', marginBottom: '14px' }}>
+                    ⚠️ <strong>مهم:</strong> أرسل هذه البيانات للمستخدم. لن تظهر مرة أخرى. قد يحتاج تأكيد إيميله أولاً قبل الدخول.
+                  </div>
+                  <button onClick={closeAddUser} style={{ width: '100%', background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', color: '#fff', border: 'none', padding: '12px', borderRadius: '10px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700', fontSize: '14px' }}>تم</button>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>الاسم الكامل (اختياري)</label>
+                    <input value={newUser.full_name} onChange={e => setNewUser({ ...newUser, full_name: e.target.value })} placeholder="مثل: محمد أحمد" style={{ width: '100%', padding: '10px 14px', fontSize: '13px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontFamily: 'Cairo, sans-serif' }} />
+                  </div>
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>📧 الإيميل *</label>
+                    <input type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} placeholder="user@example.com" style={{ width: '100%', padding: '10px 14px', fontSize: '13px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontFamily: 'Cairo, sans-serif' }} />
+                  </div>
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>🔑 كلمة المرور *</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input type="text" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} placeholder="8 أحرف على الأقل" style={{ flex: 1, padding: '10px 14px', fontSize: '13px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontFamily: 'monospace' }} />
+                      <button onClick={() => setNewUser({ ...newUser, password: generatePassword() })} type="button" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', padding: '0 14px', borderRadius: '8px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700', fontSize: '12px', color: 'var(--text)', whiteSpace: 'nowrap' }}>🎲 توليد</button>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>🛡️ الصلاحية *</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
+                      {[['admin', '🛡️ مدير', '#7c3aed'], ['editor', '📝 محرر', '#ff6b00'], ['viewer', '🔍 مشاهد', '#16a34a']].map(([r, label, c]) => (
+                        <button key={r} type="button" onClick={() => setNewUser({ ...newUser, role: r })} style={{ padding: '12px 8px', borderRadius: '10px', border: `2px solid ${newUser.role === r ? c : 'var(--border)'}`, background: newUser.role === r ? `${c}15` : 'var(--surface)', color: newUser.role === r ? c : 'var(--text)', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700', fontSize: '12px' }}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
+                  {addUserResult?.error && (
+                    <div style={{ background: 'var(--danger-soft)', border: '1px solid var(--danger)', borderRadius: '8px', padding: '10px', marginBottom: '14px', fontSize: '12px', color: 'var(--danger)' }}>❌ {addUserResult.error}</div>
+                  )}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={closeAddUser} disabled={addingUser} style={{ flex: 1, background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', padding: '12px', borderRadius: '10px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700', fontSize: '13px' }}>إلغاء</button>
+                    <button onClick={handleAddUser} disabled={addingUser || !newUser.email || !newUser.password || newUser.password.length < 6} style={{ flex: 2, background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', color: '#fff', border: 'none', padding: '12px', borderRadius: '10px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700', fontSize: '13px', boxShadow: 'var(--shadow-accent)', opacity: (addingUser || !newUser.email || !newUser.password || newUser.password.length < 6) ? 0.5 : 1 }}>
+                      {addingUser ? '⏳ جاري الإضافة...' : '✓ إنشاء الحساب'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <KeyboardShortcuts
         onSearch={() => setSearchOpen(true)}
         onNewVehicle={() => { setActiveTab('vehicles'); setShowVehicleForm(true) }}
