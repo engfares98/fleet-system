@@ -148,38 +148,23 @@ export default function Dashboard() {
     setAddingUser(true)
     setAddUserResult(null)
     try {
-      // Save current admin session
-      const { data: { session: adminSession } } = await supabase.auth.getSession()
-
-      // Sign up the new user
-      const { data, error } = await supabase.auth.signUp({
-        email: newUser.email.trim(),
-        password: newUser.password,
-        options: { data: { full_name: newUser.full_name } }
-      })
-      if (error) throw error
-
-      // Insert role + permissions
-      const newUserId = data?.user?.id
-      if (newUserId) {
-        await supabase.from('user_roles').insert({
-          user_id: newUserId,
+      // Call our API route (uses service role on the server)
+      const res = await fetch('/api/users/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: newUser.email.trim(),
+          password: newUser.password,
           role: newUser.role,
           full_name: newUser.full_name || null,
-          is_active: true,
           permissions: newUser.permissions || {},
-        })
-      }
+          requesterId: currentUser?.id,
+        }),
+      })
+      const result = await res.json()
+      if (!res.ok || result.error) throw new Error(result.error || 'فشل الإنشاء')
 
-      // Restore admin session if it was switched
-      if (adminSession) {
-        await supabase.auth.setSession({
-          access_token: adminSession.access_token,
-          refresh_token: adminSession.refresh_token,
-        })
-      }
-
-      logAction(supabase, { action: 'create', entity_type: 'user', entity_id: newUserId, entity_label: newUser.email })
+      logAction(supabase, { action: 'create', entity_type: 'user', entity_id: result.userId, entity_label: newUser.email })
       setAddUserResult({ success: true, email: newUser.email, password: newUser.password, role: newUser.role })
       showToast('✅ تم إضافة المستخدم بنجاح')
       fetchData()
