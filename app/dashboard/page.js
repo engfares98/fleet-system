@@ -418,8 +418,22 @@ export default function Dashboard() {
   }
 
   const deleteUserRole = async (userId) => {
-    if (!confirm(lang === 'ar' ? 'هل أنت متأكد؟' : lang === 'bn' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?')) return
-    await supabase.from('user_roles').delete().eq('user_id', userId); fetchData()
+    if (!confirm(lang === 'ar' ? '⚠️ حذف المستخدم نهائياً من النظام؟' : lang === 'bn' ? 'আপনি কি নিশ্চিত?' : 'Permanently delete this user?')) return
+    try {
+      const u = userRoles.find(x => x.user_id === userId)
+      const res = await fetch('/api/users/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, requesterId: currentUser?.id }),
+      })
+      const result = await res.json()
+      if (!res.ok || result.error) throw new Error(result.error || 'فشل الحذف')
+      logAction(supabase, { action: 'delete', entity_type: 'user', entity_id: userId, entity_label: u?.email || u?.full_name || userId })
+      showToast('🗑️ تم حذف المستخدم', 'warning')
+      fetchData()
+    } catch (e) {
+      showToast('❌ ' + (e.message || 'فشل الحذف'), 'error')
+    }
   }
 
   const canEdit = currentRole === 'admin' || currentRole === 'editor'
@@ -1341,19 +1355,19 @@ export default function Dashboard() {
                         <td style={st.td}>
                           {u.user_id === currentUser?.id ? (
                             <span style={{ color: C.muted, fontSize: '12px' }}>{t.you}</span>
-                          ) : currentUser?.email === 'eng.fares98@gmail.com' ? (
+                          ) : (
                             <select value={u.role} onChange={e => updateUserRole(u.user_id, e.target.value)} style={{ ...st.input, width: 'auto', padding: '6px 10px', fontSize: '12px' }}>
                               <option value="admin">{t.adminRole}</option>
                               <option value="editor">{t.editorRole}</option>
                               <option value="viewer">{t.viewerRole}</option>
                             </select>
-                          ) : <span style={{ color: C.muted, fontSize: '12px' }}>—</span>}
+                          )}
                         </td>
                         <td style={st.td}>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                             <button onClick={() => setEditPermsFor(u)} title="تعديل الصلاحيات التفصيلية" style={{ background: 'var(--accent-soft)', border: '1px solid var(--accent)', color: 'var(--accent)', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700' }}>⚙️</button>
-                            {u.user_id !== currentUser?.id && currentUser?.email === 'eng.fares98@gmail.com' && (
-                              <button onClick={() => deleteUserRole(u.user_id)} style={st.deleteBtn}>🗑️</button>
+                            {u.user_id !== currentUser?.id && (
+                              <button onClick={() => deleteUserRole(u.user_id)} title="حذف نهائي" style={st.deleteBtn}>🗑️</button>
                             )}
                           </div>
                         </td>
