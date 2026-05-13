@@ -54,6 +54,10 @@ export default function VehicleMap({ vehicles, supabase, isMobile, canEdit, show
   const [saving, setSaving] = useState(false)
   const [showSidebar, setShowSidebar] = useState(true)
   const [tileLayer, setTileLayer] = useState('streets') // streets | satellite
+  const [routeMode, setRouteMode] = useState(null) // { vehicleId, points: [[lat,lng],...] } | null
+  const [routesUnsaved, setRoutesUnsaved] = useState(new Map())
+  const routeLayersRef = useRef({})
+  const tempRouteLayerRef = useRef(null)
 
   // Filtered list
   const filteredList = useMemo(() => {
@@ -181,18 +185,19 @@ export default function VehicleMap({ vehicles, supabase, isMobile, canEdit, show
       const region = getRegion(v)
       const status = v.preparation_status || 'not_ready'
       const color = colorBy === 'region' ? REGION_STYLE[region].color : STATUS_STYLE[status].color
+      const equipType = v.year || ''
+      const plateText = v.vehicle_code || v.plate_number || '—'
       const icon = L.divIcon({
         className: 'vehicle-marker',
-        html: `<div style="
-          background:${color};color:#fff;width:36px;height:36px;border-radius:50% 50% 50% 0;
-          transform:rotate(-45deg);box-shadow:0 4px 12px rgba(0,0,0,0.35);
-          border:3px solid #fff;display:flex;align-items:center;justify-content:center;
-          font-size:14px;cursor:pointer;
-        ">
-          <span style="transform:rotate(45deg);">🚛</span>
+        html: `<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;font-family:'Cairo',sans-serif;">
+          <div style="background:${color};color:#fff;width:42px;height:42px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 4px 14px rgba(0,0,0,0.4);border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:18px;">
+            <span style="transform:rotate(45deg);">🚛</span>
+          </div>
+          <div style="margin-top:4px;background:rgba(255,255,255,0.97);color:#1a1a1a;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.25);border:1px solid ${color};">${plateText}</div>
+          ${equipType ? `<div style="margin-top:2px;background:${color};color:#fff;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;white-space:nowrap;">${equipType}</div>` : ''}
         </div>`,
-        iconSize: [36, 36],
-        iconAnchor: [18, 36],
+        iconSize: [80, 78],
+        iconAnchor: [40, 42],
       })
 
       const popupHTML = `
@@ -208,8 +213,10 @@ export default function VehicleMap({ vehicles, supabase, isMobile, canEdit, show
             ${v.location_label ? `<div>الموقع: <b>${v.location_label}</b></div>` : ''}
             <div style="font-size:10px;color:#888;margin-top:4px;">${v.lat.toFixed(4)}, ${v.lng.toFixed(4)}</div>
           </div>
-          ${canEdit ? `<div style="margin-top:8px;display:flex;gap:4px;">
-            <button onclick="window.__removeVehiclePin('${v.id}')" style="flex:1;background:#dc2626;color:#fff;border:none;padding:6px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:Cairo;">🗑️ إزالة من الخريطة</button>
+          ${canEdit ? `<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;">
+            <button onclick="window.__startRoute('${v.id}')" style="background:#2563eb;color:#fff;border:none;padding:6px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:Cairo;">🗺️ رسم مسار</button>
+            ${v.route_points && v.route_points.length ? `<button onclick="window.__clearRoute('${v.id}')" style="background:#888;color:#fff;border:none;padding:6px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:Cairo;">🚫 مسح المسار</button>` : ''}
+            <button onclick="window.__removeVehiclePin('${v.id}')" style="background:#dc2626;color:#fff;border:none;padding:6px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:Cairo;">🗑️ إزالة من الخريطة</button>
           </div>` : ''}
         </div>
       `
@@ -233,13 +240,95 @@ export default function VehicleMap({ vehicles, supabase, isMobile, canEdit, show
     })
   }, [placedVehicles, colorBy, canEdit, LMod])
 
-  // Global helper for popup button
+  // Global helpers for popup buttons
   useEffect(() => {
     window.__removeVehiclePin = (vehicleId) => {
       updatePendingChange(vehicleId, { lat: null, lng: null })
+      // also clear route
+      setRoutesUnsaved(prev => { const n = new Map(prev); n.set(vehicleId, null); return n })
     }
-    return () => { delete window.__removeVehiclePin }
-  }, [])
+    window.__startRoute = (vehicleId) => {
+      const v = vehicles.find(x => x.id === vehicleId)
+      if (!v) return
+      const startingPoints = v.route_points && Array.isArray(v.route_points) && v.route_points.length > 0
+        ? [...v.route_points]
+        : [[v.lat, v.lng]]
+      setRouteMode({ vehicleId, points: startingPoints })
+      if (mapInstanceRef.current) mapInstanceRef.current.map.closePopup()
+      showToast && showToast('🎯 اضغط على الخريطة لإضافة نقاط المسار. اضغط "حفظ المسار" لما تخلص.')
+    }
+    window.__clearRoute = (vehicleId) => {
+      setRoutesUnsaved(prev => { const n = new Map(prev); n.set(vehicleId, null); return n })
+      showToast && showToast('✂️ تم مسح المسار (احفظ التغيير)')
+    }
+    return () => {
+      delete window.__removeVehiclePin
+      delete window.__startRoute
+      delete window.__clearRoute
+    }
+  }, [vehicles])
+
+  // Route drawing mode — handle clicks on map to add points
+  useEffect(() => {
+    if (!mapInstanceRef.current || !routeMode) return
+    const { map, L } = mapInstanceRef.current
+
+    const onClick = (e) => {
+      setRouteMode(prev => prev ? { ...prev, points: [...prev.points, [e.latlng.lat, e.latlng.lng]] } : null)
+    }
+    map.on('click', onClick)
+    document.body.style.cursor = 'crosshair'
+
+    return () => {
+      map.off('click', onClick)
+      document.body.style.cursor = ''
+    }
+  }, [routeMode?.vehicleId])
+
+  // Render temporary route while drawing
+  useEffect(() => {
+    if (!mapInstanceRef.current) return
+    const { map, L } = mapInstanceRef.current
+
+    if (tempRouteLayerRef.current) {
+      map.removeLayer(tempRouteLayerRef.current)
+      tempRouteLayerRef.current = null
+    }
+
+    if (routeMode && routeMode.points.length > 1) {
+      const v = vehicles.find(x => x.id === routeMode.vehicleId)
+      const color = (v?.route_color) || '#2563eb'
+      tempRouteLayerRef.current = L.polyline(routeMode.points, { color, weight: 5, opacity: 0.9, dashArray: '10,8' }).addTo(map)
+    }
+  }, [routeMode])
+
+  // Render saved routes
+  useEffect(() => {
+    if (!mapInstanceRef.current) return
+    const { map, L } = mapInstanceRef.current
+
+    // Clear all existing route layers
+    Object.values(routeLayersRef.current).forEach(layer => map.removeLayer(layer))
+    routeLayersRef.current = {}
+
+    // Combine saved + unsaved routes
+    const allVehicles = vehicles.map(v => {
+      if (routesUnsaved.has(v.id)) {
+        return { ...v, route_points: routesUnsaved.get(v.id) }
+      }
+      return v
+    })
+
+    allVehicles.forEach(v => {
+      if (!v.route_points || !Array.isArray(v.route_points) || v.route_points.length < 2) return
+      if (routeMode && routeMode.vehicleId === v.id) return // skip — being drawn
+      const color = v.route_color || '#2563eb'
+      const layer = L.polyline(v.route_points, { color, weight: 4, opacity: 0.75 }).addTo(map)
+      // Hover tooltip
+      layer.bindTooltip(`🗺️ مسار ${v.plate_number || v.vehicle_code}`, { sticky: true })
+      routeLayersRef.current[v.id] = layer
+    })
+  }, [vehicles, routesUnsaved, routeMode])
 
   const updatePendingChange = (vehicleId, patch) => {
     setUnsavedChanges(prev => {
@@ -256,19 +345,51 @@ export default function VehicleMap({ vehicles, supabase, isMobile, canEdit, show
   }
 
   const saveChanges = async () => {
-    if (unsavedChanges.size === 0) { showToast && showToast('لا يوجد تغييرات للحفظ'); return }
+    const totalChanges = unsavedChanges.size + routesUnsaved.size
+    if (totalChanges === 0) { showToast && showToast('لا يوجد تغييرات للحفظ'); return }
     setSaving(true)
+
+    // Merge all changes per vehicle
+    const merged = new Map()
+    for (const [id, patch] of unsavedChanges.entries()) merged.set(id, { ...(merged.get(id) || {}), ...patch })
+    for (const [id, route] of routesUnsaved.entries()) merged.set(id, { ...(merged.get(id) || {}), route_points: route })
+
     let success = 0, failed = 0
-    for (const [vehicleId, patch] of unsavedChanges.entries()) {
+    const errors = []
+    for (const [vehicleId, patch] of merged.entries()) {
       const { error } = await supabase.from('vehicles').update(patch).eq('id', vehicleId)
-      if (error) failed++; else success++
+      if (error) {
+        failed++
+        errors.push(error.message)
+        console.error(`فشل حفظ ${vehicleId}:`, error)
+      } else success++
     }
     setSaving(false)
-    setUnsavedChanges(new Map())
-    showToast && showToast(`✅ تم حفظ ${success} مركبة${failed > 0 ? ` (فشل ${failed})` : ''}`)
-    // Apply changes locally for instant UI update
-    // (in production, parent would refresh data)
+    if (failed === 0) {
+      setUnsavedChanges(new Map())
+      setRoutesUnsaved(new Map())
+      showToast && showToast(`✅ تم حفظ ${success} تغيير`)
+    } else {
+      showToast && showToast(`❌ فشل ${failed}: ${errors[0]?.substring(0, 80) || 'خطأ غير معروف'}`, 'error')
+    }
     window.dispatchEvent(new CustomEvent('vehiclesUpdated'))
+  }
+
+  const finishRoute = () => {
+    if (!routeMode) return
+    setRoutesUnsaved(prev => { const n = new Map(prev); n.set(routeMode.vehicleId, routeMode.points); return n })
+    setRouteMode(null)
+    document.body.style.cursor = ''
+    showToast && showToast(`✅ تم رسم مسار بـ ${routeMode.points.length} نقاط — اضغط حفظ`)
+  }
+
+  const cancelRoute = () => {
+    setRouteMode(null)
+    document.body.style.cursor = ''
+  }
+
+  const undoRoutePoint = () => {
+    setRouteMode(prev => prev ? { ...prev, points: prev.points.slice(0, -1) } : null)
   }
 
   const fitToMarkers = () => {
@@ -360,11 +481,22 @@ export default function VehicleMap({ vehicles, supabase, isMobile, canEdit, show
       <div style={{ flex: 1, position: 'relative' }}>
         <div ref={mapRef} style={{ width: '100%', height: '100%', background: 'var(--surface-2)' }} />
 
+        {/* Route Mode floating bar */}
+        {routeMode && (
+          <div style={{ position: 'absolute', top: '14px', left: '50%', transform: 'translateX(-50%)', zIndex: 1100, background: 'var(--surface)', border: '2px solid #2563eb', borderRadius: '12px', padding: '10px 16px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Cairo, sans-serif' }}>
+            <div style={{ fontSize: '13px', fontWeight: '700', color: '#2563eb' }}>🗺️ وضع رسم المسار</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>({routeMode.points.length} نقاط)</div>
+            <button onClick={undoRoutePoint} disabled={routeMode.points.length <= 1} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', padding: '5px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: routeMode.points.length <= 1 ? 'not-allowed' : 'pointer', opacity: routeMode.points.length <= 1 ? 0.5 : 1, fontFamily: 'Cairo, sans-serif' }}>↩ تراجع</button>
+            <button onClick={cancelRoute} style={{ background: 'var(--surface-2)', color: '#dc2626', border: '1px solid #dc2626', padding: '5px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}>✕ إلغاء</button>
+            <button onClick={finishRoute} disabled={routeMode.points.length < 2} style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '5px 14px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: routeMode.points.length < 2 ? 'not-allowed' : 'pointer', opacity: routeMode.points.length < 2 ? 0.5 : 1, fontFamily: 'Cairo, sans-serif' }}>✓ إنهاء المسار</button>
+          </div>
+        )}
+
         {/* Top floating controls */}
         <div style={{ position: 'absolute', top: '14px', right: '14px', display: 'flex', gap: '8px', zIndex: 1000, flexWrap: 'wrap' }}>
-          {unsavedChanges.size > 0 && canEdit && (
+          {(unsavedChanges.size > 0 || routesUnsaved.size > 0) && canEdit && (
             <button onClick={saveChanges} disabled={saving} style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', boxShadow: '0 4px 12px rgba(22,163,74,0.4)', fontSize: '12px' }}>
-              {saving ? '⏳ جاري الحفظ...' : `💾 حفظ ${unsavedChanges.size} تغيير`}
+              {saving ? '⏳ جاري الحفظ...' : `💾 حفظ ${unsavedChanges.size + routesUnsaved.size} تغيير`}
             </button>
           )}
           <button onClick={fitToMarkers} title="عرض كل المركبات" style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', padding: '8px 12px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: '12px', boxShadow: 'var(--shadow-md)' }}>🎯 عرض الكل</button>
