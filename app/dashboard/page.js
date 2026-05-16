@@ -240,16 +240,28 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     setDataLoading(true)
+    // Supabase caps a single response at 1000 rows. Page through any table that may exceed that.
+    const fetchAll = async (build) => {
+      const PAGE = 1000
+      let all = []
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await build().range(from, from + PAGE - 1)
+        if (error || !data) break
+        all = all.concat(data)
+        if (data.length < PAGE) break
+      }
+      return all
+    }
     const [v, d, m, f, ur] = await Promise.all([
-      supabase.from('vehicles').select('*').order('created_at', { ascending: false }),
-      supabase.from('drivers').select('*').order('created_at', { ascending: false }),
-      supabase.from('maintenance').select('*, vehicles(plate_number)').order('created_at', { ascending: false }),
-      supabase.from('fuel_logs').select('*, vehicles(plate_number), drivers(full_name)').order('created_at', { ascending: false }),
-      supabase.from('user_roles').select('*').order('created_at', { ascending: false }),
+      fetchAll(() => supabase.from('vehicles').select('*').order('created_at', { ascending: false })),
+      fetchAll(() => supabase.from('drivers').select('*').order('created_at', { ascending: false })),
+      fetchAll(() => supabase.from('maintenance').select('*, vehicles(plate_number)').order('created_at', { ascending: false })),
+      fetchAll(() => supabase.from('fuel_logs').select('*, vehicles(plate_number), drivers(full_name)').order('created_at', { ascending: false })),
+      fetchAll(() => supabase.from('user_roles').select('*').order('created_at', { ascending: false })),
     ])
-    setVehicles(v.data || []); setDrivers(d.data || [])
-    setMaintenance(m.data || []); setFuelLogs(f.data || [])
-    setUserRoles(ur.data || [])
+    setVehicles(v); setDrivers(d)
+    setMaintenance(m); setFuelLogs(f)
+    setUserRoles(ur)
     setDataLoading(false)
     setStatsKey(k => k + 1)
   }
