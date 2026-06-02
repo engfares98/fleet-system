@@ -105,6 +105,13 @@ export default function Dashboard() {
   const [iqamaImage, setIqamaImage] = useState(null)
   const [licenseImage, setLicenseImage] = useState(null)
 
+  // ── تخصيص المركبات للسائقين
+  const [assignments, setAssignments] = useState([])
+  const [assignDriver, setAssignDriver] = useState(null)
+  const [assignForm, setAssignForm] = useState({ vehicle_id: '', note: '' })
+  const [assignSaving, setAssignSaving] = useState(false)
+  const [historyDriver, setHistoryDriver] = useState(null)
+
   const [showMaintenanceForm, setShowMaintenanceForm] = useState(false)
   const [maintenanceForm, setMaintenanceForm] = useState({ vehicle_id: '', type: '', description: '', date: '', cost: '', next_date: '', status: 'pending' })
 
@@ -252,16 +259,18 @@ export default function Dashboard() {
       }
       return all
     }
-    const [v, d, m, f, ur] = await Promise.all([
+    const [v, d, m, f, ur, asg] = await Promise.all([
       fetchAll(() => supabase.from('vehicles').select('*').order('created_at', { ascending: false })),
       fetchAll(() => supabase.from('drivers').select('*').order('created_at', { ascending: false })),
       fetchAll(() => supabase.from('maintenance').select('*, vehicles(plate_number)').order('created_at', { ascending: false })),
       fetchAll(() => supabase.from('fuel_logs').select('*, vehicles(plate_number), drivers(full_name)').order('created_at', { ascending: false })),
       fetchAll(() => supabase.from('user_roles').select('*').order('created_at', { ascending: false })),
+      fetchAll(() => supabase.from('driver_assignments').select('*, vehicles(plate_number, vehicle_code)').order('assigned_at', { ascending: false })),
     ])
     setVehicles(v); setDrivers(d)
     setMaintenance(m); setFuelLogs(f)
     setUserRoles(ur)
+    setAssignments(asg)
     setDataLoading(false)
     setStatsKey(k => k + 1)
   }
@@ -401,6 +410,63 @@ export default function Dashboard() {
     setDriverForm({ file_number: '', full_name: '', national_id: '', passport_number: '', phone: '', license_number: '', license_expiry: '', status: 'active' })
     setIqamaImage(null); setLicenseImage(null); setUploading(false); fetchData()
     showToast('✅ تم إضافة السائق بنجاح')
+  }
+
+  // ── التخصيص: المركبة المخصصة حالياً لسائق
+  const assignedVehicleFor = (driver) => {
+    if (!driver) return null
+    const vid = driver.assigned_vehicle_id
+    if (!vid) return null
+    return vehicles.find(v => v.id === vid) || null
+  }
+  const driverForVehicle = (vehicleId) => drivers.find(d => d.assigned_vehicle_id === vehicleId) || null
+
+  const openAssign = (driver) => {
+    setAssignDriver(driver)
+    setAssignForm({ vehicle_id: driver.assigned_vehicle_id || '', note: '' })
+  }
+
+  const assignVehicle = async () => {
+    if (!assignDriver || !assignForm.vehicle_id) return
+    setAssignSaving(true)
+    try {
+      const driverId = assignDriver.id
+      const vehicleId = assignForm.vehicle_id
+      const now = new Date().toISOString()
+      await supabase.from('driver_assignments').update({ released_at: now }).eq('driver_id', driverId).is('released_at', null)
+      const otherDriver = drivers.find(d => d.id !== driverId && d.assigned_vehicle_id === vehicleId)
+      if (otherDriver) {
+        await supabase.from('driver_assignments').update({ released_at: now }).eq('driver_id', otherDriver.id).eq('vehicle_id', vehicleId).is('released_at', null)
+        await supabase.from('drivers').update({ assigned_vehicle_id: null }).eq('id', otherDriver.id)
+      }
+      const { data: inserted } = await supabase.from('driver_assignments').insert([{ driver_id: driverId, vehicle_id: vehicleId, assigned_at: now, note: assignForm.note || null }]).select().single()
+      await supabase.from('drivers').update({ assigned_vehicle_id: vehicleId }).eq('id', driverId)
+      const veh = vehicles.find(v => v.id === vehicleId)
+      logAction(supabase, { action: 'create', entity_type: 'assignment', entity_id: inserted?.id, entity_label: `${assignDriver.full_name} ← ${veh?.plate_number || ''}` })
+      setAssignDriver(null); setAssignForm({ vehicle_id: '', note: '' })
+      await fetchData()
+      showToast(t.assignDone)
+    } catch (e) {
+      showToast('❌ ' + (e.message || 'فشل التخصيص'), 'error')
+    } finally {
+      setAssignSaving(false)
+    }
+  }
+
+  const releaseAssignment = async (driver) => {
+    if (!driver?.assigned_vehicle_id) return
+    if (!confirm(t.releaseVehicle + '؟')) return
+    try {
+      const now = new Date().toISOString()
+      const veh = vehicles.find(v => v.id === driver.assigned_vehicle_id)
+      await supabase.from('driver_assignments').update({ released_at: now }).eq('driver_id', driver.id).is('released_at', null)
+      await supabase.from('drivers').update({ assigned_vehicle_id: null }).eq('id', driver.id)
+      logAction(supabase, { action: 'update', entity_type: 'assignment', entity_id: driver.id, entity_label: `${driver.full_name} ⊘ ${veh?.plate_number || ''}` })
+      await fetchData()
+      showToast(t.releaseDone, 'warning')
+    } catch (e) {
+      showToast('❌ ' + (e.message || 'فشل الإلغاء'), 'error')
+    }
   }
 
   const addMaintenance = async () => {
@@ -1058,6 +1124,7 @@ export default function Dashboard() {
                       <th style={st.th}>{t.expiry}<ColumnFilter type="select" value={driverLicenseFilter} onChange={setDriverLicenseFilter} options={[['all','الكل'],['valid','✅ سارية'],['expiring','⚠️ تنتهي خلال 30 يوم'],['expired','❌ منتهية']]} label={t.expiry} isRTL={isRTL} /></th>
                     </>}
                     <th style={st.th}>{t.iqama}</th><th style={st.th}>{t.license}</th>
+                    <th style={st.th}>🚛 {t.assignedVehicle}</th>
                     <th style={st.th}>{t.status}<ColumnFilter type="select" value={driverStatusFilter} onChange={setDriverStatusFilter} options={[['all','الكل'],['active',t.active],['inactive',t.inactive]]} label={t.status} isRTL={isRTL} /></th>
                     {canEdit && <th style={st.th}>{t.edit}</th>}
                     {canDelete && <th style={st.th}>🗑️</th>}
@@ -1076,6 +1143,17 @@ export default function Dashboard() {
                           <td style={st.td}><span style={{ color: days !== null && days < 0 ? '#dc2626' : days !== null && days <= 14 ? '#ea580c' : days !== null && days <= 30 ? '#d97706' : C.text, fontWeight: expiring ? '700' : '400' }}>{d.license_expiry || '—'}{days !== null && days < 0 && ' ⚠️'}</span></td></>}
                           <td style={st.td}>{d.iqama_image ? <span style={imgLink} onClick={() => setPreviewImage(d.iqama_image)}>{t.view}</span> : '—'}</td>
                           <td style={st.td}>{d.license_image ? <span style={imgLink} onClick={() => setPreviewImage(d.license_image)}>{t.view}</span> : '—'}</td>
+                          <td style={st.td}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              {(() => { const av = assignedVehicleFor(d); return av
+                                ? <span style={{ background: '#f0fdf4', color: '#16a34a', padding: '3px 8px', borderRadius: '6px', fontWeight: '700', fontSize: '12px' }}>🚛 {av.plate_number || av.vehicle_code || av.id.slice(0,6)}</span>
+                                : <span style={{ color: C.muted, fontSize: '12px' }}>{t.notAssigned}</span>
+                              })()}
+                              {canEdit && <button title={d.assigned_vehicle_id ? t.changeVehicle : t.assignVehicle} style={st.editBtn} onClick={() => openAssign(d)}>{d.assigned_vehicle_id ? '🔁' : '➕'}</button>}
+                              {canEdit && d.assigned_vehicle_id && <button title={t.releaseVehicle} style={st.deleteBtn} onClick={() => releaseAssignment(d)}>⊘</button>}
+                              <button title={t.assignmentHistory} style={st.editBtn} onClick={() => setHistoryDriver(d)}>🕓</button>
+                            </div>
+                          </td>
                           <td style={st.td}><span style={st.badge(d.status)}>{statusLabel(d.status)}</span></td>
                           {canEdit && <td style={st.td}><button style={st.editBtn} onClick={() => openEdit('driver', d)}>✏️</button></td>}
                           {canDelete && <td style={st.td}><button style={st.deleteBtn} onClick={() => deleteDriver(d.id)}>🗑️</button></td>}
@@ -1544,6 +1622,66 @@ export default function Dashboard() {
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
           <button style={st.btn()} onClick={addDriver} disabled={uploading}>{uploading ? t.uploading : t.save}</button>
           <button style={st.btn('#888', true)} onClick={() => setShowDriverForm(false)}>{t.cancel}</button>
+        </div>
+      </div></div>)}
+
+      {/* Assign Vehicle Modal */}
+      {assignDriver && (<div style={st.modal}><div style={st.modalBox}>
+        <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '6px' }}>🚛 {t.assignVehicle}</div>
+        <div style={{ color: C.muted, fontSize: '13px', marginBottom: '16px' }}>👤 {assignDriver.full_name}</div>
+        <div style={st.formGrid}>
+          <div>
+            <label style={st.label}>{t.vehicle}</label>
+            <select style={st.input} value={assignForm.vehicle_id} onChange={e => setAssignForm({ ...assignForm, vehicle_id: e.target.value })}>
+              <option value="">{t.selectVehicle}</option>
+              {vehicles.map(v => {
+                const holder = driverForVehicle(v.id)
+                const busy = holder && holder.id !== assignDriver.id
+                return <option key={v.id} value={v.id}>{(v.plate_number || v.vehicle_code || v.id.slice(0,6))}{busy ? ` — (${holder.full_name})` : ''}</option>
+              })}
+            </select>
+          </div>
+          <div><label style={st.label}>{t.assignNote}</label><input style={st.input} value={assignForm.note} onChange={e => setAssignForm({ ...assignForm, note: e.target.value })} /></div>
+        </div>
+        {(() => { const holder = driverForVehicle(assignForm.vehicle_id); return holder && holder.id !== assignDriver.id
+          ? <div style={{ marginTop: '12px', background: '#fffbeb', color: '#d97706', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700' }}>⚠️ {t.vehicleAlreadyAssigned}</div>
+          : null })()}
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <button style={st.btn()} onClick={assignVehicle} disabled={assignSaving || !assignForm.vehicle_id}>{assignSaving ? t.uploading : t.save}</button>
+          <button style={st.btn('#888', true)} onClick={() => setAssignDriver(null)}>{t.cancel}</button>
+        </div>
+      </div></div>)}
+
+      {/* Assignment History Modal */}
+      {historyDriver && (<div style={st.modal}><div style={st.modalBox}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ fontSize: '16px', fontWeight: '800' }}>🕓 {t.assignmentHistoryFor}: {historyDriver.full_name}</div>
+          <button style={st.editBtn} onClick={() => setHistoryDriver(null)}>✕</button>
+        </div>
+        {(() => {
+          const rows = assignments.filter(a => a.driver_id === historyDriver.id)
+          if (!rows.length) return <div style={{ color: C.muted, textAlign: 'center', padding: '30px' }}>{t.noAssignments}</div>
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '60vh', overflow: 'auto' }}>
+              {rows.map(a => {
+                const active = !a.released_at
+                const fmt = (str) => str ? new Date(str).toLocaleDateString('ar-SA') : '—'
+                return (
+                  <div key={a.id} style={{ border: `1px solid ${C.border}`, borderInlineStart: `4px solid ${active ? '#16a34a' : C.muted}`, borderRadius: '10px', padding: '10px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: '800' }}>🚛 {a.vehicles?.plate_number || a.vehicles?.vehicle_code || '—'}</span>
+                      {active && <span style={{ background: '#f0fdf4', color: '#16a34a', padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700' }}>{t.currentAssignment}</span>}
+                    </div>
+                    <div style={{ color: C.muted, fontSize: '12px', marginTop: '4px' }}>{t.assignedAt}: {fmt(a.assigned_at)} {a.released_at && `— ${t.releasedAt}: ${fmt(a.released_at)}`}</div>
+                    {a.note && <div style={{ fontSize: '12px', marginTop: '4px' }}>📝 {a.note}</div>}
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <button style={st.btn('#888', true)} onClick={() => setHistoryDriver(null)}>{t.cancel}</button>
         </div>
       </div></div>)}
 
