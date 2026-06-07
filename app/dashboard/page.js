@@ -56,6 +56,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [uploading, setUploading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [openPlan, setOpenPlan] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
   const [currentRole, setCurrentRole] = useState('viewer')
   const [currentUser, setCurrentUser] = useState(null)
@@ -644,7 +645,7 @@ export default function Dashboard() {
   const topFuelVehicles = Object.entries(fuelByVehicle).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   const C = { orange: 'var(--accent)', orangeLight: 'var(--accent-soft)', white: 'var(--surface)', gray: 'var(--bg)', text: 'var(--text)', muted: 'var(--text-muted)', border: 'var(--border)', navy: 'var(--sidebar-bg)', navyDark: 'var(--sidebar-bg)', navyLight: 'var(--surface-2)' }
-  const navItems = [['dashboard','dashboard',t.dashboard],['vehicles','vehicles',t.vehicles],['map','map','خريطة توزيع المعدات'],['drivers','drivers',t.drivers],['maintenance','maintenance',t.maintenance],['fuel','fuel',t.fuel],['reports','reports',t.reports],['alerts','alerts',t.alerts],['users','users',t.users],['audit','audit','سجل النشاط'],['logins','logins','سجل الدخول']]
+  const navItems = [['dashboard','dashboard',t.dashboard],['vehicles','vehicles',t.vehicles],['map','map','خريطة توزيع المعدات'],['drivers','drivers',t.drivers],['maintenance','maintenance',t.maintenance],['fuel','fuel',t.fuel],['reports','reports',t.reports],['plans','plans','الخطط التشغيلية'],['alerts','alerts',t.alerts],['users','users',t.users],['audit','audit','سجل النشاط'],['logins','logins','سجل الدخول']]
   const NavIcon = ({ name }) => {
     const p = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }
     if (name === 'dashboard') return <svg {...p}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
@@ -658,6 +659,7 @@ export default function Dashboard() {
     if (name === 'audit') return <svg {...p}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     if (name === 'logins') return <svg {...p}><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
     if (name === 'map') return <svg {...p}><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+    if (name === 'plans') return <svg {...p}><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
     return null
   }
 
@@ -1088,6 +1090,43 @@ export default function Dashboard() {
               canEdit={canEdit}
               showToast={showToast}
             />
+          )}
+
+          {activeTab === 'plans' && (
+            <div>
+              {!openPlan ? (
+                <div>
+                  <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '16px' }}>📋 الخطط التشغيلية</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                    {[
+                      { id: 'cleaning', icon: '🧹', title: 'الخطط التشغيلية لمشاريع النظافة العامة', desc: 'أمانة منطقة المدينة المنورة — الخطط التشغيلية لمشاريع النظافة العامة بالمدينة المنورة', file: '/plans/cleaning-plan.html' },
+                    ].map(plan => (
+                      <div key={plan.id} onClick={() => setOpenPlan(plan)} style={{ ...st.card, cursor: 'pointer' }}
+                        onMouseEnter={e => e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)'}
+                        onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.05)'}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                          <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: C.orangeLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>{plan.icon}</div>
+                          <div style={{ fontSize: '14px', fontWeight: '800', color: C.text }}>{plan.title}</div>
+                        </div>
+                        <div style={{ fontSize: '12px', color: C.muted, lineHeight: 1.7, marginBottom: '14px' }}>{plan.desc}</div>
+                        <button style={{ ...st.btn(), padding: '7px 16px', fontSize: '12px' }}>عرض الخطة</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ fontSize: isMobile ? '14px' : '17px', fontWeight: '800' }}>{openPlan.icon} {openPlan.title}</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button style={{ ...st.btn(null, true), padding: '7px 14px', fontSize: '12px' }} onClick={() => window.open(openPlan.file, '_blank')}>فتح في نافذة جديدة ↗</button>
+                      <button style={{ ...st.btn(), padding: '7px 14px', fontSize: '12px' }} onClick={() => setOpenPlan(null)}>→ رجوع للقائمة</button>
+                    </div>
+                  </div>
+                  <iframe src={openPlan.file} title={openPlan.title} style={{ width: '100%', height: 'calc(100vh - 180px)', minHeight: '500px', border: `1px solid ${C.border}`, borderRadius: '16px', background: '#fff' }} />
+                </div>
+              )}
+            </div>
           )}
 
           {activeTab === 'drivers' && (
@@ -1859,7 +1898,7 @@ export default function Dashboard() {
       {/* Global Search */}
       <GlobalSearch
         open={searchOpen}
-        onClose={() => setSearchOpen(false)}
+        on        onClose={() => setSearchOpen(false)}
         vehicles={vehicles}
         drivers={drivers}
         maintenance={maintenance}

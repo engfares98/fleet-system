@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الخطط التشغيلية لمشاريع النظافة العامة — أمانة المدينة المنورة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#0e5c43; --green2:#157a59; --green-light:#e8f3ee; --gold:#b8923a; --gold-light:#f7f0df;
+  --ink:#1f2933; --muted:#5f6b76; --line:#dde4e9; --bg:#f4f7f6; --card:#ffffff;
+  --ohud:#1d6fb8; --aqiq:#b8923a; --awali:#157a59; --quba:#a04545;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Tajawal','Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.7}
+.wrap{max-width:1280px;margin:0 auto;padding:0 20px}
+
+/* ===== Header ===== */
+header.main{background:linear-gradient(135deg,#0a4a36 0%,#0e5c43 55%,#157a59 100%);color:#fff;padding:34px 0 0;position:relative;overflow:hidden}
+header.main::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 85% 20%,rgba(184,146,58,.25),transparent 45%);pointer-events:none}
+.hdr-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;border-bottom:1px solid rgba(255,255,255,.2);padding-bottom:16px}
+.brand{display:flex;align-items:center;gap:14px}
+.brand .emblem{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:26px}
+.brand h2{font-size:17px;font-weight:700}
+.brand small{display:block;font-weight:400;opacity:.85;font-size:12.5px}
+.hdr-meta{text-align:left;font-size:12.5px;opacity:.9;line-height:1.9}
+.hdr-title{text-align:center;padding:30px 0 8px;position:relative;z-index:1}
+.hdr-title .kicker{display:inline-block;background:rgba(184,146,58,.2);border:1px solid var(--gold);color:#f3e3bb;border-radius:30px;padding:3px 18px;font-size:13px;letter-spacing:.5px;margin-bottom:14px}
+.hdr-title h1{font-size:33px;font-weight:800;letter-spacing:-.3px}
+.hdr-title p{opacity:.9;margin-top:8px;font-size:15.5px;max-width:760px;margin-inline:auto}
+.hdr-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;padding:26px 0 30px;position:relative;z-index:1}
+.hstat{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:12px 10px;text-align:center;backdrop-filter:blur(2px)}
+.hstat b{display:block;font-size:21px;color:#ffe9b8}
+.hstat span{font-size:12px;opacity:.9}
+
+/* ===== Nav tabs ===== */
+nav.tabs{position:sticky;top:0;z-index:50;background:#fff;border-bottom:3px solid var(--green);box-shadow:0 2px 10px rgba(0,0,0,.07)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto}
+nav.tabs button{flex:1;min-width:130px;border:none;background:none;font-family:inherit;font-size:15px;font-weight:700;color:var(--muted);padding:15px 10px 12px;cursor:pointer;border-bottom:4px solid transparent;transition:.2s;white-space:nowrap}
+nav.tabs button:hover{color:var(--green);background:var(--green-light)}
+nav.tabs button.active{color:var(--green);border-bottom-color:var(--gold)}
+nav.tabs button .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:6px;vertical-align:1px}
+
+/* ===== Sections ===== */
+main{padding:34px 0 10px}
+section.tab-panel{display:none;animation:fadeIn .35s ease}
+section.tab-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+h2.sec{display:flex;align-items:center;gap:12px;font-size:22px;color:var(--green);margin:34px 0 16px}
+h2.sec::before{content:"";width:10px;height:30px;background:linear-gradient(var(--gold),var(--green));border-radius:4px}
+h2.sec small{font-size:13px;color:var(--muted);font-weight:400}
+.note{font-size:13px;color:var(--muted);background:var(--gold-light);border:1px dashed var(--gold);border-radius:10px;padding:9px 14px;margin:10px 0}
+
+/* ===== Cards / grids ===== */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+.kcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.04);transition:.2s}
+.kcard:hover{transform:translateY(-3px);box-shadow:0 6px 16px rgba(14,92,67,.12)}
+.kcard .ic{font-size:24px}
+.kcard b{display:block;font-size:23px;color:var(--green);margin:2px 0}
+.kcard span{font-size:13px;color:var(--muted)}
+.muni-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.muni-card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;transition:.25s;box-shadow:0 1px 5px rgba(0,0,0,.05)}
+.muni-card:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,.13)}
+.muni-card .mc-head{padding:14px 18px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+.muni-card .mc-head h3{font-size:18px}
+.muni-card .mc-head span{font-size:12px;background:rgba(255,255,255,.22);padding:2px 12px;border-radius:20px}
+.muni-card .mc-body{padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13.5px}
+.muni-card .mc-body div b{color:var(--green);font-size:15px}
+.muni-card .mc-foot{padding:10px 18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between}
+
+/* ===== Tables ===== */
+.tblwrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+table.data{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
+table.data th{background:var(--green);color:#fff;padding:10px 12px;font-weight:700;font-size:13.5px;white-space:nowrap}
+table.data td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:center}
+table.data tr:nth-child(even) td{background:#f7faf9}
+table.data tr:last-child td{border-bottom:none}
+table.data tr.total td{background:var(--gold-light);font-weight:800;color:var(--green)}
+table.data td.r{font-weight:700;color:var(--green);background:var(--green-light)!important}
+
+/* ===== Zones / districts chips ===== */
+.zone-blocks{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.zblock{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.zblock h4{display:flex;align-items:center;gap:8px;color:var(--green);font-size:15px;margin-bottom:10px}
+.zblock h4 .zb{background:var(--green);color:#fff;border-radius:8px;padding:1px 10px;font-size:12.5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--green-light);color:var(--green);border:1px solid #cde3da;border-radius:20px;padding:3px 12px;font-size:12.5px;font-weight:500}
+
+/* ===== Geo map ===== */
+.map-flex{display:grid;grid-template-columns:1.4fr 1fr;gap:20px;align-items:start}
+.map-box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 1px 5px rgba(0,0,0,.05)}
+.map-box svg{width:100%;height:auto;display:block}
+.geo-sector{cursor:pointer;transition:.25s;stroke:#fff;stroke-width:2.5}
+.geo-sector:hover{filter:brightness(1.12)}
+.geo-label{font-family:'Tajawal';font-weight:800;fill:#fff;pointer-events:none}
+.geo-sub{font-family:'Tajawal';font-weight:500;fill:rgba(255,255,255,.92);pointer-events:none}
+.map-side{display:flex;flex-direction:column;gap:12px}
+.legend-item{background:var(--card);border:1px solid var(--line);border-right:6px solid;border-radius:12px;padding:11px 14px;cursor:pointer;transition:.2s;display:flex;justify-content:space-between;align-items:center}
+.legend-item:hover{transform:translateX(-4px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.legend-item b{font-size:15px}
+.legend-item small{display:block;color:var(--muted);font-size:12px}
+.legend-item .arr{color:var(--muted);font-size:18px}
+#geo-tip{position:fixed;background:#10312a;color:#fff;border-radius:10px;padding:10px 14px;font-size:12.5px;line-height:1.8;pointer-events:none;opacity:0;transition:opacity .15s;z-index:99;box-shadow:0 8px 20px rgba(0,0,0,.3);max-width:240px}
+#geo-tip b{color:#ffe9b8}
+
+/* ===== Mindmap ===== */
+.mindwrap{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px;box-shadow:0 1px 5px rgba(0,0,0,.05)}
+.mind-tools{display:flex;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);align-items:center;flex-wrap:wrap}
+.mind-tools button{font-family:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--green);border-radius:8px;padding:5px 14px;cursor:pointer;transition:.15s}
+.mind-tools button:hover{background:var(--green);color:#fff}
+.mind-tools .hint{font-size:12px;color:var(--muted);margin-right:auto}
+.mind-scroll{overflow:auto;max-height:680px;cursor:grab}
+.mind-scroll:active{cursor:grabbing}
+.mm-node rect{transition:.15s}
+.mm-node:hover rect{filter:brightness(1.07)}
+.mm-node{cursor:pointer}
+.mm-leaf{cursor:default}
+.mm-text{font-family:'Tajawal';pointer-events:none}
+.mm-count{font-family:'Tajawal';font-weight:700;pointer-events:none}
+
+/* ===== Services / accordions ===== */
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
+.svc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;position:relative;transition:.2s}
+.svc:hover{box-shadow:0 6px 16px rgba(14,92,67,.1)}
+.svc .num{position:absolute;top:-12px;right:14px;background:var(--gold);color:#fff;border-radius:9px;font-weight:800;font-size:13px;padding:2px 12px}
+.svc h4{color:var(--green);font-size:15.5px;margin:6px 0 6px}
+.svc p{font-size:13px;color:var(--muted)}
+.svc .freq{display:inline-block;margin-top:8px;background:var(--green-light);color:var(--green);font-size:12px;font-weight:700;border-radius:20px;padding:2px 12px}
+details.acc{background:var(--card);border:1px solid var(--line);border-radius:13px;margin-bottom:10px;overflow:hidden}
+details.acc summary{cursor:pointer;padding:13px 18px;font-weight:700;color:var(--green);font-size:15px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.acc summary::-webkit-details-marker{display:none}
+details.acc summary::after{content:"▾";color:var(--gold);transition:.2s}
+details.acc[open] summary::after{transform:rotate(180deg)}
+details.acc .acc-body{padding:2px 18px 16px;font-size:14px;color:#39444e}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.two-col,.map-flex{grid-template-columns:1fr}.hdr-stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.hdr-stats{grid-template-columns:repeat(2,1fr)}.hdr-title h1{font-size:24px}}
+ul.tick{list-style:none}
+ul.tick li{padding:4px 0 4px 0;font-size:14px}
+ul.tick li::before{content:"✔";color:var(--green2);margin-left:8px;font-size:12px}
+
+/* ===== Footer ===== */
+footer{margin-top:46px;background:#10312a;color:#cfe0da;padding:26px 0;font-size:13px}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+/* ===== Print ===== */
+@media print{
+  nav.tabs,.mind-tools,#geo-tip{display:none!important}
+  section.tab-panel{display:block!important;page-break-before:always}
+  section.tab-panel:first-of-type{page-break-before:avoid}
+  body{background:#fff}
+  .mind-scroll{max-height:none;overflow:visible}
+}
+</style>
+</head>
+<body>
+
+<header class="main">
+  <div class="wrap">
+    <div class="hdr-top">
+      <div class="brand">
+        <div class="emblem">🕌</div>
+        <h2>أمانة منطقة المدينة المنورة<small>مشاريع النظافة العامة والإصحاح البيئي</small></h2>
+      </div>
+      <div class="hdr-meta">
+        الجهة المنفّذة: <b>شركة مجموعة المجال العربي</b><br>
+        تاريخ الخطة: 01.05.2026 &nbsp;•&nbsp; مدة العقد: 60 شهرًا (5 سنوات)
+      </div>
+    </div>
+    <div class="hdr-title">
+      <span class="kicker">وثيقة عرض موحّدة — الخطط التشغيلية المعتمدة</span>
+      <h1>الخطط التشغيلية لمشاريع النظافة العامة بالمدينة المنورة</h1>
+      <p>عرض تفاعلي موحّد للخطط التشغيلية الأربع: بلدية أحد (المحور الشمالي) • بلدية العقيق (المحور الغربي) • بلدية العوالي (المحور الشرقي) • بلدية قباء (المحور الجنوبي)</p>
+    </div>
+    <div class="hdr-stats">
+      <div class="hstat"><b>4</b><span>بلديات / محاور</span></div>
+      <div class="hstat"><b>17</b><span>زونًا تشغيليًا</span></div>
+      <div class="hstat"><b>82</b><span>حيًّا مخدومًا</span></div>
+      <div class="hstat"><b>3,550</b><span>موظفًا وعاملًا</span></div>
+      <div class="hstat"><b>1,325</b><span>معدة وآلية</span></div>
+      <div class="hstat"><b>56,118</b><span>حاوية وبرميلًا</span></div>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap">
+    <button class="active" data-tab="overview">🗺️ النظرة العامة والخريطة</button>
+    <button data-tab="ohud"><span class="dot" style="background:var(--ohud)"></span>بلدية أحد</button>
+    <button data-tab="aqiq"><span class="dot" style="background:var(--aqiq)"></span>بلدية العقيق</button>
+    <button data-tab="awali"><span class="dot" style="background:var(--awali)"></span>بلدية العوالي</button>
+    <button data-tab="quba"><span class="dot" style="background:var(--quba)"></span>بلدية قباء</button>
+    <button data-tab="shared">📋 المنظومة المشتركة</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<!-- ============ OVERVIEW ============ -->
+<section class="tab-panel active" id="tab-overview">
+  <h2 class="sec">الخريطة الجغرافية للمحاور الأربعة <small>انقر على أي محور للانتقال إلى خطته التشغيلية</small></h2>
+  <div class="map-flex">
+    <div class="map-box">
+      <svg viewBox="0 0 760 640" xmlns="http://www.w3.org/2000/svg" id="geoMap">
+        <defs>
+          <radialGradient id="cityGlow" cx="50%" cy="50%" r="60%">
+            <stop offset="0%" stop-color="#fdf6e3"/><stop offset="100%" stop-color="#eef3f1"/>
+          </radialGradient>
+        </defs>
+        <rect x="0" y="0" width="760" height="640" rx="14" fill="url(#cityGlow)"/>
+        <!-- بلدية أحد - شمال -->
+        <path id="geo-ohud" class="geo-sector" fill="#1d6fb8"
+          d="M 130,178 Q 160,92 280,62 Q 380,38 480,60 Q 600,86 632,180 Q 560,222 470,238 Q 420,210 380,212 Q 340,210 292,240 Q 200,224 130,178 Z"
+          data-m="ohud"/>
+        <!-- بلدية العقيق - غرب -->
+        <path id="geo-aqiq" class="geo-sector" fill="#b8923a"
+          d="M 118,196 Q 196,240 284,258 Q 262,300 262,330 Q 262,362 286,402 Q 210,428 132,470 Q 76,392 70,318 Q 66,250 118,196 Z"
+          data-m="aqiq"/>
+        <!-- بلدية العوالي - شرق -->
+        <path id="geo-awali" class="geo-sector" fill="#157a59"
+          d="M 644,198 Q 692,252 690,326 Q 688,398 636,468 Q 552,428 478,404 Q 500,364 500,330 Q 500,298 480,256 Q 566,238 644,198 Z"
+          data-m="awali"/>
+        <!-- بلدية قباء - جنوب -->
+        <path id="geo-quba" class="geo-sector" fill="#a04545"
+          d="M 146,488 Q 230,446 306,422 Q 344,452 382,452 Q 420,452 458,422 Q 534,446 620,486 Q 580,562 470,594 Q 380,618 290,596 Q 190,570 146,488 Z"
+          data-m="quba"/>
+        <!-- المركز -->
+        <circle cx="381" cy="331" r="62" fill="#fff" stroke="#0e5c43" stroke-width="3"/>
+        <circle cx="381" cy="331" r="50" fill="#e8f3ee"/>
+        <text x="381" y="322" text-anchor="middle" font-size="26">🕌</text>
+        <text x="381" y="348" text-anchor="middle" font-size="13.5" font-weight="800" fill="#0e5c43" font-family="Tajawal">المنطقة المركزية</text>
+        <text x="381" y="364" text-anchor="middle" font-size="11" fill="#5f6b76" font-family="Tajawal">المسجد النبوي الشريف</text>
+        <!-- labels -->
+        <text x="381" y="128" text-anchor="middle" class="geo-label" font-size="23">بلدية أحد</text>
+        <text x="381" y="152" text-anchor="middle" class="geo-sub" font-size="13">المحور الشمالي • 4 زونات • 23 حيًّا</text>
+        <text x="172" y="320" text-anchor="middle" class="geo-label" font-size="21">بلدية العقيق</text>
+        <text x="172" y="344" text-anchor="middle" class="geo-sub" font-size="12.5">المحور الغربي • 4 زونات • 19 حيًّا</text>
+        <text x="590" y="320" text-anchor="middle" class="geo-label" font-size="21">بلدية العوالي</text>
+        <text x="590" y="344" text-anchor="middle" class="geo-sub" font-size="12.5">المحور الشرقي • 4 زونات • 15 حيًّا</text>
+        <text x="381" y="520" text-anchor="middle" class="geo-label" font-size="23">بلدية قباء</text>
+        <text x="381" y="544" text-anchor="middle" class="geo-sub" font-size="13">المحور الجنوبي • 5 زونات • 25 حيًّا</text>
+        <!-- معالم -->
+        <text x="660" y="92" text-anchor="middle" font-size="12" fill="#5f6b76" font-family="Tajawal">⛰ جبل أُحد</text>
+        <text x="100" y="560" text-anchor="middle" font-size="12" fill="#5f6b76" font-family="Tajawal">🕌 مسجد قباء</text>
+        <text x="48" y="620" font-size="11" fill="#9aa6af" font-family="Tajawal">خريطة توضيحية للمحاور — ليست بمقياس رسم</text>
+      </svg>
+    </div>
+    <div class="map-side" id="mapLegend"></div>
+  </div>
+  <div id="geo-tip"></div>
+
+  <h2 class="sec">مقارنة عامة بين البلديات الأربع</h2>
+  <div class="tblwrap">
+    <table class="data" id="cmpTable"></table>
+  </div>
+
+  <h2 class="sec">بطاقات الخطط التشغيلية <small>انقر على البطاقة لفتح الخطة</small></h2>
+  <div class="muni-grid" id="muniCards"></div>
+
+  <h2 class="sec">إطار موحّد لجميع الخطط</h2>
+  <div class="cards">
+    <div class="kcard"><div class="ic">📑</div><b>8</b><span>أبواب رئيسية في كل خطة</span></div>
+    <div class="kcard"><div class="ic">🧹</div><b>11</b><span>خدمة نظافة رئيسية</span></div>
+    <div class="kcard"><div class="ic">⏱️</div><b>3</b><span>ورديات تغطي 24 ساعة</span></div>
+    <div class="kcard"><div class="ic">📊</div><b>4</b><span>مستويات لمؤشرات الأداء</span></div>
+    <div class="kcard"><div class="ic">🔁</div><b>PDCA</b><span>منهجية التحسين المستمر</span></div>
+    <div class="kcard"><div class="ic">📡</div><b>100%</b><span>تتبع GPS لكامل الأسطول</span></div>
+  </div>
+</section>
+
+<!-- ============ MUNICIPALITY PANELS (rendered by JS) ============ -->
+<section class="tab-panel" id="tab-ohud"></section>
+<section class="tab-panel" id="tab-aqiq"></section>
+<section class="tab-panel" id="tab-awali"></section>
+<section class="tab-panel" id="tab-quba"></section>
+
+<!-- ============ SHARED ============ -->
+<section class="tab-panel" id="tab-shared">
+  <p class="note">المنظومة التالية موحّدة في الأبواب (الأول، الرابع، الخامس، السادس، السابع) عبر الخطط التشغيلية الأربع، مع تكييف الموارد والجداول حسب كل بلدية.</p>
+
+  <h2 class="sec">الأهداف التفصيلية ومؤشراتها المستهدفة <small>الباب الأول</small></h2>
+  <div class="tblwrap"><table class="data">
+    <tr><th>المحور</th><th>الهدف</th><th>المؤشر المستهدف</th></tr>
+    <tr><td class="r">التغطية</td><td>تغطية كاملة للنطاق الجغرافي</td><td>100% من النطاق</td></tr>
+    <tr><td class="r">النظافة</td><td>الحفاظ على نظافة الشوارع يوميًا</td><td>تغطية كنس يومي 100%</td></tr>
+    <tr><td class="r">الاستجابة</td><td>سرعة الاستجابة لبلاغات 940</td><td>≤ 12 ساعة</td></tr>
+    <tr><td class="r">الحاويات</td><td>غسيل وتطهير دوري للحاويات</td><td>3 مرات أسبوعيًا</td></tr>
+    <tr><td class="r">الفرز</td><td>فرز النفايات من المصدر (3 مسارات)</td><td>حسب مستهدفات الأمانة</td></tr>
+    <tr><td class="r">التدوير</td><td>رفع نسبة المواد المعاد تدويرها</td><td>حسب الخطة المعتمدة</td></tr>
+    <tr><td class="r">التحول الرقمي</td><td>تتبع رقمي للأسطول والحاويات</td><td>100% من الأسطول بـ GPS</td></tr>
+    <tr><td class="r">التدريب</td><td>تأهيل الكوادر التشغيلية</td><td>100% من العمالة مدرّبة</td></tr>
+    <tr><td class="r">السلامة</td><td>الصحة والسلامة المهنية</td><td>صفر حوادث جسيمة</td></tr>
+    <tr><td class="r">الجودة</td><td>رضا الأمانة والمستفيدين</td><td>90% فأعلى</td></tr>
+  </table></div>
+
+  <h2 class="sec">الخدمات الإحدى عشرة <small>الباب الخامس — الخطط التشغيلية للخدمات</small></h2>
+  <div class="svc-grid" id="svcGrid"></div>
+
+  <h2 class="sec">منظومة الورديات والتغطية على مدار الساعة <small>الباب الرابع</small></h2>
+  <div class="two-col">
+    <div class="tblwrap"><table class="data">
+      <tr><th>الوردية</th><th>التوقيت</th><th>الكوادر</th><th>التركيز</th></tr>
+      <tr><td class="r">الأولى — الصباحية</td><td>02:00 – 10:00</td><td>≈ 50%</td><td>النظافة العامة وتفريغ الحاويات</td></tr>
+      <tr><td class="r">الثانية — المسائية</td><td>10:00 – 18:00</td><td>≈ 30%</td><td>المتابعة وإعادة التنظيف والأنشطة المسائية</td></tr>
+      <tr><td class="r">الثالثة — الليلية</td><td>18:00 – 02:00</td><td>≈ 20%</td><td>الكنس والغسيل الآلي للشوارع الرئيسية</td></tr>
+    </table></div>
+    <div>
+      <ul class="tick">
+        <li>تعليق العمل قرب المساجد قبل الأذان بـ 15 دقيقة وحتى انتهاء الصلاة.</li>
+        <li>رمضان: مواءمة الورديات مع الإفطار والسحور والتراويح، وساعة الإفطار تُحتسب ضمن الوردية.</li>
+        <li>الحج والعمرة: زيادة الكوادر وتفعيل وردية رابعة عند الحاجة.</li>
+        <li>الجمعة والسبت: ورديات مخففة مع بقاء التغطية الأساسية.</li>
+        <li>استراحة منتصف الوردية 30 دقيقة، وإجازة أسبوعية دوّارة لكل عامل.</li>
+        <li>خطة طوارئ: استدعاء ورديات الراحة وتمديد الوردية حتى 12 ساعة.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 class="sec">الجودة والأداء <small>الباب السادس</small></h2>
+  <details class="acc" open><summary>مؤشرات الأداء (KPIs) — أربعة مستويات</summary><div class="acc-body">
+    <b>استراتيجي:</b> رضا الأمانة والالتزام التعاقدي • <b>تشغيلي:</b> كفاءة الخدمات الإحدى عشرة وتنفيذ الخطط • <b>الزونات:</b> أداء كل زون ومعدلات الإنجاز والمقارنة بينها • <b>فردي:</b> أداء الكادر والانضباط الوظيفي. من المستهدفات: استجابة البلاغات ≤ 12 ساعة، تطهير الحاويات 3 مرات أسبوعيًا، تغطية كنس يومي 100%، صفر حوادث جسيمة.
+  </div></details>
+  <details class="acc"><summary>منهجية التحسين المستمر (PDCA)</summary><div class="acc-body">
+    دورة رباعية: <b>خطّط</b> (تحليل البيانات وتحديد فرص التطوير) ← <b>نفّذ</b> (تطبيق الحلول تجريبيًا) ← <b>تحقّق</b> (قياس النتائج) ← <b>صحّح</b> (تعميم الحلول الناجحة). مصادر التحسين: بيانات الأداء، البلاغات، التقييم الذاتي، اقتراحات الكوادر، والمقارنات بين الزونات.
+  </div></details>
+  <details class="acc"><summary>التقارير الدورية والتفتيش الميداني</summary><div class="acc-body">
+    تقارير <b>يومية</b> (الإنجاز الميداني)، <b>أسبوعية</b> (تحليل أداء الزونات)، <b>شهرية</b> (الأداء الشامل)، <b>ربعية</b> (تحليلات معمّقة)، و<b>سنوية</b> (الإنجاز الاستراتيجي). جولات يومية لفنيي الجودة على الزونات مع توثيق مصوّر، وتقييم ذاتي أسبوعي بعينات عشوائية وفق سلّم من 5 درجات (ممتاز ← غير مقبول).
+  </div></details>
+  <details class="acc"><summary>لوحة المتابعة الإلكترونية (Dashboard)</summary><div class="acc-body">
+    عرض لحظي لمؤشرات الأداء، تتبّع البلاغات وحالة معالجتها، جاهزية المعدات والموارد، نسب حضور العمالة، وتنبيهات حرجة للبلاغات المتأخرة والأعطال الطارئة.
+  </div></details>
+
+  <h2 class="sec">تنمية الموارد البشرية والمعسكرات <small>الباب السابع</small></h2>
+  <details class="acc" open><summary>المنظومة التدريبية</summary><div class="acc-body">
+    <b>أولي</b> عند التعيين (إجراءات العمل والسلامة والمعدات) • <b>دوري</b> فصلي لتحديث المهارات ونصف سنوي للسلامة والإسعافات الأولية • <b>موسمي</b> قبل رمضان والحج • <b>خارجي</b> لإيفاد كوادر مختارة • <b>إشرافي وإداري</b> سنوي للقيادات. مع اختبارات قبلية وبعدية، وقاعة تدريب بالمعسكر الرئيسي، وإرشادات مرئية بالمواقع.
+  </div></details>
+  <details class="acc"><summary>المعسكرات والإسكان</summary><div class="acc-body">
+    مرافق حدّ أدنى: غرف نوم (≥ 4 م² للفرد)، دورات مياه كافية، مطبخ ومطعم، قاعة تدريب واجتماعات، عيادة طبية، منطقة ترفيه وملعب رياضي، ومتجر. وفق اشتراطات الدفاع المدني مع إنذار حريق متكامل وصرف صحي نظامي.
+  </div></details>
+  <details class="acc"><summary>الصحة والسلامة المهنية والرعاية</summary><div class="acc-body">
+    فحوصات طبية سنوية شاملة، تغطية الضمان الصحي، 3 وجبات يومية، عقود وفق نظام العمل السعودي، أجر إضافي للعمل الإضافي، ومستهدف <b>صفر حوادث جسيمة</b>.
+  </div></details>
+
+  <h2 class="sec">التحول الرقمي</h2>
+  <div class="cards">
+    <div class="kcard"><div class="ic">📡</div><b>GPS</b><span>تتبع لحظي لكامل الأسطول 100%</span></div>
+    <div class="kcard"><div class="ic">🏷️</div><b>RFID</b><span>شرائح للحاويات الكبيرة (20 و6 ياردة)</span></div>
+    <div class="kcard"><div class="ic">📱</div><b>940</b><span>تطبيق ذكي ورقم تتبع فوري للبلاغات</span></div>
+    <div class="kcard"><div class="ic">♻️</div><b>3 مسارات</b><span>فرز من المصدر: عضوية / تدوير / متبقية</span></div>
+    <div class="kcard"><div class="ic">🔢</div><b>ترقيم</b><span>ترقيم تسلسلي وسجل غسيل وتفريغ لكل حاوية</span></div>
+    <div class="kcard"><div class="ic">🖥️</div><b>Dashboard</b><span>لوحة متابعة لحظية وتنبيهات حرجة</span></div>
+  </div>
+
+  <h2 class="sec">خطط مواسم الذروة</h2>
+  <div class="two-col">
+    <div class="zblock"><h4><span class="zb">🌙</span> شهر رمضان المبارك</h4>
+      <ul class="tick">
+        <li>مواءمة الورديات مع الإفطار والسحور والتراويح والقيام.</li>
+        <li>مضاعفة جولات الكنس والغسيل لمحيط المساجد وتنظيف ليلي بعد التراويح.</li>
+        <li>جولات يومية للميادين الكبرى في العشر الأواخر واستدعاء جزء من الاحتياط.</li>
+      </ul>
+    </div>
+    <div class="zblock"><h4><span class="zb">🕋</span> مواسم الحج والعمرة</h4>
+      <ul class="tick">
+        <li>زيادة الكوادر في الورديات الثلاث وتفعيل وردية رابعة عند الحاجة.</li>
+        <li>تكثيف بمعدل ضعفي الجدول الاعتيادي للمعالم والمواقع المميزة والحدائق القريبة منها.</li>
+        <li>جولة شاملة للأراضي الفضاء قبل الموسم وتجهيز كامل لاستقبال الزوار.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 class="sec">مراحل تنفيذ العقد (60 شهرًا)</h2>
+  <div class="cards">
+    <div class="kcard"><div class="ic">1️⃣</div><b>التعبئة والتأسيس</b><span>التجهيزات والاستقطاب وإنشاء المعسكرات</span></div>
+    <div class="kcard"><div class="ic">2️⃣</div><b>الانطلاق التشغيلي</b><span>بدء الخدمات الميدانية وفق الزونات</span></div>
+    <div class="kcard"><div class="ic">3️⃣</div><b>التشغيل الكامل والتحسين</b><span>التشغيل الشامل مع التحسين المستمر PDCA</span></div>
+    <div class="kcard"><div class="ic">4️⃣</div><b>الإغلاق والتسليم</b><span>إغلاق المشروع وتسليمه للأمانة</span></div>
+  </div>
+
+  <h2 class="sec">أسس إعداد الخطط</h2>
+  <details class="acc"><summary>المرجعيات والمعايير المعتمدة</summary><div class="acc-body">
+    كراسة الشروط والمواصفات لأمانة المدينة المنورة • نظام إدارة النفايات السعودي ولوائح المركز الوطني لإدارة النفايات (موان) • اشتراطات الدفاع المدني والصحة العامة • مواصفات SASO • معايير منظمة الصحة العالمية (WHO) والجمعية الدولية للنفايات الصلبة (ISWA) • منهجية الهرمية (Reduce – Reuse – Recycle) • مستهدفات رؤية المملكة 2030 والاستراتيجية الوطنية لإدارة النفايات ومبادرة السعودية الخضراء • الدراسة الميدانية للنطاق (الكثافة، أطوال الشوارع، حصر المرافق).
+  </div></details>
+  <details class="acc"><summary>الهيكل القيادي ومصفوفة RACI</summary><div class="acc-body">
+    <b>مدير المشروع</b> (المسؤولية الشاملة والعلاقة مع الأمانة) ← <b>نائب المدير</b> (الخطط والتنسيق) ← <b>مدير العمليات</b> (قيادة الميدان وتنفيذ الخدمات الإحدى عشرة) ← <b>مديرو المناطق Zone Managers</b> (إدارة الزونات والبلاغات) مع <b>مشرف الجودة</b> و<b>الخبير البيئي</b> وفرق الفنيين. وتُحدَّد الأدوار بمصفوفة RACI: مسؤول عن النتيجة (A)، منفّذ (R)، مستشار (C)، ومُبلَّغ (I) لكل نشاط رئيسي بما يمنع تضارب الصلاحيات.
+  </div></details>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>أُعدّت هذه الوثيقة التفاعلية استنادًا إلى الخطط التشغيلية المعتمدة للبلديات الأربع — شركة مجموعة المجال العربي • أمانة منطقة المدينة المنورة</div>
+    <div>مدة العقد: 60 شهرًا • 01.05.2026</div>
+  </div>
+</footer>
+
+<script>
+/* ================== البيانات ================== */
+const fmt = n => n.toLocaleString('en-US');
+const MUNIS = {
+ ohud:{key:'ohud',name:'بلدية أحد',axis:'المحور الشمالي',color:'#1d6fb8',
+  zones:4,districts:23,areaKm:163,stMain:115655,stIn:957112,mosques:233,schools:274,parks:15,
+  manpower:780,equipment:234,containers:14400,
+  zoneRows:[
+   ['Z1',5,11,'62,400','176,434',63,70,5],
+   ['Z2',5,22,'30,948','267,466',87,106,7],
+   ['Z3',7,73,'22,307','236,495',38,63,2],
+   ['Z4',6,57,'0','276,717',45,35,1]],
+  zoneTotal:['الإجمالي',23,163,'115,655','957,112',233,274,15],
+  res:{comp:31,sweep:20,basic:[91,118,62,75],evening:36,total:382},
+  zd:{Z1:['الدرع','بني حارثة','بني عبد الأشهل','المصانع','الشهداء'],
+      Z2:['الراية','بئر عثمان','الفتح','العيون','البركة'],
+      Z3:['جبل أحد','التلعة','النقمى','الشافية','الدار','المطار','وعيرة'],
+      Z4:['الحفيا','كتانة','النخيل','الغابة','الزهرة','الصادقية']},
+  jobs:[['مدير المشروع',1],['نائب مدير المشروع',1],['مدير العمليات',1],['خبير بيئي',1],['مدير منطقة',4],['مساعد مدير منطقة',2],['مشرف جودة',1],['كبير فني نظافة',16],['فني نظافة',20],['فني بيئي',4],['فني جودة',2],['عمال كنس والتقاط',492],['عمال تحميل',116],['سائق',119]],
+  equip:[['ضواغط جمع النفايات',31],['المكانس والمعدات الآلية',20],['معدات النقل والحفر',38],['معدات الغسيل والتطهير',21],['معدات متخصصة (التقاط وتعقيم)',124]],
+  cont:[['حاوية 20 ياردة',8],['حاوية 6 ياردة',300],['حاوية 2 ياردة',3692],['برميل 240 لتر',10000],['برميل 120 لتر',400]]},
+
+ aqiq:{key:'aqiq',name:'بلدية العقيق',axis:'المحور الغربي',color:'#b8923a',
+  zones:4,districts:19,areaKm:159,stMain:274271,stIn:1704223,mosques:222,schools:375,parks:21,
+  manpower:937,equipment:194,containers:12756,
+  zoneRows:[
+   ['Z1',8,20,'78,528','299,648',96,136,10],
+   ['Z2',6,40,'72,607','304,236',32,67,2],
+   ['Z3',3,42,'53,701','768,288',72,132,7],
+   ['Z4',2,57,'69,435','332,051',22,40,2]],
+  zoneTotal:['الإجمالي',19,159,'274,271','1,704,223',222,375,21],
+  res:{comp:34,sweep:25,basic:[154,79,94,57],evening:58,total:442},
+  zd:{Z1:['السقيا','السيح','حرة الوبرة','الأصيفرين','العنابس','الجامعة','الجماوات','القبلتين'],
+      Z2:['ورقان','ذو الحليفة','جماء أم خالد','عروة','أبو كبير','الحساء'],
+      Z3:['سكة الحديد','العزيزية','الدفاع'],
+      Z4:['السالم','طيبة']},
+  jobs:[['مدير المشروع',1],['نائب مدير المشروع',1],['مدير العمليات',1],['خبير بيئي',1],['مدير منطقة',3],['مساعد مدير منطقة',2],['مشرف جودة',1],['كبير فني نظافة',17],['فني نظافة',26],['فني بيئي',4],['فني جودة',2],['عمال كنس والتقاط',600],['عمال تحميل',150],['سائق',128]],
+  equip:[['ضواغط جمع النفايات',34],['المكانس والمعدات الآلية',25],['معدات النقل والحفر',29],['معدات الغسيل والتطهير',22],['معدات متخصصة (التقاط وتعقيم)',84]],
+  cont:[['حاوية 20 ياردة',6],['حاوية 6 ياردة',250],['حاوية 2 ياردة',4700],['برميل 240 لتر',7500],['برميل 120 لتر',300]]},
+
+ awali:{key:'awali',name:'بلدية العوالي',axis:'المحور الشرقي',color:'#157a59',
+  zones:4,districts:15,areaKm:79,stMain:181849,stIn:1072008,mosques:212,schools:346,parks:23,
+  manpower:964,equipment:428,containers:15856,
+  zoneRows:[
+   ['Z1',6,18,'76,323','353,481',115,166,15],
+   ['Z2',4,24,'45,978','281,978',47,100,3],
+   ['Z3',3,18,'44,444','218,963',39,49,4],
+   ['Z4',2,19,'15,104','217,586',11,31,1]],
+  zoneTotal:['الإجمالي',15,79,'181,849','1,072,008',212,346,23],
+  res:{comp:45,sweep:22,basic:[193,80,56,60],evening:60,total:449},
+  zd:{Z1:['بني ظفر','الشريبات','الخالدية','بني معاوية','العريض','الإسكان'],
+      Z2:['وادي مذينب','عين الخيف','وادي مهزور','جشم'],
+      Z3:['المبعوث','شظاة','الدويخلة'],
+      Z4:['الملك فهد','الهدراء']},
+  jobs:[['مدير المشروع',1],['نائب مدير المشروع',1],['مدير العمليات',1],['خبير بيئي',1],['مدير منطقة',3],['مساعد مدير منطقة',2],['مشرف جودة',1],['كبير فني نظافة',16],['فني نظافة',30],['فني بيئي',4],['فني جودة',2],['عمال كنس والتقاط',600],['عمال تحميل',159],['سائق',143]],
+  equip:[['ضواغط جمع النفايات',45],['المكانس والمعدات الآلية',22],['معدات النقل والحفر',32],['معدات الغسيل والتطهير',34],['معدات متخصصة (التقاط وتعقيم)',295]],
+  cont:[['حاوية 20 ياردة',6],['حاوية 6 ياردة',250],['حاوية 2 ياردة',6700],['برميل 240 لتر',8500],['برميل 120 لتر',400]]},
+
+ quba:{key:'quba',name:'بلدية قباء',axis:'المحور الجنوبي',color:'#a04545',
+  zones:5,districts:25,areaKm:128,stMain:236976,stIn:1321533,mosques:177,schools:289,parks:18,
+  manpower:869,equipment:469,containers:13106,
+  zoneRows:[
+   ['Z1',8,16,'70,522','280,802',100,139,8],
+   ['Z2',5,21,'81,683','439,411',54,104,5],
+   ['Z3',3,16,'57,469','206,914',13,11,0],
+   ['Z4',4,26,'27,302','284,276',9,23,5],
+   ['Z5',5,48,'0','110,130',1,12,0]],
+  zoneTotal:['الإجمالي',25,128,'236,976','1,321,533',177,289,18],
+  res:{comp:36,sweep:21,basic:[149,101,49,70,35],evening:42,total:446},
+  zd:{Z1:['العصبة','الظاهرة','قربان','الخاتم','العهن','الجمعة','المغيسلة','الدويمة'],
+      Z2:['القصواء','أبو بريقاء','الرانوناء','بني بياضة','الجابرة'],
+      Z3:['شوران','السد','الحديقة'],
+      Z4:['نبلاء','الغراء','الرمانة','الروابي'],
+      Z5:['السكب','رهط','الشهباء','الجصة','جبل عير']},
+  jobs:[['مدير المشروع',1],['نائب مدير المشروع',1],['مدير العمليات',1],['خبير بيئي',1],['مدير منطقة',2],['مساعد مدير منطقة',2],['مشرف جودة',1],['كبير فني نظافة',13],['فني نظافة',27],['فني بيئي',4],['فني جودة',2],['عمال كنس والتقاط',520],['عمال تحميل',170],['سائق',124]],
+  equip:[['ضواغط جمع النفايات',36],['المكانس والمعدات الآلية',21],['معدات النقل والحفر',29],['معدات الغسيل والتطهير',28],['معدات متخصصة (التقاط وتعقيم)',355]],
+  cont:[['حاوية 20 ياردة',6],['حاوية 6 ياردة',100],['حاوية 2 ياردة',5500],['برميل 240 لتر',7000],['برميل 120 لتر',500]]}
+};
+
+const SERVICES=[
+ ['الكنس الآلي للشوارع','كنس ميكانيكي لجميع الشوارع بمختلف تصنيفاتها (رئيسية / فرعية / داخلية).','تكرار متفاوت حسب تصنيف الشارع'],
+ ['الغسيل الآلي للشوارع','غسيل الشوارع بالماء والمواد المناسبة مع التجفيف.','حسب الحاجة وطلب الأمانة'],
+ ['الكنس والغسيل الآلي للأرصفة','تنظيف يدوي وآلي للأرصفة مع غسيل دوري.','حسب أهمية الموقع'],
+ ['كنس وغسيل الميادين والساحات العامة','تنظيف ميكانيكي للمساحات العامة الكبيرة.','مرتان أسبوعيًا'],
+ ['النظافة والكنس والالتقاط بالعمالة','كنس يدوي والتقاط للمبعثرات في الشوارع والأحياء.','يوميًا — وردية أو ورديتان'],
+ ['نظافة حدائق الأحياء','تنظيف الحدائق والمسطحات الخضراء وتعقيم دوري.','مرتان يوميًا'],
+ ['نظافة الأراضي الفضاء','داخل النطاق العمراني وخارجه.','مجدولة + حسب الطلب'],
+ ['تفريغ ونقل النفايات من الحاويات','جمع بثلاثة مسارات (عضوية / تدوير / متبقية) ونقل للمرادم المعتمدة.','مرة يوميًا على الأقل'],
+ ['غسيل وصيانة وتطهير الحاويات','غسيل وتعقيم وصيانة بمعدات متخصصة وسجل رقمي.','3 مرات أسبوعيًا'],
+ ['جمع ونقل النفايات ذات الحجم الكبير','استقبال بلاغ ← تشخيص ← رفع بمعدات خاصة ← نقل.','مجدولة + استجابة ≤ 12 ساعة'],
+ ['الاستجابة للبلاغات والحالات الطارئة','غرفة عمليات 940 على مدار الساعة مع رقم تتبع فوري.','فورية — بحد أقصى 12 ساعة']];
+
+/* ================== الخريطة الذهنية ================== */
+function mindData(m){
+ const zNodes=Object.entries(m.zd).map(([z,list])=>({t:z+' — '+list.length+' أحياء',c:list.map(d=>({t:d}))}));
+ return {t:'الخطة التشغيلية — '+m.name,c:[
+  {t:'١. التعريف بالمشروع',c:[
+    {t:'الجهة المالكة: أمانة المدينة المنورة'},
+    {t:'الجهة المنفذة: شركة مجموعة المجال العربي'},
+    {t:'مدة العقد: 60 شهرًا — '+m.axis},
+    {t:'الهدف العام',c:[{t:'بيئة حضرية نظيفة وصحية وجاذبة'},{t:'وفق متطلبات الأمانة ورؤية 2030'}]},
+    {t:'ركائز الخطة',c:[{t:'الكفاءة التشغيلية (توزيع علمي على الزونات)'},{t:'التحول الرقمي (GPS / RFID / تطبيق 940)'},{t:'جودة الخدمة (KPIs + PDCA)'}]},
+    {t:'مراحل التنفيذ',c:[{t:'التعبئة والتأسيس'},{t:'الانطلاق التشغيلي'},{t:'التشغيل الكامل والتحسين'},{t:'الإغلاق والتسليم'}]}]},
+  {t:'٢. نطاق العمل والإحصائيات',c:[
+    {t:'مساحة الزونات: '+m.areaKm+' كم²'},
+    {t:m.districts+' حيًّا في '+m.zones+' زونات'},
+    {t:'شوارع رئيسية: '+fmt(m.stMain)+' م'},
+    {t:'شوارع داخلية: '+fmt(m.stIn)+' م'},
+    {t:'البنية التحتية',c:[{t:m.mosques+' مسجدًا'},{t:m.schools+' مدرسة'},{t:m.parks+' حديقة'},{t:'مواقع ذات أهمية خاصة'}]},
+    {t:'الزونات والأحياء',c:zNodes},
+    {t:'تصنيف الكثافة',c:[{t:'عالية: ورديتان يوميًا'},{t:'متوسطة: وردية يومية'},{t:'منخفضة: جدولة حسب الحاجة'}]}]},
+  {t:'٣. قوة المشروع والموارد',c:[
+    {t:'القوى البشرية: '+fmt(m.manpower),c:m.jobs.slice(7).map(j=>({t:j[0]+': '+fmt(j[1])}))},
+    {t:'المعدات: '+fmt(m.equipment),c:m.equip.map(e=>({t:e[0]+': '+e[1]}))},
+    {t:'الحاويات: '+fmt(m.containers),c:m.cont.map(e=>({t:e[0]+': '+fmt(e[1])}))}]},
+  {t:'٤. الهيكل التنظيمي والإدارة',c:[
+    {t:'القيادة',c:[{t:'مدير المشروع'},{t:'نائب مدير المشروع'},{t:'مدير العمليات'},{t:'مديرو المناطق (Zone Managers)'},{t:'مشرف الجودة + الخبير البيئي'}]},
+    {t:'مصفوفة RACI لتحديد الأدوار'},
+    {t:'3 ورديات تغطي 24 ساعة',c:[{t:'صباحية 02:00–10:00 (≈50%)'},{t:'مسائية 10:00–18:00 (≈30%)'},{t:'ليلية 18:00–02:00 (≈20%)'}]},
+    {t:'خصوصية المدينة: الصلوات / رمضان / الحج'}]},
+  {t:'٥. الخدمات الإحدى عشرة',c:SERVICES.map((s,i)=>({t:(i+1)+'. '+s[0],c:[{t:s[2]}]}))},
+  {t:'٦. الجودة والأداء',c:[
+    {t:'KPIs بأربعة مستويات'},
+    {t:'منهجية PDCA للتحسين المستمر'},
+    {t:'تقارير: يومية ← سنوية'},
+    {t:'جولات تفتيش وسلّم تقييم من 5 درجات'},
+    {t:'لوحة متابعة إلكترونية لحظية'}]},
+  {t:'٧. الموارد البشرية والمعسكرات',c:[
+    {t:'تدريب: أولي / دوري / موسمي / خارجي / قيادي'},
+    {t:'معسكرات بمرافق متكاملة وعيادة طبية'},
+    {t:'فحوصات سنوية وضمان صحي'},
+    {t:'مستهدف: صفر حوادث جسيمة'}]},
+  {t:'٨. الملاحق',c:[{t:'خرائط الأحياء التفصيلية'},{t:'النماذج التشغيلية والإدارية'}]}
+ ]};
+}
+
+const LV_COLORS=['#0e5c43',null,'#3d8d72','#7eb5a2','#b9d8cd'];
+const CH_COLORS=['#1d6fb8','#b8923a','#157a59','#a04545','#5b67a8','#2a8fa3','#8a6db1','#777f87'];
+
+function buildMindmap(container,root,accent){
+ let nid=0;
+ (function prep(n,d){n._id=nid++;n._open=d<1;(n.c||[]).forEach(x=>prep(x,d+1));})(root,0);
+ const NH=34,VGAP=10,HGAP=46;
+ const colW=[210,205,235,250,230];
+ function w(n,d){return Math.min(colW[Math.min(d,4)],Math.max(70,n.t.length*8.2+(n.c&&n.c.length?44:26)));}
+ function render(){
+  const placed=[];let maxD=0;
+  function layout(n,d){
+   maxD=Math.max(maxD,d);
+   if(!n.c||!n.c.length||!n._open){n._h=NH;return NH;}
+   let h=0;n.c.forEach(c=>{h+=layout(c,d+1)+VGAP});h-=VGAP;
+   n._h=Math.max(NH,h);return n._h;
+  }
+  layout(root,0);
+  const xs=[0];for(let i=0;i<=maxD;i++)xs.push(xs[i]+colW[Math.min(i,4)]+HGAP);
+  const W=xs[maxD+1]+30, H=root._h+50;
+  function pos(n,d,top){
+   n._y=top+n._h/2;n._d=d;placed.push(n);
+   if(n.c&&n._open){let t=top+(n._h-(n.c.reduce((s,c)=>s+c._h+VGAP,0)-VGAP))/2;
+    n.c.forEach(c=>{pos(c,d+1,t);t+=c._h+VGAP});}
+  }
+  pos(root,0,25);
+  let links='',nodes='';
+  placed.forEach(n=>{
+   const nw=w(n,n._d), xR=W-15-xs[n._d], xL=xR-nw, y=n._y;
+   const open=n._open, has=n.c&&n.c.length;
+   let fill,txt='#fff',fs=13,fw=500,st='none';
+   if(n._d===0){fill=LV_COLORS[0];fs=15;fw=800;}
+   else if(n._d===1){fill=CH_COLORS[(n._ci||0)%8];fw=700;fs=13.5;}
+   else if(n._d===2){fill='#fff';txt='#1f2933';st=accent;fw=700;fs=12.5;}
+   else{fill='#f1f6f4';txt='#39444e';st='#cfe0da';fs=12;}
+   if(has&&n._open){n.c.forEach((c,i)=>{c._ci=n._d===0?i:(n._ci||0);
+    const cw=w(c,n._d+1), cxR=W-15-xs[n._d+1], cy=c._y;
+    links+=`<path d="M ${xL},${y} C ${xL-HGAP/2},${y} ${cxR+HGAP/2},${cy} ${cxR},${cy}" fill="none" stroke="${n._d===0?'#9bbcb0':'#c9d8d2'}" stroke-width="${n._d===0?2.2:1.6}"/>`;});}
+   const cls=has?'mm-node':'mm-node mm-leaf';
+   nodes+=`<g class="${cls}" data-id="${n._id}">
+     <rect x="${xL}" y="${y-NH/2}" width="${nw}" height="${NH}" rx="${n._d===0?12:9}" fill="${fill}" stroke="${st}" stroke-width="1.4"/>
+     <text class="mm-text" x="${xL+nw/2}" y="${y+4.5}" text-anchor="middle" font-size="${fs}" font-weight="${fw}" fill="${txt}">${n.t}</text>
+     ${has?`<circle cx="${xL}" cy="${y}" r="8" fill="${open?'#fff':accent}" stroke="${accent}" stroke-width="1.5"/><text class="mm-count" x="${xL}" y="${y+3.5}" text-anchor="middle" font-size="11" fill="${open?accent:'#fff'}">${open?'−':n.c.length}</text>`:''}
+   </g>`;
+  });
+  container.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="font-family:Tajawal">${links}${nodes}</svg>`;
+  container.querySelectorAll('.mm-node').forEach(g=>{
+   g.addEventListener('click',()=>{
+    const id=+g.dataset.id;
+    (function find(n){if(n._id===id){if(n.c&&n.c.length)n._open=!n._open;return true}return (n.c||[]).some(find)})(root);
+    render();
+   });
+  });
+ }
+ render();
+ return {
+  expand(){(function ex(n){n._open=true;(n.c||[]).forEach(ex)})(root);render();},
+  collapse(){(function co(n,d){n._open=d<1;(n.c||[]).forEach(x=>co(x,d+1))})(root,0);render();}
+ };
+}
+
+/* ================== توليد أقسام البلديات ================== */
+function muniPanel(m){
+ const zoneHead=['الزون','عدد الأحياء','المساحة (كم²)','شوارع رئيسية (م)','شوارع داخلية (م)','المساجد','المدارس','الحدائق'];
+ const rows=m.zoneRows.map(r=>'<tr>'+r.map((c,i)=>`<td${i===0?' class="r"':''}>${c}</td>`).join('')+'</tr>').join('');
+ const tot='<tr class="total">'+m.zoneTotal.map(c=>`<td>${c}</td>`).join('')+'</tr>';
+ const resRows=m.res.basic.map((b,i)=>`<tr><td class="r">Z${i+1}</td><td>${b}</td></tr>`).join('');
+ const zblocks=Object.entries(m.zd).map(([z,l])=>`<div class="zblock"><h4><span class="zb" style="background:${m.color}">${z}</span> ${l.length} أحياء</h4><div class="chips">${l.map(d=>`<span class="chip">${d}</span>`).join('')}</div></div>`).join('');
+ const jobs=m.jobs.map(j=>`<tr><td class="r">${j[0]}</td><td>${fmt(j[1])}</td></tr>`).join('')+`<tr class="total"><td>الإجمالي</td><td>${fmt(m.manpower)}</td></tr>`;
+ const eq=m.equip.map(e=>`<tr><td class="r">${e[0]}</td><td>${e[1]}</td></tr>`).join('')+`<tr class="total"><td>إجمالي المعدات</td><td>${m.equipment}</td></tr>`;
+ const ct=m.cont.map(e=>`<tr><td class="r">${e[0]}</td><td>${fmt(e[1])}</td></tr>`).join('')+`<tr class="total"><td>إجمالي الحاويات</td><td>${fmt(m.containers)}</td></tr>`;
+ return `
+  <div style="background:linear-gradient(120deg,${m.color},${m.color}cc);color:#fff;border-radius:16px;padding:22px 26px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+    <div><h2 style="font-size:26px">${m.name} <small style="font-weight:400;font-size:15px;opacity:.9">— ${m.axis}</small></h2>
+    <div style="font-size:13.5px;opacity:.92">مشروع النظافة العامة • أمانة المدينة المنورة • شركة مجموعة المجال العربي • 60 شهرًا</div></div>
+    <div style="background:rgba(255,255,255,.18);border-radius:12px;padding:8px 18px;font-size:14px"><b style="font-size:20px">${m.zones}</b> زونات &nbsp;•&nbsp; <b style="font-size:20px">${m.districts}</b> حيًّا</div>
+  </div>
+
+  <h2 class="sec">أرقام الخطة الرئيسية</h2>
+  <div class="cards">
+    <div class="kcard"><div class="ic">🗺️</div><b>${m.areaKm} كم²</b><span>مساحة الزونات التشغيلية</span></div>
+    <div class="kcard"><div class="ic">🛣️</div><b>${(Math.round((m.stMain+m.stIn)/100)/10).toLocaleString()} كم</b><span>إجمالي أطوال الشوارع</span></div>
+    <div class="kcard"><div class="ic">👷</div><b>${fmt(m.manpower)}</b><span>موظفًا وعاملًا</span></div>
+    <div class="kcard"><div class="ic">🚛</div><b>${m.equipment}</b><span>معدة وآلية</span></div>
+    <div class="kcard"><div class="ic">🗑️</div><b>${fmt(m.containers)}</b><span>حاوية وبرميلًا</span></div>
+    <div class="kcard"><div class="ic">🕌</div><b>${m.mosques}</b><span>مسجدًا ضمن النطاق</span></div>
+    <div class="kcard"><div class="ic">🏫</div><b>${m.schools}</b><span>مدرسة</span></div>
+    <div class="kcard"><div class="ic">🌳</div><b>${m.parks}</b><span>حديقة</span></div>
+  </div>
+
+  <h2 class="sec">الخريطة الذهنية للخطة <small>انقر على أي عقدة للتوسيع أو الطي</small></h2>
+  <div class="mindwrap">
+    <div class="mind-tools">
+      <button data-mm="expand">⊕ توسيع الكل</button>
+      <button data-mm="collapse">⊖ طي الكل</button>
+      <span class="hint">اسحب للتنقل داخل الخريطة • العقد ذات الدائرة قابلة للنقر</span>
+    </div>
+    <div class="mind-scroll"><div class="mm-canvas"></div></div>
+  </div>
+
+  <h2 class="sec">الزونات التشغيلية — البيانات الاسترشادية <small>الباب الثاني</small></h2>
+  <div class="tblwrap"><table class="data"><tr>${zoneHead.map(h=>`<th>${h}</th>`).join('')}</tr>${rows}${tot}</table></div>
+
+  <div class="two-col" style="margin-top:16px">
+    <div>
+      <h2 class="sec" style="margin-top:8px">الموارد التشغيلية للزونات</h2>
+      <div class="tblwrap"><table class="data" style="min-width:0">
+        <tr><th>الزون</th><th>عمالة الفترة الأساسية</th></tr>${resRows}
+        <tr><td class="r">فترة مسائية (مشتركة)</td><td>${m.res.evening}</td></tr>
+        <tr class="total"><td>إجمالي العمالة الموزعة</td><td>${m.res.total}</td></tr>
+        <tr><td class="r">الضواغط المخصصة</td><td>${m.res.comp}</td></tr>
+        <tr><td class="r">المكانس الآلية</td><td>${m.res.sweep}</td></tr>
+      </table></div>
+      <p class="note">يُوزَّع باقي الموارد على القرى والمناطق الأخرى والطوارئ والراحات حسب الاحتياج، ويتولى مدير منطقة (Zone Manager) إدارة كل زون بإشراف مدير العمليات.</p>
+    </div>
+    <div>
+      <h2 class="sec" style="margin-top:8px">القوى البشرية حسب التوصيف الوظيفي</h2>
+      <div class="tblwrap"><table class="data" style="min-width:0"><tr><th>التوصيف الوظيفي</th><th>العدد</th></tr>${jobs}</table></div>
+    </div>
+  </div>
+
+  <h2 class="sec">الأحياء التابعة لكل زون <small>${m.districts} حيًّا</small></h2>
+  <div class="zone-blocks">${zblocks}</div>
+
+  <div class="two-col" style="margin-top:16px">
+    <div>
+      <h2 class="sec" style="margin-top:8px">المعدات حسب الفئة</h2>
+      <div class="tblwrap"><table class="data" style="min-width:0"><tr><th>الفئة</th><th>العدد</th></tr>${eq}</table></div>
+    </div>
+    <div>
+      <h2 class="sec" style="margin-top:8px">منظومة الحاويات</h2>
+      <div class="tblwrap"><table class="data" style="min-width:0"><tr><th>النوع</th><th>العدد</th></tr>${ct}</table></div>
+    </div>
+  </div>`;
+}
+
+/* ================== التركيب والتفاعل ================== */
+const mmAPIs={};
+Object.values(MUNIS).forEach(m=>{
+ const sec=document.getElementById('tab-'+m.key);
+ sec.innerHTML=muniPanel(m);
+ const api=buildMindmap(sec.querySelector('.mm-canvas'),mindData(m),m.color);
+ mmAPIs[m.key]=api;
+ sec.querySelector('[data-mm="expand"]').onclick=()=>api.expand();
+ sec.querySelector('[data-mm="collapse"]').onclick=()=>api.collapse();
+ const sc=sec.querySelector('.mind-scroll');sc.scrollLeft=sc.scrollWidth;
+});
+
+/* services */
+document.getElementById('svcGrid').innerHTML=SERVICES.map((s,i)=>`<div class="svc"><span class="num">الخدمة ${i+1}</span><h4>${s[0]}</h4><p>${s[1]}</p><span class="freq">⏱ ${s[2]}</span></div>`).join('');
+
+/* comparison table */
+(function(){
+ const ms=Object.values(MUNIS);
+ const rows=[
+  ['المحور',m=>m.axis],['الزونات التشغيلية',m=>m.zones],['عدد الأحياء',m=>m.districts],
+  ['مساحة الزونات (كم²)',m=>m.areaKm],['شوارع رئيسية (م)',m=>fmt(m.stMain)],['شوارع داخلية (م)',m=>fmt(m.stIn)],
+  ['المساجد',m=>m.mosques],['المدارس',m=>m.schools],['الحدائق',m=>m.parks],
+  ['القوى البشرية',m=>fmt(m.manpower)],['المعدات والآليات',m=>m.equipment],['الحاويات',m=>fmt(m.containers)]];
+ const sums={'الزونات التشغيلية':17,'عدد الأحياء':82,'مساحة الزونات (كم²)':529,'المساجد':844,'المدارس':1284,'الحدائق':77,'القوى البشرية':'3,550','المعدات والآليات':'1,325','الحاويات':'56,118','شوارع رئيسية (م)':'808,751','شوارع داخلية (م)':'5,054,876'};
+ document.getElementById('cmpTable').innerHTML=
+  '<tr><th>البند</th>'+ms.map(m=>`<th style="background:${m.color}">${m.name}</th>`).join('')+'<th style="background:#10312a">الإجمالي</th></tr>'+
+  rows.map(r=>'<tr><td class="r">'+r[0]+'</td>'+ms.map(m=>`<td>${r[1](m)}</td>`).join('')+`<td><b>${sums[r[0]]??'—'}</b></td></tr>`).join('');
+})();
+
+/* muni cards + legend */
+(function(){
+ const cards=Object.values(MUNIS).map(m=>`
+  <div class="muni-card" onclick="goTab('${m.key}')">
+    <div class="mc-head" style="background:linear-gradient(120deg,${m.color},${m.color}cc)"><h3>${m.name}</h3><span>${m.axis}</span></div>
+    <div class="mc-body">
+      <div>الزونات<br><b>${m.zones}</b></div><div>الأحياء<br><b>${m.districts}</b></div>
+      <div>القوى البشرية<br><b>${fmt(m.manpower)}</b></div><div>المعدات<br><b>${m.equipment}</b></div>
+      <div>الحاويات<br><b>${fmt(m.containers)}</b></div><div>المساحة<br><b>${m.areaKm} كم²</b></div>
+    </div>
+    <div class="mc-foot"><span>📄 ${m.name === 'بلدية أحد' ? 362 : m.name === 'بلدية العقيق' ? 385 : m.name === 'بلدية العوالي' ? 375 : 387} صفحة في الخطة الأصلية</span><span>فتح الخطة ←</span></div>
+  </div>`).join('');
+ document.getElementById('muniCards').innerHTML=cards;
+ document.getElementById('mapLegend').innerHTML=Object.values(MUNIS).map(m=>`
+  <div class="legend-item" style="border-right-color:${m.color}" onclick="goTab('${m.key}')">
+    <div><b>${m.name}</b><small>${m.axis} • ${m.zones} زونات • ${m.districts} حيًّا • ${fmt(m.manpower)} موظفًا وعاملًا</small></div>
+    <span class="arr">←</span>
+  </div>`).join('')+`<p class="note" style="margin:0">أرقام هذا العرض مستخلصة من الجداول التفصيلية داخل كل خطة (أبواب النطاق وقوة المشروع)، وهي الأدق من ملخصات الأغلفة.</p>`;
+})();
+
+/* tabs */
+function goTab(key){
+ document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===key));
+ document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+key));
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>goTab(b.dataset.tab));
+
+/* geo map interactions */
+const tip=document.getElementById('geo-tip');
+document.querySelectorAll('.geo-sector').forEach(p=>{
+ const m=MUNIS[p.dataset.m];
+ p.addEventListener('click',()=>goTab(m.key));
+ p.addEventListener('mousemove',e=>{
+  tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px';
+  tip.innerHTML=`<b>${m.name} — ${m.axis}</b><br>الزونات: ${m.zones} • الأحياء: ${m.districts}<br>القوى البشرية: ${fmt(m.manpower)} • المعدات: ${m.equipment}<br>الحاويات: ${fmt(m.containers)} • المساجد: ${m.mosques}<br><span style="opacity:.8">انقر لفتح الخطة التشغيلية</span>`;
+ });
+ p.addEventListener('mouseleave',()=>tip.style.opacity=0);
+});
+
+/* drag-scroll for mindmaps */
+document.querySelectorAll('.mind-scroll').forEach(sc=>{
+ let down=false,sx,sy,sl,st;
+ sc.addEventListener('mousedown',e=>{down=true;sx=e.pageX;sy=e.pageY;sl=sc.scrollLeft;st=sc.scrollTop});
+ window.addEventListener('mouseup',()=>down=false);
+ sc.addEventListener('mousemove',e=>{if(!down)return;sc.scrollLeft=sl-(e.pageX-sx);sc.scrollTop=st-(e.pageY-sy)});
+});
+</script>
+</body>
+</html>
