@@ -41,15 +41,20 @@ export async function POST(request) {
 
     const newUserId = data?.user?.id
 
-    // Insert into user_roles
+    // Upsert into user_roles (handles auto-created rows by triggers)
     if (newUserId) {
-      const { error: roleError } = await adminSupabase.from('user_roles').insert({
-        user_id: newUserId,
-        role: role || 'viewer',
-        full_name: full_name || null,
-        is_active: true,
-        permissions: permissions || {},
-      })
+      const { error: roleError } = await adminSupabase
+        .from('user_roles')
+        .upsert(
+          {
+            user_id: newUserId,
+            role: role || 'viewer',
+            full_name: full_name || null,
+            is_active: true,
+            permissions: permissions || {},
+          },
+          { onConflict: 'user_id' }
+        )
       if (roleError) {
         return Response.json({ error: 'تم إنشاء الحساب لكن فشل حفظ الصلاحية: ' + roleError.message, userId: newUserId }, { status: 207 })
       }

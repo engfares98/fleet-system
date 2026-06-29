@@ -6,8 +6,6 @@ import {
   BarChart, Bar,
   LineChart, Line,
 } from 'recharts'
-import TiltCard from './TiltCard'
-import Vehicle3D from './Vehicle3D'
 
 const monthLabel = (d) => {
   const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر']
@@ -16,20 +14,20 @@ const monthLabel = (d) => {
 
 function StatCard({ icon, label, value, trend, color = '#ff6b00', subtitle }) {
   return (
-    <TiltCard intensity={6} scale={1.03} glow={true} className="stat-3d" style={{ borderTop: `3px solid ${color}` }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: `linear-gradient(135deg, ${color}30, ${color}15)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: `0 4px 12px ${color}30`, transform: 'translateZ(20px)' }}>{icon}</div>
+    <div className="dash-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '18px', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '9px', background: `${color}1a`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>{icon}</div>
         {trend !== undefined && trend !== null && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: '700', color: trend >= 0 ? '#16a34a' : '#dc2626', background: trend >= 0 ? 'rgba(22,163,74,0.12)' : 'rgba(220,38,38,0.12)', padding: '4px 10px', borderRadius: '20px', transform: 'translateZ(15px)' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: '700', color: trend >= 0 ? 'var(--success)' : 'var(--danger)', background: trend >= 0 ? 'var(--success-soft)' : 'var(--danger-soft)', padding: '3px 9px', borderRadius: '20px' }}>
             <span>{trend >= 0 ? '▲' : '▼'}</span>
             <span>{Math.abs(trend)}%</span>
           </div>
         )}
       </div>
-      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', marginBottom: '4px', transform: 'translateZ(10px)' }}>{label}</div>
-      <div style={{ fontSize: '28px', fontWeight: '900', color, transform: 'translateZ(25px)', textShadow: `0 4px 12px ${color}30` }}>{value}</div>
-      {subtitle && <div style={{ fontSize: '10px', color: 'var(--text-subtle)', marginTop: '4px', transform: 'translateZ(5px)' }}>{subtitle}</div>}
-    </TiltCard>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', marginBottom: '4px' }}>{label}</div>
+      <div style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text)', letterSpacing: '-0.02em' }}>{value}</div>
+      {subtitle && <div style={{ fontSize: '10px', color: 'var(--text-subtle)', marginTop: '4px' }}>{subtitle}</div>}
+    </div>
   )
 }
 
@@ -156,35 +154,25 @@ export default function InteractiveDashboard({ vehicles, drivers, maintenance, f
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-      {/* Hero — 3D Fleet Showcase */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr', gap: '16px', alignItems: 'stretch' }}>
-        <div className="aurora" style={{ background: 'linear-gradient(135deg, var(--surface), var(--surface-2))', border: '1px solid var(--border)', borderRadius: '18px', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', overflow: 'hidden', boxShadow: 'var(--shadow-md)' }}>
-          <div style={{ position: 'relative', zIndex: 2 }}>
-            <div style={{ display: 'inline-block', background: 'var(--accent-soft)', color: 'var(--accent)', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', marginBottom: '12px' }}>🚀 نظام إدارة الأسطول</div>
-            <div style={{ fontSize: isMobile ? '20px' : '28px', fontWeight: '900', color: 'var(--text)', marginBottom: '8px', letterSpacing: '-0.02em' }}>
-              أهلاً بك في <span className="number-3d">أسطولك الذكي</span>
-            </div>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.7', marginBottom: '20px' }}>
-              {stats.totalVehicles.toLocaleString('ar')} مركبة · {stats.totalDrivers.toLocaleString('ar')} سائق · {stats.alertsCount.toLocaleString('ar')} تنبيه نشط
-            </div>
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>حالة الأسطول</div>
-                <div style={{ fontSize: '20px', fontWeight: '900', color: '#16a34a' }}>{Math.round((stats.readyVehicles / Math.max(stats.totalVehicles, 1)) * 100)}% جاهز</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>تكلفة الشهر</div>
-                <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--accent)' }}>{(stats.lastMonth || 0).toLocaleString('ar')} ر.س</div>
-              </div>
-            </div>
+      {/* Hero — clean overview panel */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: isMobile ? '20px' : '26px 28px', boxShadow: 'var(--shadow-sm)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '20px', borderLeft: '3px solid var(--accent)' }}>
+        <div>
+          <div style={{ display: 'inline-block', background: 'var(--accent-soft)', color: 'var(--accent)', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', marginBottom: '12px' }}>نظام إدارة الأسطول</div>
+          <div style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px', letterSpacing: '-0.02em' }}>
+            أهلاً بك في <span style={{ color: 'var(--accent)' }}>أسطولك الذكي</span>
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.7' }}>
+            {stats.totalVehicles.toLocaleString('ar')} مركبة · {stats.totalDrivers.toLocaleString('ar')} سائق · {stats.alertsCount.toLocaleString('ar')} تنبيه نشط
           </div>
         </div>
-
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '18px', padding: '14px', boxShadow: 'var(--shadow-md)', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'var(--accent-soft)', color: 'var(--accent)', padding: '4px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '700', zIndex: 2 }}>3D Live</div>
-          <Vehicle3D color="#ff6b00" height={isMobile ? 220 : 260} autoRotate />
-          <div style={{ position: 'absolute', bottom: '12px', left: '12px', right: '12px', textAlign: 'center', fontSize: '10px', color: 'var(--text-subtle)', pointerEvents: 'none' }}>
-            🖱️ حرّك الفأرة لتفاعل مع المركبة
+        <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>حالة الأسطول</div>
+            <div style={{ fontSize: '22px', fontWeight: '800', color: 'var(--success)' }}>{Math.round((stats.readyVehicles / Math.max(stats.totalVehicles, 1)) * 100)}% جاهز</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>تكلفة الشهر</div>
+            <div style={{ fontSize: '22px', fontWeight: '800', color: 'var(--accent)' }}>{(stats.lastMonth || 0).toLocaleString('ar')} ر.س</div>
           </div>
         </div>
       </div>

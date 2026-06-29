@@ -75,6 +75,10 @@ export default function SidePanel({ open, onClose, title, children, width = '480
           from { transform: translateX(-100%); }
           to { transform: translateX(0); }
         }
+        @keyframes slideInRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
       `}</style>
     </>
   )

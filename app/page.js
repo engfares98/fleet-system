@@ -60,10 +60,10 @@ export default function Home() {
   }
 
   const inp = {
-    width:'100%', padding:'13px 16px', background:'#fafafa',
-    border:'1.5px solid #e8e8e8', borderRadius:'10px', color:'#1a1a1a',
+    width:'100%', padding:'13px 16px', background:'rgba(255,255,255,0.04)',
+    border:'1px solid rgba(255,255,255,0.12)', borderRadius:'8px', color:'#dcddde',
     fontSize:'14px', outline:'none', boxSizing:'border-box',
-    fontFamily:'Cairo, sans-serif', transition:'border-color 0.2s, box-shadow 0.2s',
+    fontFamily:'Cairo, sans-serif', transition:'border-color 0.15s, box-shadow 0.15s',
   }
 
   return (
@@ -75,18 +75,17 @@ export default function Home() {
           background-size: cover !important;
           background-position: center !important;
           background-attachment: fixed !important;
-          background-color: #1a1a2e !important;
+          background-color: #141414 !important;
         }
-        @keyframes slideUp    { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes slideUp    { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
         @keyframes fadeIn     { from{opacity:0} to{opacity:1} }
         @keyframes slideDown  { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes shimmerBg  { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
         @keyframes spin       { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        .login-card  { animation: slideUp 0.6s cubic-bezier(.16,1,.3,1) both; }
-        .login-btn:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 12px 36px rgba(255,107,0,0.45)!important; }
-        .login-btn:active:not(:disabled){ transform:translateY(0); }
-        .login-btn   { transition: all 0.25s; }
-        .login-input:focus { border-color:#ff6b00!important; box-shadow:0 0 0 3px rgba(255,107,0,0.1)!important; }
+        .login-card  { animation: slideUp 0.4s cubic-bezier(.16,1,.3,1) both; }
+        .login-btn:hover:not(:disabled) { filter:brightness(1.07); }
+        .login-btn:active:not(:disabled){ filter:brightness(0.96); }
+        .login-btn   { transition: filter 0.15s; }
+        .login-input:focus { border-color:#ff6b00!important; box-shadow:0 0 0 3px rgba(255,107,0,0.18)!important; }
         .forgot-btn:hover { opacity:0.75; }
         .forgot-btn  { transition: opacity 0.2s; }
         .eye-btn:hover { color:#ff6b00!important; }
@@ -139,44 +138,16 @@ export default function Home() {
         }
       `}</style>
 
-      {/* الصورة كـ layer ثابت + Aurora متحرك */}
+      {/* الخلفية — صورة ثابتة مع تعتيم هادئ */}
       <div style={{ position:'fixed', inset:0, zIndex:0, overflow:'hidden' }}>
         <img src="/bg-login.jpeg" alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center', display:'block' }} />
-        <div className="bg-overlay" style={{ position:'absolute', inset:0, background:'linear-gradient(135deg, rgba(10,10,30,0.75) 0%, rgba(10,10,30,0.60) 50%, rgba(255,107,0,0.15) 100%)' }} />
-        {/* Aurora orbs */}
-        <div style={{ position:'absolute', top:'-10%', left:'-10%', width:'40%', height:'40%', background:'radial-gradient(circle, rgba(255,107,0,0.5), transparent 70%)', filter:'blur(80px)', animation:'auroraA 18s ease-in-out infinite' }} />
-        <div style={{ position:'absolute', bottom:'-15%', right:'-10%', width:'45%', height:'45%', background:'radial-gradient(circle, rgba(124,58,237,0.4), transparent 70%)', filter:'blur(90px)', animation:'auroraB 22s ease-in-out infinite' }} />
-        <div style={{ position:'absolute', top:'30%', right:'10%', width:'35%', height:'35%', background:'radial-gradient(circle, rgba(37,99,235,0.35), transparent 70%)', filter:'blur(80px)', animation:'auroraC 26s ease-in-out infinite' }} />
-        {/* Floating particles */}
-        {[...Array(20)].map((_,i)=>(
-          <span key={i} aria-hidden style={{
-            position:'absolute',
-            left: `${(i*47)%100}%`,
-            top: `${(i*73)%100}%`,
-            width: `${2 + (i%3)}px`,
-            height: `${2 + (i%3)}px`,
-            background: i%3===0 ? '#ff6b00' : i%3===1 ? '#7c3aed' : '#fff',
-            borderRadius:'50%',
-            opacity:0.5,
-            boxShadow:`0 0 ${8+(i%4)*4}px currentColor`,
-            animation:`floatP${i%4} ${15+(i%5)*3}s ${(i%7)}s ease-in-out infinite`
-          }} />
-        ))}
+        <div className="bg-overlay" style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(15,15,16,0.82) 0%, rgba(15,15,16,0.88) 100%)' }} />
       </div>
-      <style jsx global>{`
-        @keyframes auroraA { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(20%,30%) scale(1.3)} }
-        @keyframes auroraB { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-25%,-20%) scale(1.4)} }
-        @keyframes auroraC { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(15%,-30%) scale(1.2)} }
-        @keyframes floatP0 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,-60px)} }
-        @keyframes floatP1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-50px,80px)} }
-        @keyframes floatP2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(60px,40px)} }
-        @keyframes floatP3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-70px,-90px)} }
-      `}</style>
-      {/* شريط علوي */}
-      <div style={{ position:'fixed', top:0, left:0, right:0, height:'4px', background:'linear-gradient(90deg,#1a1a2e,#ff6b00,#1a1a2e)', zIndex:3 }} />
+      {/* شريط علوي رفيع */}
+      <div style={{ position:'fixed', top:0, left:0, right:0, height:'2px', background:'#ff6b00', zIndex:3 }} />
 
       {/* هيدر رسمي */}
-      <div className="login-header" style={{ position:'absolute', top:0, left:0, right:0, background:'linear-gradient(135deg,#1a1a2e 0%,#12122a 100%)', borderBottom:'3px solid #ff6b00', padding:'12px 40px', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'0 4px 24px rgba(0,0,0,0.2)', zIndex:10 }}>
+      <div className="login-header" style={{ position:'absolute', top:0, left:0, right:0, background:'rgba(20,20,20,0.85)', backdropFilter:'blur(10px)', borderBottom:'1px solid rgba(255,255,255,0.08)', padding:'12px 40px', display:'flex', alignItems:'center', justifyContent:'space-between', zIndex:10 }}>
         <img src="/logo-madinah.jpeg" alt="أمانة المدينة المنورة" style={{ height:'58px', objectFit:'contain', filter:'brightness(1.1)' }} />
         <div style={{ textAlign:'center' }}>
           <div className="login-header-title" style={{ fontSize:'13px', color:'#ff6b00', fontWeight:'800', letterSpacing:'0.5px' }}>نظام إدارة مركبات النظافة</div>
@@ -186,27 +157,26 @@ export default function Home() {
       </div>
 
       {/* بطاقة الدخول */}
-      <div className="login-card" style={{ background:'rgba(255,255,255,0.92)', backdropFilter:'blur(20px) saturate(180%)', WebkitBackdropFilter:'blur(20px) saturate(180%)', borderRadius:'24px', padding:'48px 44px 40px', width:'100%', maxWidth:'430px', boxShadow:'0 32px 80px rgba(0,0,0,0.35), 0 16px 40px rgba(255,107,0,0.18), inset 0 1px 0 rgba(255,255,255,0.6)', border:'1px solid rgba(255,255,255,0.3)', marginTop:'90px', marginBottom:'16px', position:'relative', zIndex:5, animation:'scaleIn 0.5s cubic-bezier(.2,.9,.3,1.2)' }}>
-        <div style={{ position:'absolute', top:0, left:'20px', right:'20px', height:'3px', background:'linear-gradient(90deg,transparent,#ff6b00,transparent)', borderRadius:'0 0 3px 3px' }} />
+      <div className="login-card" style={{ background:'rgba(28,28,30,0.92)', backdropFilter:'blur(16px)', WebkitBackdropFilter:'blur(16px)', borderRadius:'16px', padding:'44px 40px 36px', width:'100%', maxWidth:'420px', boxShadow:'0 24px 64px rgba(0,0,0,0.5)', border:'1px solid rgba(255,255,255,0.08)', marginTop:'90px', marginBottom:'16px', position:'relative', zIndex:5, animation:'slideUp 0.4s cubic-bezier(.16,1,.3,1)' }}>
 
         {/* أيقونة + عنوان */}
-        <div className="login-icon-wrap" style={{ textAlign:'center', marginBottom:'24px' }}>
-          <div className="login-icon" style={{ width:'76px', height:'76px', background:'linear-gradient(135deg,#1a1a2e 0%,#ff6b00 100%)', borderRadius:'20px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'34px', margin:'0 auto 14px', boxShadow:'0 12px 32px rgba(255,107,0,0.35)' }}>🚛</div>
-          <h1 className="login-title" style={{ color:'#1a1a2e', fontSize:'20px', fontWeight:'900', margin:'0 0 6px', lineHeight:'1.3' }}>أسطول مشاريع نظافة المدينة المنورة</h1>
-          <p className="login-subtitle" style={{ color:'#999', fontSize:'12px', margin:0, letterSpacing:'0.3px' }}>
+        <div className="login-icon-wrap" style={{ textAlign:'center', marginBottom:'22px' }}>
+          <div className="login-icon" style={{ width:'64px', height:'64px', background:'rgba(255,107,0,0.14)', border:'1px solid rgba(255,107,0,0.3)', borderRadius:'14px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'30px', margin:'0 auto 14px' }}>🚛</div>
+          <h1 className="login-title" style={{ color:'#dcddde', fontSize:'19px', fontWeight:'800', margin:'0 0 6px', lineHeight:'1.3' }}>أسطول مشاريع نظافة المدينة المنورة</h1>
+          <p className="login-subtitle" style={{ color:'#8a8a8a', fontSize:'12px', margin:0, letterSpacing:'0.3px' }}>
             {isInvite ? 'أكمل تسجيل حسابك' : 'بوابة الدخول الرسمية — للموظفين المخولين فقط'}
           </p>
         </div>
 
         {/* فاصل */}
-        <div className="login-divider" style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'28px' }}>
-          <div style={{ flex:1, height:'1px', background:'linear-gradient(90deg,transparent,#e8e8e8)' }} />
-          <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:'#ff6b00' }} />
-          <div style={{ flex:1, height:'1px', background:'linear-gradient(90deg,#e8e8e8,transparent)' }} />
+        <div className="login-divider" style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'26px' }}>
+          <div style={{ flex:1, height:'1px', background:'rgba(255,255,255,0.08)' }} />
+          <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#ff6b00' }} />
+          <div style={{ flex:1, height:'1px', background:'rgba(255,255,255,0.08)' }} />
         </div>
 
         {isInvite && (
-          <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:'10px', padding:'12px 16px', color:'#16a34a', fontSize:'13px', marginBottom:'20px', fontWeight:'600', display:'flex', alignItems:'center', gap:'8px' }}>
+          <div style={{ background:'rgba(34,197,94,0.12)', border:'1px solid rgba(34,197,94,0.3)', borderRadius:'8px', padding:'12px 16px', color:'#4ade80', fontSize:'13px', marginBottom:'20px', fontWeight:'600', display:'flex', alignItems:'center', gap:'8px' }}>
             <span>✅</span> {inviteMsg}
           </div>
         )}
@@ -214,8 +184,8 @@ export default function Home() {
         {resetSent ? (
           <div style={{ textAlign:'center', padding:'24px 0', animation:'fadeIn 0.4s ease' }}>
             <div style={{ fontSize:'44px', marginBottom:'14px' }}>📧</div>
-            <div style={{ color:'#1a1a2e', fontWeight:'800', fontSize:'16px', marginBottom:'8px' }}>تم الإرسال بنجاح</div>
-            <div style={{ color:'#777', fontSize:'13px', marginBottom:'28px', lineHeight:'1.7' }}>تم إرسال رابط إعادة تعيين كلمة المرور<br/>إلى البريد المرتبط برقمك الوظيفي</div>
+            <div style={{ color:'#dcddde', fontWeight:'800', fontSize:'16px', marginBottom:'8px' }}>تم الإرسال بنجاح</div>
+            <div style={{ color:'#9a9a9a', fontSize:'13px', marginBottom:'28px', lineHeight:'1.7' }}>تم إرسال رابط إعادة تعيين كلمة المرور<br/>إلى البريد المرتبط برقمك الوظيفي</div>
             <button onClick={()=>setResetSent(false)} style={{ background:'none', border:'none', color:'#ff6b00', fontSize:'13px', fontWeight:'700', cursor:'pointer', fontFamily:'Cairo, sans-serif', textDecoration:'underline' }}>
               ← العودة لتسجيل الدخول
             </button>
@@ -226,14 +196,14 @@ export default function Home() {
             {/* الرقم الوظيفي */}
             {!isInvite && (
               <div>
-                <label style={{ color:'#444', fontSize:'12px', fontWeight:'700', display:'block', marginBottom:'8px' }}>الرقم الوظيفي</label>
+                <label style={{ color:'#b8b8b8', fontSize:'12px', fontWeight:'700', display:'block', marginBottom:'8px' }}>الرقم الوظيفي</label>
                 <input className="login-input" type="text" value={empId} onChange={e=>{setEmpId(e.target.value);setError('')}} placeholder="أدخل رقمك الوظيفي" style={inp} />
               </div>
             )}
 
             {/* كلمة المرور */}
             <div>
-              <label style={{ color:'#444', fontSize:'12px', fontWeight:'700', display:'block', marginBottom:'8px' }}>كلمة المرور</label>
+              <label style={{ color:'#b8b8b8', fontSize:'12px', fontWeight:'700', display:'block', marginBottom:'8px' }}>كلمة المرور</label>
               <div style={{ position:'relative' }}>
                 <input className="login-input" type={showPassword?'text':'password'} value={password} onChange={e=>{setPassword(e.target.value);setError('')}} placeholder="••••••••" onKeyDown={e=>e.key==='Enter'&&handleLogin()} style={{ ...inp, paddingLeft:'48px' }} />
                 <button className="eye-btn" type="button" onClick={()=>setShowPassword(!showPassword)} aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'} style={{ position:'absolute', left:'13px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', padding:'4px', lineHeight:0, color:'#888', display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -249,7 +219,7 @@ export default function Home() {
             {/* تذكرني + نسيت */}
             {!isInvite && (
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:'-4px' }}>
-                <label style={{ display:'flex', alignItems:'center', gap:'8px', cursor:'pointer', fontSize:'13px', color:'#555', userSelect:'none' }}>
+                <label style={{ display:'flex', alignItems:'center', gap:'8px', cursor:'pointer', fontSize:'13px', color:'#b8b8b8', userSelect:'none' }}>
                   <input type="checkbox" checked={rememberMe} onChange={e=>setRememberMe(e.target.checked)} style={{ accentColor:'#ff6b00', width:'15px', height:'15px', cursor:'pointer' }} />
                   تذكرني
                 </label>
@@ -261,13 +231,13 @@ export default function Home() {
 
             {/* رسالة الخطأ */}
             {error && (
-              <div style={{ background:'#fff5f5', border:'1px solid #fca5a5', borderRadius:'10px', padding:'11px 14px', color:'#dc2626', fontSize:'13px', display:'flex', alignItems:'center', gap:'8px', animation:'slideDown 0.3s ease' }}>
+              <div style={{ background:'rgba(220,38,38,0.12)', border:'1px solid rgba(220,38,38,0.35)', borderRadius:'8px', padding:'11px 14px', color:'#f87171', fontSize:'13px', display:'flex', alignItems:'center', gap:'8px', animation:'slideDown 0.3s ease' }}>
                 <span>⚠️</span> {error}
               </div>
             )}
 
             {/* زر الدخول */}
-            <button className="login-btn" onClick={handleLogin} disabled={loading} style={{ background:loading?'#ddd':'linear-gradient(135deg,#1a1a2e 0%,#ff6b00 100%)', color:'#fff', border:'none', borderRadius:'12px', padding:'16px', fontSize:'15px', fontWeight:'800', fontFamily:'Cairo, sans-serif', cursor:loading?'not-allowed':'pointer', marginTop:'4px', boxShadow:loading?'none':'0 8px 24px rgba(255,107,0,0.3)', width:'100%', letterSpacing:'0.5px' }}>
+            <button className="login-btn" onClick={handleLogin} disabled={loading} style={{ background:loading?'#3a3a3a':'#ff6b00', color:'#fff', border:'none', borderRadius:'10px', padding:'15px', fontSize:'15px', fontWeight:'800', fontFamily:'Cairo, sans-serif', cursor:loading?'not-allowed':'pointer', marginTop:'4px', width:'100%', letterSpacing:'0.3px' }}>
               {loading
                 ? <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'10px' }}>
                     <span style={{ display:'inline-block', width:'16px', height:'16px', border:'2px solid rgba(255,255,255,0.35)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
@@ -279,9 +249,9 @@ export default function Home() {
           </div>
         )}
 
-        <div className="login-footer" style={{ marginTop:'28px', paddingTop:'20px', borderTop:'1px solid #f0f0f0', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' }}>
+        <div className="login-footer" style={{ marginTop:'26px', paddingTop:'18px', borderTop:'1px solid rgba(255,255,255,0.07)', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' }}>
           <div style={{ width:'5px', height:'5px', borderRadius:'50%', background:'#ff6b00' }} />
-          <span style={{ color:'#bbb', fontSize:'11px' }}>نظام آمن ومشفر</span>
+          <span style={{ color:'#7a7a7a', fontSize:'11px' }}>نظام آمن ومشفر</span>
           <div style={{ width:'5px', height:'5px', borderRadius:'50%', background:'#ff6b00' }} />
         </div>
       </div>

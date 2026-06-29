@@ -12,8 +12,6 @@ import InteractiveDashboard from './InteractiveDashboard'
 import AuditLogView from './AuditLogView'
 import LoginHistoryView from './LoginHistoryView'
 import { setAuditUser, logAction, logLogin, diffChanges } from './auditLog'
-import TiltCard from './TiltCard'
-import AnimatedBackground from './AnimatedBackground'
 import PermissionsManager from './PermissionsManager'
 import { ROLE_TEMPLATES } from './permissions'
 import VehicleMap from './VehicleMap'
@@ -727,7 +725,6 @@ export default function Dashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: 'Cairo, sans-serif', direction: isRTL ? 'rtl' : 'ltr', position: 'relative' }}>
-      <AnimatedBackground variant="mesh" intensity={0.7} fixed={true} />
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
       <style>{`
         @keyframes toastSlideIn { from{opacity:0;transform:translateX(80px)} to{opacity:1;transform:translateX(0)} }
@@ -736,17 +733,14 @@ export default function Dashboard() {
         @keyframes spin         { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         @keyframes statPop      { 0%{transform:scale(0.85);opacity:0} 60%{transform:scale(1.04)} 100%{transform:scale(1);opacity:1} }
         @keyframes shimmer      { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
-        .skeleton { background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:600px 100%; animation:shimmer 1.4s infinite linear; border-radius:8px; }
-        .nav-item  { transition: all 0.2s !important; }
-        .nav-item:hover { background: rgba(255,107,0,0.08) !important; color: #ff6b00 !important; }
-        .dash-card { transition: box-shadow 0.2s, transform 0.2s; }
-        .dash-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.1) !important; transform: translateY(-2px); }
-        .action-btn:hover { opacity: 0.85; transform: translateY(-1px); }
-        .action-btn { transition: all 0.15s; }
-        tr.data-row:hover td { background: #fff7f2 !important; }
-        ::-webkit-scrollbar { width:5px; height:5px; }
-        ::-webkit-scrollbar-thumb { background:#e0e0e0; border-radius:3px; }
-        ::-webkit-scrollbar-thumb:hover { background:#ff6b00; }
+        .skeleton { background:linear-gradient(90deg,var(--surface-2) 25%,var(--surface-3) 50%,var(--surface-2) 75%); background-size:600px 100%; animation:shimmer 1.4s infinite linear; border-radius:8px; }
+        .nav-item  { transition: background-color 0.15s ease, color 0.15s ease !important; }
+        .nav-item:hover { background: rgba(255,255,255,0.06) !important; color: rgba(255,255,255,0.92) !important; }
+        .dash-card { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+        .dash-card:hover { border-color: var(--border-strong) !important; box-shadow: var(--shadow-md) !important; }
+        .action-btn:hover { opacity: 0.88; }
+        .action-btn { transition: opacity 0.15s, background-color 0.15s; }
+        tr.data-row:hover td { background: var(--surface-2) !important; }
       `}</style>
 
       {/* Toast Notifications */}
@@ -793,7 +787,7 @@ export default function Dashboard() {
       {isMobile && sidebarOpen && <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 30 }} onClick={() => setSidebarOpen(false)} />}
 
       {/* Top Bar */}
-      <div style={{ background: `linear-gradient(135deg, ${C.navy} 0%, ${C.navyDark} 100%)`, borderBottom: `3px solid ${C.orange}`, padding: isMobile ? '8px 16px' : '10px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.25)' }}>
+      <div style={{ background: C.navy, borderBottom: '1px solid rgba(255,255,255,0.07)', padding: isMobile ? '8px 16px' : '10px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {isMobile && <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 9px', fontSize: '18px', cursor: 'pointer', color: '#fff' }}>☰</button>}
           <img src="/logo-madinah.jpeg" alt="" style={{ height: isMobile ? '36px' : '50px', objectFit: 'contain', filter: 'brightness(1.1)' }} />
@@ -832,7 +826,7 @@ export default function Dashboard() {
 
       <div style={{ display: 'flex' }}>
         {/* Sidebar */}
-        <div style={{ width: '230px', background: `linear-gradient(180deg, ${C.navy} 0%, ${C.navyDark} 100%)`, display: 'flex', flexDirection: 'column', padding: '12px 0', position: isMobile ? 'fixed' : 'sticky', [isRTL ? 'right' : 'left']: isMobile ? (sidebarOpen ? 0 : '-230px') : 0, top: isMobile ? 0 : '67px', height: isMobile ? '100vh' : 'calc(100vh - 67px)', overflowY: 'auto', zIndex: isMobile ? 40 : 10, transition: `${isRTL ? 'right' : 'left'} 0.3s cubic-bezier(.16,1,.3,1)`, boxShadow: isMobile ? '4px 0 20px rgba(0,0,0,0.3)' : 'none' }}>
+        <div style={{ width: '230px', background: C.navy, [isRTL ? 'borderLeft' : 'borderRight']: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', padding: '12px 0', position: isMobile ? 'fixed' : 'sticky', [isRTL ? 'right' : 'left']: isMobile ? (sidebarOpen ? 0 : '-230px') : 0, top: isMobile ? 0 : '67px', height: isMobile ? '100vh' : 'calc(100vh - 67px)', overflowY: 'auto', zIndex: isMobile ? 40 : 10, transition: `${isRTL ? 'right' : 'left'} 0.3s cubic-bezier(.16,1,.3,1)`, boxShadow: isMobile ? '4px 0 20px rgba(0,0,0,0.3)' : 'none' }}>
           {isMobile && (
             <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: '14px', fontWeight: '800', color: C.orange }}>{t.menu}</div>
