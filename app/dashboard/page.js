@@ -56,6 +56,7 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [openPlan, setOpenPlan] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
+  const [isNarrow, setIsNarrow] = useState(false)
   const [currentRole, setCurrentRole] = useState('viewer')
   const [currentUser, setCurrentUser] = useState(null)
   const [userRoles, setUserRoles] = useState([])
@@ -209,7 +210,14 @@ export default function Dashboard() {
     setTheme(savedTheme)
     document.documentElement.setAttribute('data-theme', savedTheme)
     checkAuth(); fetchData()
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    const checkMobile = () => {
+      const w = window.innerWidth
+      setIsMobile(w < 768)
+      // عرض مضغوط (نصف شاشة / تابلت): نطوي القائمة الجانبية ونقلّص الشريط العلوي
+      const narrow = w < 1180
+      setIsNarrow(narrow)
+      if (!narrow) setSidebarOpen(false)
+    }
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
@@ -669,7 +677,7 @@ export default function Dashboard() {
     modal: { position: 'fixed', inset: 0, background: 'rgba(10,10,20,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px', backdropFilter: 'blur(4px)' },
     modalBox: { background: C.white, borderRadius: '20px', padding: isMobile ? '20px' : '36px', width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', border: `1px solid ${C.border}` },
     formGrid: { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' },
-    card: { background: C.white, border: `1px solid ${C.border}`, borderRadius: '16px', padding: isMobile ? '16px' : '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.05)', transition: 'box-shadow 0.2s' },
+    card: { background: C.white, border: `1px solid ${C.border}`, borderRadius: '16px', padding: isMobile ? '16px' : isNarrow ? '18px' : '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.05)', transition: 'box-shadow 0.2s' },
     th: { padding: '12px 14px', textAlign: isRTL ? 'right' : 'left', color: '#666', fontSize: '11px', fontWeight: '700', borderBottom: `2px solid ${C.border}`, background: '#fafbfc', whiteSpace: 'nowrap', letterSpacing: '0.3px' },
     td: { padding: '11px 14px', color: C.text, fontSize: '12px', borderBottom: `1px solid #f0f0f0`, whiteSpace: 'nowrap' },
     editBtn: { background: '#fff7f2', border: '1px solid #ffccaa', color: C.orange, borderRadius: '7px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700', transition: 'all 0.15s' },
@@ -784,24 +792,24 @@ export default function Dashboard() {
         </div>
       )}
 
-      {isMobile && sidebarOpen && <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 30 }} onClick={() => setSidebarOpen(false)} />}
+      {isNarrow && sidebarOpen && <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 30 }} onClick={() => setSidebarOpen(false)} />}
 
       {/* Top Bar */}
-      <div style={{ background: C.navy, borderBottom: '1px solid rgba(255,255,255,0.07)', padding: isMobile ? '8px 16px' : '10px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {isMobile && <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 9px', fontSize: '18px', cursor: 'pointer', color: '#fff' }}>☰</button>}
-          <img src="/logo-madinah.jpeg" alt="" style={{ height: isMobile ? '36px' : '50px', objectFit: 'contain', filter: 'brightness(1.1)' }} />
+      <div style={{ background: C.navy, borderBottom: '1px solid rgba(255,255,255,0.07)', padding: isMobile ? '8px 16px' : isNarrow ? '8px 14px' : '10px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: isNarrow ? '8px' : '16px', position: 'sticky', top: 0, zIndex: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isNarrow ? '8px' : '12px', flexShrink: 0 }}>
+          {isNarrow && <button onClick={() => setSidebarOpen(!sidebarOpen)} title={t.menu} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 9px', fontSize: '18px', cursor: 'pointer', color: '#fff', lineHeight: 1 }}>☰</button>}
+          <img src="/logo-madinah.jpeg" alt="" style={{ height: isMobile ? '36px' : isNarrow ? '38px' : '50px', objectFit: 'contain', filter: 'brightness(1.1)' }} />
         </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: isMobile ? '11px' : '15px', fontWeight: '900', color: '#fff', letterSpacing: '0.3px' }}>
-            {isMobile ? (isRTL ? 'أسطول نظافة المدينة' : 'Cleaning Fleet') : (isRTL ? 'أسطول مشاريع نظافة المدينة المنورة' : 'Madinah Cleaning Fleet Management')}
+        <div style={{ textAlign: 'center', flex: '1 1 auto', minWidth: 0 }}>
+          <div style={{ fontSize: isMobile ? '11px' : isNarrow ? '12px' : '15px', fontWeight: '900', color: '#fff', letterSpacing: '0.3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {(isMobile || isNarrow) ? (isRTL ? 'أسطول نظافة المدينة' : 'Cleaning Fleet') : (isRTL ? 'أسطول مشاريع نظافة المدينة المنورة' : 'Madinah Cleaning Fleet Management')}
           </div>
-          {!isMobile && <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>{t.yourPermission}: <span style={{ color: C.orange, fontWeight: '700' }}>{roleLabel(currentRole)}</span></div>}
+          {!isMobile && <div style={{ fontSize: isNarrow ? '10px' : '11px', color: 'rgba(255,255,255,0.5)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.yourPermission}: <span style={{ color: C.orange, fontWeight: '700' }}>{roleLabel(currentRole)}</span></div>}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={() => setSearchOpen(true)} title="بحث عام (Ctrl+K)" aria-label="search" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontFamily: 'Cairo, sans-serif', minWidth: isMobile ? 'auto' : '140px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = '#fff' }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isNarrow ? '6px' : '8px', flexShrink: 0 }}>
+          <button onClick={() => setSearchOpen(true)} title="بحث عام (Ctrl+K)" aria-label="search" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontFamily: 'Cairo, sans-serif', minWidth: (isMobile || isNarrow) ? 'auto' : '140px', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = '#fff' }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            {!isMobile && <><span style={{ flex: 1, textAlign: 'right' }}>بحث...</span><kbd style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '3px', padding: '1px 6px', fontSize: '10px', fontFamily: 'monospace' }}>⌘K</kbd></>}
+            {!isMobile && !isNarrow && <><span style={{ flex: 1, textAlign: 'right' }}>بحث...</span><kbd style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '3px', padding: '1px 6px', fontSize: '10px', fontFamily: 'monospace' }}>⌘K</kbd></>}
           </button>
           <button onClick={toggleTheme} title={theme === 'dark' ? 'فاتح' : 'داكن'} aria-label="toggle theme" style={{ background: 'rgba(255,107,0,0.15)', border: `1px solid rgba(255,107,0,0.3)`, borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', color: C.orange, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,107,0,0.25)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(255,107,0,0.15)'}>
             {theme === 'dark' ? (
@@ -819,15 +827,15 @@ export default function Dashboard() {
               <span style={{ position: 'absolute', top: '-6px', [isRTL?'left':'right']: '-6px', background: '#dc2626', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{criticalAlerts.length}</span>
             </div>
           )}
-          {!isMobile && <img src="/logo-mag.jpeg" alt="" style={{ height: '40px', objectFit: 'contain', filter: 'brightness(1.1)' }} />}
-          <button className="action-btn" onClick={handleLogout} style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: '9px', padding: isMobile ? '6px 10px' : '8px 16px', fontSize: isMobile ? '11px' : '13px', fontWeight: '700', cursor: 'pointer', color: '#ff6b6b', fontFamily: 'Cairo, sans-serif' }}>{t.logout}</button>
+          {!isMobile && !isNarrow && <img src="/logo-mag.jpeg" alt="" style={{ height: '40px', objectFit: 'contain', filter: 'brightness(1.1)' }} />}
+          <button className="action-btn" onClick={handleLogout} style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: '9px', padding: (isMobile || isNarrow) ? '6px 10px' : '8px 16px', fontSize: (isMobile || isNarrow) ? '11px' : '13px', fontWeight: '700', cursor: 'pointer', color: '#ff6b6b', fontFamily: 'Cairo, sans-serif' }}>{t.logout}</button>
         </div>
       </div>
 
       <div style={{ display: 'flex' }}>
         {/* Sidebar */}
-        <div style={{ width: '230px', background: C.navy, [isRTL ? 'borderLeft' : 'borderRight']: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', padding: '12px 0', position: isMobile ? 'fixed' : 'sticky', [isRTL ? 'right' : 'left']: isMobile ? (sidebarOpen ? 0 : '-230px') : 0, top: isMobile ? 0 : '67px', height: isMobile ? '100vh' : 'calc(100vh - 67px)', overflowY: 'auto', zIndex: isMobile ? 40 : 10, transition: `${isRTL ? 'right' : 'left'} 0.3s cubic-bezier(.16,1,.3,1)`, boxShadow: isMobile ? '4px 0 20px rgba(0,0,0,0.3)' : 'none' }}>
-          {isMobile && (
+        <div style={{ width: '230px', flexShrink: 0, background: C.navy, [isRTL ? 'borderLeft' : 'borderRight']: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', padding: '12px 0', position: isNarrow ? 'fixed' : 'sticky', [isRTL ? 'right' : 'left']: isNarrow ? (sidebarOpen ? 0 : '-260px') : 0, top: isNarrow ? 0 : '67px', height: isNarrow ? '100vh' : 'calc(100vh - 67px)', overflowY: 'auto', zIndex: isNarrow ? 40 : 10, transition: `${isRTL ? 'right' : 'left'} 0.3s cubic-bezier(.16,1,.3,1)`, boxShadow: isNarrow ? '4px 0 20px rgba(0,0,0,0.3)' : 'none' }}>
+          {isNarrow && (
             <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: '14px', fontWeight: '800', color: C.orange }}>{t.menu}</div>
               <button onClick={() => setSidebarOpen(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '6px', width: '28px', height: '28px', fontSize: '14px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
@@ -837,7 +845,7 @@ export default function Dashboard() {
             {navItems.map(([id, icon, label]) => (
               (!['users','audit','logins'].includes(id) || currentRole === 'admin') && (
                 <div key={id} className="nav-item" style={{ display: 'flex', alignItems: 'center', gap: '11px', padding: '11px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: activeTab === id ? '700' : '500', color: activeTab === id ? '#fff' : 'rgba(255,255,255,0.55)', background: activeTab === id ? `rgba(255,107,0,0.2)` : 'transparent', borderRadius: '10px', marginBottom: '3px', borderRight: isRTL && activeTab === id ? `3px solid ${C.orange}` : isRTL ? '3px solid transparent' : 'none', borderLeft: !isRTL && activeTab === id ? `3px solid ${C.orange}` : !isRTL ? '3px solid transparent' : 'none', position: 'relative', transition: 'all 0.2s' }}
-                  onClick={() => { setActiveTab(id); if (id === 'dashboard') setStatsKey(k=>k+1); if (isMobile) setSidebarOpen(false) }}>
+                  onClick={() => { setActiveTab(id); if (id === 'dashboard') setStatsKey(k=>k+1); if (isNarrow) setSidebarOpen(false) }}>
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px' }}><NavIcon name={icon} /></span>
                   <span>{label}</span>
                   {id === 'alerts' && criticalAlerts.length > 0 && <span style={{ marginRight: isRTL ? 'auto' : 0, marginLeft: isRTL ? 0 : 'auto', background: '#dc2626', color: '#fff', borderRadius: '20px', padding: '2px 8px', fontSize: '10px', fontWeight: '700' }}>{criticalAlerts.length}</span>}
@@ -855,7 +863,7 @@ export default function Dashboard() {
         </div>
 
         {/* Main */}
-        <div style={{ flex: 1, padding: isMobile ? '16px' : '28px', overflowX: 'auto', [isRTL ? 'marginRight' : 'marginLeft']: isMobile ? 0 : '230px', minWidth: 0 }}>
+        <div style={{ flex: 1, padding: isMobile ? '16px' : isNarrow ? '18px' : '28px', overflowX: 'auto', minWidth: 0 }}>
 
           {/* Dashboard */}
           {activeTab === 'dashboard' && (
@@ -880,10 +888,11 @@ export default function Dashboard() {
                 alerts={alerts}
                 t={t}
                 isMobile={isMobile}
+                isNarrow={isNarrow}
               />
               <div style={{ display: 'none' }}>{/* hide old stats section below */}
               {/* بطاقات الإحصائيات المتحركة */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '14px', marginBottom: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : isNarrow ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '14px', marginBottom: '24px' }}>
                 {[
                   { icon:'🚛', label: t.vehicles,    val: vehicles.length,    color:'#ff6b00', bg:'linear-gradient(135deg,#fff7f2,#fff)', sub: `${activeVehicles} نشط • ${readyVehicles} جاهز` },
                   { icon:'👤', label: t.drivers,     val: drivers.length,     color:'#16a34a', bg:'linear-gradient(135deg,#f0fdf4,#fff)', sub: `${activeDrivers} سائق نشط` },
@@ -902,7 +911,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: (isMobile || isNarrow) ? '1fr' : '1fr 1fr', gap: '16px' }}>
                 <div style={{ ...st.card, animation: 'slideUp 0.5s ease 0.3s both' }}>
                   <div style={{ fontWeight: '800', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
                     <span style={{ width: '28px', height: '28px', background: '#fff7f2', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🚛</span>
@@ -939,7 +948,7 @@ export default function Dashboard() {
           {/* Vehicles */}
           {activeTab === 'vehicles' && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
                 <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🚛 {t.vehiclesTitle} ({filteredVehicles.length})</div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {canEdit && (
@@ -981,7 +990,7 @@ export default function Dashboard() {
                   </button>
                 ))}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : isNarrow ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
                 <select style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={vehiclePrepFilter} onChange={e => setVehiclePrepFilter(e.target.value)}>
                   <option value="all">🔧 حالة التجهيز: الكل</option>
                   <option value="ready">✅ جاهزة</option>
@@ -1125,7 +1134,7 @@ export default function Dashboard() {
 
           {activeTab === 'drivers' && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
                 <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>👤 {t.driversTitle} ({filteredDrivers.length})</div>
                 {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowDriverForm(true)}>{t.addDriver}</button>}
               </div>
@@ -1203,12 +1212,12 @@ export default function Dashboard() {
           {/* Maintenance */}
           {activeTab === 'maintenance' && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
                 <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>🔧 {t.maintenanceTitle} ({filteredMaintenance.length})</div>
                 {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowMaintenanceForm(true)}>{t.addMaintenance}</button>}
               </div>
               <input style={{ ...st.input, marginBottom: '8px' }} placeholder="🔍 بحث في الوصف، النوع، رقم اللوحة..." value={maintenanceSearch} onChange={e => setMaintenanceSearch(e.target.value)} />
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : isNarrow ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
                 <select style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={maintenanceStatusFilter} onChange={e => setMaintenanceStatusFilter(e.target.value)}>
                   <option value="all">📌 الحالة: الكل</option>
                   <option value="active">{t.completedLabel}</option>
@@ -1266,12 +1275,12 @@ export default function Dashboard() {
           {/* Fuel */}
           {activeTab === 'fuel' && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
                 <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800' }}>⛽ {t.fuelTitle} ({filteredFuel.length})</div>
                 {canEdit && <button style={{ ...st.btn(), fontSize: isMobile ? '12px' : '13px', padding: isMobile ? '7px 12px' : '9px 18px' }} onClick={() => setShowFuelForm(true)}>{t.addFuel}</button>}
               </div>
               <input style={{ ...st.input, marginBottom: '8px' }} placeholder="🔍 بحث برقم اللوحة أو اسم السائق..." value={fuelSearch} onChange={e => setFuelSearch(e.target.value)} />
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : isNarrow ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
                 <select style={{ ...st.input, padding: '8px 10px', fontSize: '12px' }} value={fuelVehicleFilter} onChange={e => setFuelVehicleFilter(e.target.value)}>
                   <option value="all">🚛 المركبة: الكل</option>
                   {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}
@@ -1330,7 +1339,7 @@ export default function Dashboard() {
           {activeTab === 'reports' && (
             <div>
               <div style={{ fontSize: isMobile ? '16px' : '19px', fontWeight: '800', marginBottom: '20px' }}>📈 {t.reportsTitle}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : isNarrow ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
                 {[[`🚛`,t.totalVehicles,vehicles.length,'#ff6b00'],[`✅`,t.activeVehicles,activeVehicles,'#16a34a'],[`🟢`,t.readyVehicles,readyVehicles,'#16a34a'],[`👤`,t.totalDrivers,drivers.length,'#2563eb'],[`👍`,t.activeDrivers,activeDrivers,'#16a34a'],[`🔔`,t.activeAlerts,alerts.length,'#dc2626']].map(([icon,label,val,color]) => (
                   <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', borderTop: `3px solid ${color}` }}>
                     <div style={{ color: C.muted, fontSize: '11px', marginBottom: '6px' }}>{icon} {label}</div>
@@ -1338,9 +1347,9 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: (isMobile || isNarrow) ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div style={st.card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
                     <div style={{ fontWeight: '800' }}>⛽ {t.fuelReport}</div>
                     <button onClick={exportFuel} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>{t.export}</button>
                   </div>
@@ -1358,7 +1367,7 @@ export default function Dashboard() {
                   <BarChart data={topFuelVehicles} maxVal={topFuelVehicles[0]?.[1] || 1} color={C.orange} />
                 </div>
                 <div style={st.card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
                     <div style={{ fontWeight: '800' }}>🔧 {t.maintenanceReport}</div>
                     <button onClick={exportMaintenance} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>{t.export}</button>
                   </div>
@@ -1376,11 +1385,11 @@ export default function Dashboard() {
                 </div>
               </div>
               <div style={st.card}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
                   <div style={{ fontWeight: '800' }}>🚛 {t.vehiclesReport}</div>
                   <button onClick={exportVehicles} style={{ ...st.btn('#16a34a'), padding: '6px 12px', fontSize: '11px' }}>{t.export}</button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : isNarrow ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
                   {[[t.ready,readyVehicles,'#16a34a'],[t.inProgress,vehicleTypes['in_progress']||0,'#d97706'],[t.notReady,vehicleTypes['not_ready']||0,'#dc2626']].map(([label,val,color]) => (
                     <div key={label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
                       <div style={{ fontSize: '26px', fontWeight: '900', color }}>{val}</div>
@@ -1392,7 +1401,7 @@ export default function Dashboard() {
               </div>
               <div style={{ ...st.card, marginTop: '16px' }}>
                 <div style={{ fontWeight: '800', marginBottom: '16px' }}>📥 {t.exportData}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : isNarrow ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '10px' }}>
                   <button onClick={exportVehicles} style={{ ...st.btn('#ff6b00'), padding: '12px' }}>🚛 {t.vehicles}</button>
                   <button onClick={exportDrivers} style={{ ...st.btn('#2563eb'), padding: '12px' }}>👤 {t.drivers}</button>
                   <button onClick={exportMaintenance} style={{ ...st.btn('#d97706'), padding: '12px' }}>🔧 {t.maintenance}</button>
@@ -1687,7 +1696,7 @@ export default function Dashboard() {
 
       {/* Assignment History Modal */}
       {historyDriver && (<div style={st.modal}><div style={st.modalBox}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
           <div style={{ fontSize: '16px', fontWeight: '800' }}>🕓 {t.assignmentHistoryFor}: {historyDriver.full_name}</div>
           <button style={st.editBtn} onClick={() => setHistoryDriver(null)}>✕</button>
         </div>

@@ -367,3 +367,24 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -0.015em; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; }
 }
+
+/* ============================================================
+   RESPONSIVE — نافذة ضيقة (نصف الشاشة / تابلت)
+   شبكة أمان تمنع تجاوز المحتوى للعرض وتقلّص المسافات
+   ============================================================ */
+/* الجداول لا تدفع الصفحة كلها — التمرير الأفقي يبقى داخل البطاقة */
+table { max-width: 100%; }
+
+@media (max-width: 1180px) {
+  /* تصغير حشوة الجداول لإظهار أعمدة أكثر داخل نافذة ضيقة */
+  table th { font-size: 10.5px !important; padding: 10px 10px !important; }
+  table td { font-size: 11.5px !important; padding: 9px 10px !important; }
+
+  /* زوايا أهدأ ومسافات أقل في البطاقات */
+  .glass-card, .panel, .card-3d, .stat-3d { border-radius: var(--radius-md); }
+}
+
+@media (max-width: 900px) {
+  table th { padding: 9px 8px !important; }
+  table td { padding: 8px 8px !important; }
+}

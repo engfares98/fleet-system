@@ -60,7 +60,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   )
 }
 
-export default function InteractiveDashboard({ vehicles, drivers, maintenance, fuelLogs, alerts, t, isMobile }) {
+export default function InteractiveDashboard({ vehicles, drivers, maintenance, fuelLogs, alerts, t, isMobile, isNarrow = false }) {
   // Compute stats
   const stats = useMemo(() => {
     const activeVehicles = vehicles.filter(v => v.status === 'active').length
@@ -180,7 +180,7 @@ export default function InteractiveDashboard({ vehicles, drivers, maintenance, f
       {/* Insights bar */}
       <div style={{ background: 'linear-gradient(135deg, var(--accent-soft), var(--surface))', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px 20px', display: 'flex', flexWrap: 'wrap', gap: '14px', alignItems: 'center' }}>
         <div style={{ fontSize: '20px' }}>💡</div>
-        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
           {stats.insights.slice(0, 4).map((ins, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text)' }}>
               <span>{ins.icon}</span>
@@ -191,7 +191,7 @@ export default function InteractiveDashboard({ vehicles, drivers, maintenance, f
       </div>
 
       {/* Stats grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '14px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : isNarrow ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '14px' }}>
         <StatCard icon="🚛" label="إجمالي المركبات" value={stats.totalVehicles.toLocaleString('ar')} color="#ff6b00" subtitle={`${stats.activeVehicles} نشطة · ${stats.readyVehicles} جاهزة`} />
         <StatCard icon="👤" label="السائقون" value={stats.totalDrivers.toLocaleString('ar')} color="#2563eb" subtitle={`${stats.activeDrivers} نشطون`} />
         <StatCard icon="⛽" label="تكلفة الوقود الشهر" value={`${(stats.lastMonth || 0).toLocaleString('ar')} ر.س`} color="#16a34a" trend={stats.fuelTrend} />
@@ -199,7 +199,7 @@ export default function InteractiveDashboard({ vehicles, drivers, maintenance, f
       </div>
 
       {/* Charts grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: '14px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: (isMobile || isNarrow) ? '1fr' : '2fr 1fr', gap: '14px' }}>
         {/* Fuel trend */}
         <ChartCard title="📈 استهلاك الوقود — آخر 6 أشهر" subtitle="التكلفة بالريال السعودي">
           <ResponsiveContainer width="100%" height={260}>
@@ -237,7 +237,7 @@ export default function InteractiveDashboard({ vehicles, drivers, maintenance, f
         </ChartCard>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: (isMobile || isNarrow) ? '1fr' : '1fr 1fr', gap: '14px' }}>
         {/* Top 5 vehicles by fuel */}
         <ChartCard title="🥇 أعلى 5 مركبات استهلاكاً للوقود" subtitle="التكلفة الكلية">
           {stats.topFuel.length === 0 ? (
