@@ -147,11 +147,11 @@ export default function AuditLogView({ supabase, isMobile }) {
         </div>
       )}
 
-      {logs.length === PAGE_SIZE && (
+      {(page > 0 || logs.length === PAGE_SIZE) && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>
           <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)', cursor: page === 0 ? 'not-allowed' : 'pointer', opacity: page === 0 ? 0.5 : 1, fontFamily: 'Cairo, sans-serif', fontWeight: '700', fontSize: '13px', color: 'var(--text)' }}>السابق</button>
           <span style={{ padding: '8px 16px', color: 'var(--text-muted)', fontSize: '13px' }}>الصفحة {page + 1}</span>
-          <button onClick={() => setPage(p => p + 1)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: '700', fontSize: '13px', color: 'var(--text)' }}>التالي</button>
+          <button onClick={() => setPage(p => p + 1)} disabled={logs.length < PAGE_SIZE} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)', cursor: logs.length < PAGE_SIZE ? 'not-allowed' : 'pointer', opacity: logs.length < PAGE_SIZE ? 0.5 : 1, fontFamily: 'Cairo, sans-serif', fontWeight: '700', fontSize: '13px', color: 'var(--text)' }}>التالي</button>
         </div>
       )}
     </div>
