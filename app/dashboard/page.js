@@ -651,7 +651,7 @@ export default function Dashboard() {
   const topFuelVehicles = Object.entries(fuelByVehicle).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   const C = { orange: 'var(--accent)', orangeLight: 'var(--accent-soft)', white: 'var(--surface)', gray: 'var(--bg)', text: 'var(--text)', muted: 'var(--text-muted)', border: 'var(--border)', navy: 'var(--sidebar-bg)', navyDark: 'var(--sidebar-bg)', navyLight: 'var(--surface-2)' }
-  const navItems = [['dashboard','dashboard',t.dashboard],['vehicles','vehicles',t.vehicles],['map','map','خريطة توزيع المعدات'],['drivers','drivers',t.drivers],['maintenance','maintenance',t.maintenance],['fuel','fuel',t.fuel],['reports','reports',t.reports],['plans','plans','الخطط التشغيلية'],['alerts','alerts',t.alerts],['users','users',t.users],['audit','audit','سجل النشاط'],['logins','logins','سجل الدخول']]
+  const navItems = [['dashboard','dashboard',t.dashboard],['vehicles','vehicles',t.vehicles],['drivers','drivers',t.drivers],['reports','reports',t.reports],['plans','plans','الخطط التشغيلية'],['alerts','alerts',t.alerts],['users','users',t.users],['audit','audit','سجل النشاط'],['logins','logins','سجل الدخول']]
   const NavIcon = ({ name }) => {
     const p = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }
     if (name === 'dashboard') return <svg {...p}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
