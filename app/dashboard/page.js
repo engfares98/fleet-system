@@ -128,6 +128,7 @@ export default function Dashboard() {
   const [previewImage, setPreviewImage] = useState(null)
   const [showBulkUpload, setShowBulkUpload] = useState(false)
   const [bulkAttachmentType, setBulkAttachmentType] = useState('istimara_image')
+  const [bulkMatchBy, setBulkMatchBy] = useState('plate') // 'plate' | 'chassis' | 'auto'
   const [bulkMenuOpen, setBulkMenuOpen] = useState(false)
   const [bulkFiles, setBulkFiles] = useState([])
   const [bulkResults, setBulkResults] = useState([])
@@ -342,6 +343,40 @@ export default function Dashboard() {
     return data.publicUrl
   }
 
+  const normKey = (v) => (v || '').toString().toUpperCase().replace(/[^A-Z0-9\u0621-\u064A]/g, '')
+
+  // يطابق اسم الملف مع مركبة — إما برقم اللوحة أو برقم الهيكل أو تلقائي
+  const findVehicleForFile = (fileBase) => {
+    const norm = normKey(fileBase)
+    const digits = (fileBase.match(/\d+/) || [])[0] || null
+
+    const tryPlate = () => {
+      if (!norm) return null
+      const exact = vehicles.find(v => (normKey(v.plate_number) && normKey(v.plate_number) === norm) || (normKey(v.vehicle_code) && normKey(v.vehicle_code) === norm))
+      if (exact) return exact
+      if (!digits) return null
+      return vehicles.find(v => (v.plate_number || '').replace(/\s/g, '').includes(digits)) || null
+    }
+
+    const tryChassis = () => {
+      if (norm.length < 4) return null
+      const exact = vehicles.find(v => normKey(v.chassis_number) && normKey(v.chassis_number) === norm)
+      if (exact) return exact
+      // اسم الملف يحتوي رقم الهيكل كاملاً، أو اسم الملف هو آخر جزء من رقم الهيكل
+      const cands = vehicles.filter(v => {
+        const c = normKey(v.chassis_number)
+        return c && c.length >= 4 && (norm.includes(c) || c.endsWith(norm))
+      })
+      if (cands.length === 1) return cands[0]
+      if (cands.length > 1) return 'AMBIGUOUS'
+      return null
+    }
+
+    if (bulkMatchBy === 'plate') return tryPlate()
+    if (bulkMatchBy === 'chassis') return tryChassis()
+    return tryPlate() || tryChassis()
+  }
+
   const bulkUploadAttachments = async () => {
     if (!bulkFiles.length) return
     const conf = ATTACHMENT_TYPES.find(a => a.key === bulkAttachmentType)
@@ -349,20 +384,21 @@ export default function Dashboard() {
     setBulkUploading(true)
     const results = []
     for (const file of bulkFiles) {
-      // استخرج الأرقام من اسم الملف فقط
-      const numMatch = file.name.replace(/\.[^.]+$/, '').match(/\d+/)
-      const fileNum = numMatch ? numMatch[0] : null
-      if (!fileNum) { results.push({ file: file.name, status: 'error', msg: 'لا يوجد رقم في الاسم' }); continue }
-      // ابحث عن مركبة رقم لوحتها يحتوي على هذا الرقم
-      const matched = vehicles.find(v => (v.plate_number || '').replace(/\s/g, '').includes(fileNum))
-      if (!matched) { results.push({ file: file.name, status: 'notfound', msg: `لم يتم العثور على مركبة: ${fileNum}` }); continue }
+      const base = file.name.replace(/\.[^.]+$/, '')
+      const matched = findVehicleForFile(base)
+      if (matched === 'AMBIGUOUS') { results.push({ file: file.name, status: 'error', msg: 'أكثر من مركبة مطابقة' }); continue }
+      if (!matched) {
+        const label = bulkMatchBy === 'chassis' ? 'رقم هيكل' : bulkMatchBy === 'plate' ? 'رقم لوحة' : 'رقم لوحة أو هيكل'
+        results.push({ file: file.name, status: 'notfound', msg: `لم يتم العثور على مركبة بهذا الـ${label}` })
+        continue
+      }
       const ext = file.name.split('.').pop()
       const fileName = `${conf.folder}/${matched.id}_${Date.now()}.${ext}`
       const { error } = await supabase.storage.from('fleet-files').upload(fileName, file)
       if (error) { results.push({ file: file.name, status: 'error', msg: 'فشل الرفع' }); continue }
       const { data } = supabase.storage.from('fleet-files').getPublicUrl(fileName)
       await supabase.from('vehicles').update({ [bulkAttachmentType]: data.publicUrl }).eq('id', matched.id)
-      results.push({ file: file.name, status: 'success', msg: `✅ ${matched.plate_number}` })
+      results.push({ file: file.name, status: 'success', msg: `✅ ${matched.plate_number || matched.chassis_number || matched.vehicle_code}` })
     }
     setBulkResults(results)
     setBulkUploading(false)
@@ -1588,8 +1624,37 @@ export default function Dashboard() {
         <div style={st.modal}>
           <div style={{ ...st.modalBox, maxWidth: '620px' }}>
             <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px' }}>📂 رفع جماعي — {t[(ATTACHMENT_TYPES.find(a => a.key === bulkAttachmentType) || {}).labelKey] || ''}</div>
-            <div style={{ fontSize: '12px', color: '#888', marginBottom: '14px', background: '#f8f9fa', padding: '10px 14px', borderRadius: '8px' }}>
-              ⚠️ يجب أن يحتوي اسم كل ملف على رقم اللوحة — مثال: <strong>2122.jpg</strong> أو <strong>2122.pdf</strong>
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: C.text, marginBottom: '8px' }}>🔎 المطابقة بواسطة</div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {[['plate', '🔢 رقم اللوحة'], ['chassis', '🏗️ رقم الهيكل'], ['auto', '⚡ تلقائي']].map(([val, lbl]) => (
+                  <button
+                    key={val}
+                    onClick={() => { setBulkMatchBy(val); setBulkResults([]) }}
+                    disabled={bulkUploading}
+                    style={{
+                      flex: '1 1 auto',
+                      padding: '8px 12px',
+                      borderRadius: '9px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      fontFamily: 'Cairo, sans-serif',
+                      cursor: bulkUploading ? 'not-allowed' : 'pointer',
+                      border: `2px solid ${bulkMatchBy === val ? C.orange : C.border}`,
+                      background: bulkMatchBy === val ? C.orangeLight : 'var(--surface-2)',
+                      color: bulkMatchBy === val ? C.orange : C.muted,
+                      transition: 'all 0.15s',
+                    }}
+                  >{lbl}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{ fontSize: '12px', color: C.muted, marginBottom: '14px', background: 'var(--surface-2)', padding: '10px 14px', borderRadius: '8px', lineHeight: '1.7' }}>
+              {bulkMatchBy === 'chassis'
+                ? <>⚠️ يجب أن يحتوي اسم كل ملف على رقم الهيكل — مثال: <strong>MHFCX8EM1K1234567.jpg</strong>، وتكفي آخر خانات الهيكل مثل: <strong>1234567.pdf</strong></>
+                : bulkMatchBy === 'plate'
+                ? <>⚠️ يجب أن يحتوي اسم كل ملف على رقم اللوحة — مثال: <strong>2122.jpg</strong> أو <strong>2122.pdf</strong></>
+                : <>⚡ يبحث النظام برقم اللوحة أولاً، وإذا لم يجد مطابقة يبحث برقم الهيكل</>}
             </div>
             <label style={{ width: '100%', padding: '20px', background: bulkFiles.length ? '#fff7f2' : '#fafafa', border: `2px dashed ${bulkFiles.length ? '#ff6b00' : '#e8e8e8'}`, borderRadius: '10px', color: bulkFiles.length ? '#ff6b00' : '#888', fontSize: '13px', cursor: 'pointer', textAlign: 'center', display: 'block', boxSizing: 'border-box', fontWeight: '600', marginBottom: '16px' }}>
               {bulkFiles.length ? `✅ تم اختيار ${bulkFiles.length} ملف` : '📎 اضغط هنا لاختيار الملفات (صور أو PDF)'}
